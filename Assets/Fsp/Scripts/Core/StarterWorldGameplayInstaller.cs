@@ -18,5 +18,6 @@ if(Object.FindObjectOfType<LanternCoastRoadLink>()==null)new GameObject("Lantern
 if(Object.FindObjectOfType<SunscarIslandPolish>()==null)new GameObject("SunscarIsland_Polish").AddComponent<SunscarIslandPolish>();
 if(Object.FindObjectOfType<StarterVehicleDistribution>()==null)new GameObject("SunscarIsland_Vehicles").AddComponent<StarterVehicleDistribution>();
 if(Object.FindObjectOfType<MobileWorldOptimizer>()==null)new GameObject("SunscarIsland_MobileOptimizer").AddComponent<MobileWorldOptimizer>();
-if(Object.FindObjectOfType<StarterSpawnBalance>()==null)new GameObject("SunscarIsland_SpawnBalance").AddComponent<StarterSpawnBalance>();}}
+if(Object.FindObjectOfType<StarterSpawnBalance>()==null)new GameObject("SunscarIsland_SpawnBalance").AddComponent<StarterSpawnBalance>();
+if(Object.FindObjectOfType<PoiLootTierBalancer>()==null)new GameObject("SunscarIsland_LootBalance").AddComponent<PoiLootTierBalancer>();}}
 }
