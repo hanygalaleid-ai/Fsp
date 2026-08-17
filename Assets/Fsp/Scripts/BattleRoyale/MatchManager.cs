@@ -80,6 +80,7 @@ namespace Fsp.BattleRoyale
             CountdownRemaining = 0f;
             RecountAlive();
             PhaseChanged?.Invoke(Phase);
+            EvaluateEndCondition();
         }
 
         public static void Register(MatchParticipant participant)
@@ -95,7 +96,9 @@ namespace Fsp.BattleRoyale
         {
             if (participant == null) return;
             participants.Remove(participant);
-            instance?.RecountAlive();
+            if (instance == null) return;
+            instance.RecountAlive();
+            instance.EvaluateEndCondition();
         }
 
         public static void NotifyDeath(MatchParticipant participant)
@@ -110,8 +113,12 @@ namespace Fsp.BattleRoyale
             int placement = Mathf.Max(1, AliveCount + 1);
             participant?.SetPlacement(placement);
             ParticipantEliminated?.Invoke(participant, placement);
+            EvaluateEndCondition();
+        }
 
-            if (AliveCount > 1) return;
+        private void EvaluateEndCondition()
+        {
+            if (Phase != MatchPhase.Active || AliveCount > 1) return;
 
             Phase = MatchPhase.Finished;
             MatchParticipant winner = null;
