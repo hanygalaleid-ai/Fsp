@@ -24,6 +24,7 @@ namespace Fsp.Networking
         public event Action<NetworkPlayerSnapshot> SnapshotReceived;
         public event Action<NetworkFireEvent> FireReceived;
         public event Action<NetworkDamageEvent> DamageReceived;
+        public event Action<NetworkVehicleSnapshot> VehicleReceived;
 
         private void Update()
         {
@@ -78,6 +79,7 @@ namespace Fsp.Networking
         public void SendSnapshot(NetworkPlayerSnapshot snapshot) => Send("snapshot", JsonUtility.ToJson(snapshot));
         public void SendFire(NetworkFireEvent fireEvent) => Send("fire", JsonUtility.ToJson(fireEvent));
         public void SendDamage(NetworkDamageEvent damageEvent) => Send("damage", JsonUtility.ToJson(damageEvent));
+        public void SendVehicle(NetworkVehicleSnapshot vehicleSnapshot) => Send("vehicle", JsonUtility.ToJson(vehicleSnapshot));
 
         private async void Send(string type, string payload)
         {
@@ -139,6 +141,7 @@ namespace Fsp.Networking
                 case "snapshot": SnapshotReceived?.Invoke(JsonUtility.FromJson<NetworkPlayerSnapshot>(envelope.payload)); break;
                 case "fire": FireReceived?.Invoke(JsonUtility.FromJson<NetworkFireEvent>(envelope.payload)); break;
                 case "damage": DamageReceived?.Invoke(JsonUtility.FromJson<NetworkDamageEvent>(envelope.payload)); break;
+                case "vehicle": VehicleReceived?.Invoke(JsonUtility.FromJson<NetworkVehicleSnapshot>(envelope.payload)); break;
             }
         }
 
