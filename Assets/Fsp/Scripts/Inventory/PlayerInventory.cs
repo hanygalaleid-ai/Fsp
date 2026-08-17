@@ -26,9 +26,23 @@ namespace Fsp.Inventory
             SetActiveWeapon(primaryWeapon != null ? primaryWeapon : secondaryWeapon);
         }
 
-        public bool TryPickup(InventoryItem item)
+        public bool CanPickup(InventoryItem item)
         {
             if (item == null) return false;
+            switch (item.type)
+            {
+                case InventoryItemType.Medkit: return Medkits < maxMedkits;
+                case InventoryItemType.Weapon: return false;
+                case InventoryItemType.Ammo:
+                case InventoryItemType.Armor:
+                    return true;
+                default: return false;
+            }
+        }
+
+        public bool TryPickup(InventoryItem item)
+        {
+            if (!CanPickup(item)) return false;
 
             switch (item.type)
             {
@@ -36,7 +50,6 @@ namespace Fsp.Inventory
                     AddAmmo(item.ammoAmount);
                     break;
                 case InventoryItemType.Medkit:
-                    if (Medkits >= maxMedkits) return false;
                     Medkits++;
                     break;
                 case InventoryItemType.Armor:
