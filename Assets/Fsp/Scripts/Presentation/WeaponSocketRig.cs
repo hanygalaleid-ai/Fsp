@@ -12,6 +12,8 @@ namespace Fsp.Presentation
         [SerializeField] private Transform backSecondarySocket;
         [SerializeField] private Vector3 handLocalPosition;
         [SerializeField] private Vector3 handLocalEuler;
+        [SerializeField] private Vector3 primaryBackEuler = new(8f, 18f, 42f);
+        [SerializeField] private Vector3 secondaryBackEuler = new(-5f, -22f, -38f);
 
         private HitscanWeapon lastActive;
 
@@ -26,32 +28,43 @@ namespace Fsp.Presentation
             HitscanWeapon active = inventory.ActiveWeapon;
             if (active == lastActive) return;
             lastActive = active;
-            AttachActive(active);
+            RefreshSockets(active);
         }
 
-        private void AttachActive(HitscanWeapon weapon)
+        private void RefreshSockets(HitscanWeapon active)
+        {
+            HitscanWeapon primary = inventory.PrimaryWeapon;
+            HitscanWeapon secondary = inventory.SecondaryWeapon;
+
+            if (primary != null)
+            {
+                primary.gameObject.SetActive(true);
+                if (primary == active) AttachToHand(primary.transform);
+                else AttachToBack(primary.transform, backPrimarySocket, primaryBackEuler);
+            }
+
+            if (secondary != null)
+            {
+                secondary.gameObject.SetActive(true);
+                if (secondary == active) AttachToHand(secondary.transform);
+                else AttachToBack(secondary.transform, backSecondarySocket, secondaryBackEuler);
+            }
+        }
+
+        private void AttachToHand(Transform weapon)
         {
             if (weapon == null || rightHandSocket == null) return;
-            Transform t = weapon.transform;
-            t.SetParent(rightHandSocket, false);
-            t.localPosition = handLocalPosition;
-            t.localRotation = Quaternion.Euler(handLocalEuler);
+            weapon.SetParent(rightHandSocket, false);
+            weapon.localPosition = handLocalPosition;
+            weapon.localRotation = Quaternion.Euler(handLocalEuler);
         }
 
-        public void StowPrimary(Transform weaponVisual)
+        private static void AttachToBack(Transform weapon, Transform socket, Vector3 euler)
         {
-            if (weaponVisual == null || backPrimarySocket == null) return;
-            weaponVisual.SetParent(backPrimarySocket, false);
-            weaponVisual.localPosition = Vector3.zero;
-            weaponVisual.localRotation = Quaternion.identity;
-        }
-
-        public void StowSecondary(Transform weaponVisual)
-        {
-            if (weaponVisual == null || backSecondarySocket == null) return;
-            weaponVisual.SetParent(backSecondarySocket, false);
-            weaponVisual.localPosition = Vector3.zero;
-            weaponVisual.localRotation = Quaternion.identity;
+            if (weapon == null || socket == null) return;
+            weapon.SetParent(socket, false);
+            weapon.localPosition = Vector3.zero;
+            weapon.localRotation = Quaternion.Euler(euler);
         }
     }
 }
