@@ -6,8 +6,12 @@ namespace Fsp.Networking
     {
         bool IsConnected { get; }
         event Action<NetworkPlayerSnapshot> SnapshotReceived;
+        event Action<NetworkFireEvent> FireReceived;
+        event Action<NetworkDamageEvent> DamageReceived;
         void Connect(string matchId, string playerId);
         void Disconnect();
         void SendSnapshot(NetworkPlayerSnapshot snapshot);
+        void SendFire(NetworkFireEvent fireEvent);
+        void SendDamage(NetworkDamageEvent damageEvent);
     }
 }
