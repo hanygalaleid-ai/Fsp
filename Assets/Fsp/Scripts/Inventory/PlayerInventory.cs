@@ -10,9 +10,12 @@ namespace Fsp.Inventory
         [SerializeField] private HitscanWeapon primaryWeapon;
         [SerializeField] private HitscanWeapon secondaryWeapon;
         [SerializeField] private PlayerVitals vitals;
+        [SerializeField] private float medkitHealAmount = 45f;
+        [SerializeField] private int maxMedkits = 5;
 
         public int PrimaryAmmo { get; private set; }
         public int SecondaryAmmo { get; private set; }
+        public int Medkits { get; private set; }
         public HitscanWeapon ActiveWeapon { get; private set; }
 
         public event Action InventoryChanged;
@@ -33,7 +36,8 @@ namespace Fsp.Inventory
                     AddAmmo(item.ammoAmount);
                     break;
                 case InventoryItemType.Medkit:
-                    vitals?.Heal(item.healAmount);
+                    if (Medkits >= maxMedkits) return false;
+                    Medkits++;
                     break;
                 case InventoryItemType.Armor:
                     vitals?.AddArmor(item.armorAmount);
@@ -58,6 +62,28 @@ namespace Fsp.Inventory
         {
             if (primaryWeapon == null && secondaryWeapon == null) return;
             SetActiveWeapon(ActiveWeapon == primaryWeapon ? secondaryWeapon : primaryWeapon);
+        }
+
+        public bool TryUseMedkit()
+        {
+            if (Medkits <= 0 || vitals == null || !vitals.IsAlive) return false;
+            if (vitals.Health >= 99.9f) return false;
+
+            Medkits--;
+            vitals.Heal(medkitHealAmount);
+            InventoryChanged?.Invoke();
+            return true;
+        }
+
+        public bool TryReloadActiveWeapon()
+        {
+            return ActiveWeapon != null && ActiveWeapon.ReloadInstant();
+        }
+
+        public int GetReserveAmmoForActiveWeapon()
+        {
+            if (ActiveWeapon == secondaryWeapon) return SecondaryAmmo;
+            return PrimaryAmmo;
         }
 
         public int ConsumeReserveAmmoFor(HitscanWeapon weapon, int requested)
