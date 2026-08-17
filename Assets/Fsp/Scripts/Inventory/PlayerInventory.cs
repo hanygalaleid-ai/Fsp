@@ -28,6 +28,16 @@ namespace Fsp.Inventory
             SetActiveWeapon(primaryWeapon != null ? primaryWeapon : secondaryWeapon);
         }
 
+        public void ConfigureStarterLoadout(HitscanWeapon primary, HitscanWeapon secondary, int primaryReserve, int secondaryReserve, int medkits)
+        {
+            primaryWeapon = primary;
+            secondaryWeapon = secondary;
+            PrimaryAmmo = Mathf.Max(0, primaryReserve);
+            SecondaryAmmo = Mathf.Max(0, secondaryReserve);
+            Medkits = Mathf.Clamp(medkits, 0, maxMedkits);
+            SetActiveWeapon(primaryWeapon != null ? primaryWeapon : secondaryWeapon);
+        }
+
         public bool CanPickup(InventoryItem item)
         {
             if (item == null) return false;
@@ -119,7 +129,6 @@ namespace Fsp.Inventory
         private void SetActiveWeapon(HitscanWeapon weapon)
         {
             ActiveWeapon = weapon;
-            // Keep both weapon objects alive so the inactive one can be visibly stowed on the back.
             if (primaryWeapon != null) primaryWeapon.gameObject.SetActive(true);
             if (secondaryWeapon != null) secondaryWeapon.gameObject.SetActive(true);
             if (primaryWeapon != null) primaryWeapon.enabled = primaryWeapon == weapon;
