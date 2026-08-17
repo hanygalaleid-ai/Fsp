@@ -1,0 +1,2 @@
+Trigger Unity Android CI build for current main revision.
+Requested: 2026-08-18
