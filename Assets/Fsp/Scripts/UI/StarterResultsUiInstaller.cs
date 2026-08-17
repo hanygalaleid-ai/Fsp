@@ -1,4 +1,6 @@
+using Fsp.BattleRoyale;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Fsp.UI
@@ -8,6 +10,8 @@ namespace Fsp.UI
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
         {
+            bool isMatchScene = SceneManager.GetActiveScene().name == "Match";
+            if (!isMatchScene && Object.FindObjectOfType<MatchManager>() == null) return;
             if (Object.FindObjectOfType<MatchResultsController>() != null) return;
 
             Canvas canvas = Object.FindObjectOfType<Canvas>();
