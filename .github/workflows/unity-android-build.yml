@@ -36,19 +36,22 @@ jobs:
         with:
           lfs: true
 
-      - name: Check Unity license secrets
-        id: license
+      - name: Require Unity CI secrets
         shell: bash
         run: |
-          if [ -n "$UNITY_LICENSE" ] && [ -n "$UNITY_EMAIL" ] && [ -n "$UNITY_PASSWORD" ]; then
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "Unity CI is prepared, but UNITY_LICENSE / UNITY_EMAIL / UNITY_PASSWORD are not all configured as repository secrets."
+          missing=0
+          for name in UNITY_LICENSE UNITY_EMAIL UNITY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not configured in repository Actions secrets."
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "See Docs/UNITY_CI_SETUP.md for the Unity Personal setup flow."
+            exit 1
           fi
 
       - name: Cache Unity Library
-        if: steps.license.outputs.ready == 'true'
         uses: actions/cache@v4
         with:
           path: Library
@@ -57,7 +60,7 @@ jobs:
             Library-${{ runner.os }}-6000.3.17f1-Android-
 
       - name: Build Android APK
-        if: steps.license.outputs.ready == 'true' && (github.event_name == 'push' || inputs.build_type == 'apk')
+        if: github.event_name == 'push' || inputs.build_type == 'apk'
         uses: game-ci/unity-builder@v5.0.0
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -71,7 +74,7 @@ jobs:
           allowDirtyBuild: true
 
       - name: Build Android AAB
-        if: steps.license.outputs.ready == 'true' && github.event_name == 'workflow_dispatch' && inputs.build_type == 'aab'
+        if: github.event_name == 'workflow_dispatch' && inputs.build_type == 'aab'
         uses: game-ci/unity-builder@v5.0.0
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -85,16 +88,9 @@ jobs:
           allowDirtyBuild: true
 
       - name: Upload Android artifacts
-        if: steps.license.outputs.ready == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: fsp-android-${{ github.run_number }}
           path: Builds/Android/**
           if-no-files-found: error
           retention-days: 14
-
-      - name: License configuration notice
-        if: steps.license.outputs.ready != 'true'
-        run: |
-          echo "Unity build skipped because repository Unity license secrets are not configured."
-          echo "Required secrets: UNITY_LICENSE, UNITY_EMAIL, UNITY_PASSWORD."
