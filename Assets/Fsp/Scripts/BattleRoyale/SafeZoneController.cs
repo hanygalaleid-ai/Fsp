@@ -135,7 +135,9 @@ namespace Fsp.BattleRoyale
 
         private Vector3 PickNextCenter(Vector3 current, float currentRadius, float nextRadius, float shiftFactor, int phaseIndex)
         {
-            string matchId = MatchRoomState.HasMatch ? MatchRoomState.MatchId : "offline";
+            string matchId = MatchRoomState.Instance != null && MatchRoomState.Instance.HasMatch
+                ? MatchRoomState.Instance.MatchId
+                : "offline";
             var random = new System.Random(StableHash(matchId + ":zone:" + phaseIndex));
             double angle = random.NextDouble() * Math.PI * 2.0;
             float maxShift = Mathf.Max(0f, currentRadius - nextRadius) * Mathf.Clamp01(shiftFactor);
