@@ -7,13 +7,16 @@ namespace Fsp.BattleRoyale
     public sealed class MatchParticipant : MonoBehaviour
     {
         [SerializeField] private bool isBot;
+        [SerializeField] private bool isLocalPlayer;
         [SerializeField] private string displayName = "Player";
 
         private PlayerVitals vitals;
 
         public bool IsBot => isBot;
+        public bool IsLocalPlayer => isLocalPlayer;
         public string DisplayName => displayName;
         public bool IsAlive => vitals != null && vitals.IsAlive;
+        public int Placement { get; private set; }
 
         private void Awake()
         {
@@ -31,6 +34,8 @@ namespace Fsp.BattleRoyale
             if (vitals != null) vitals.Died -= HandleDeath;
             MatchManager.Unregister(this);
         }
+
+        public void SetPlacement(int value) => Placement = Mathf.Max(1, value);
 
         private void HandleDeath()
         {
