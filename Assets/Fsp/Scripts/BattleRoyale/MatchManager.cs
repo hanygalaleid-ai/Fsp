@@ -31,8 +31,21 @@ namespace Fsp.BattleRoyale
 
         private void Awake()
         {
+            if (instance != null && instance != this)
+                Debug.LogWarning("Multiple MatchManager instances detected. The newest instance will become active.");
+
             instance = this;
+            PruneParticipants();
             RecountAlive();
+        }
+
+        private void OnDestroy()
+        {
+            if (instance == this)
+            {
+                instance = null;
+                participants.Clear();
+            }
         }
 
         private void Start()
@@ -51,6 +64,7 @@ namespace Fsp.BattleRoyale
 
         public void BeginCountdown()
         {
+            PruneParticipants();
             if (Phase != MatchPhase.Waiting || participants.Count < minimumParticipantsToStart) return;
             Phase = MatchPhase.Countdown;
             CountdownRemaining = preMatchCountdown;
@@ -101,7 +115,7 @@ namespace Fsp.BattleRoyale
 
             Phase = MatchPhase.Finished;
             MatchParticipant winner = null;
-            foreach (var p in participants)
+            foreach (MatchParticipant p in participants)
             {
                 if (p != null && p.IsAlive)
                 {
@@ -116,9 +130,10 @@ namespace Fsp.BattleRoyale
 
         private void RecountAlive()
         {
+            PruneParticipants();
             int alive = 0;
             int total = 0;
-            foreach (var p in participants)
+            foreach (MatchParticipant p in participants)
             {
                 if (p == null) continue;
                 total++;
@@ -129,6 +144,11 @@ namespace Fsp.BattleRoyale
             TotalParticipants = total;
             AliveCountChanged?.Invoke(AliveCount);
             ParticipantCountChanged?.Invoke(TotalParticipants);
+        }
+
+        private static void PruneParticipants()
+        {
+            participants.RemoveWhere(p => p == null);
         }
     }
 }
