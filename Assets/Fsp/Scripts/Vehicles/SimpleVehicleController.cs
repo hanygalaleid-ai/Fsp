@@ -8,8 +8,8 @@ namespace Fsp.Vehicles
         [SerializeField] private float acceleration = 28f;
         [SerializeField] private float maxSpeed = 30f;
         [SerializeField] private float steeringPower = 90f;
-        [SerializeField] private float brakeDrag = 3f;
-        [SerializeField] private float normalDrag = 0.25f;
+        [SerializeField] private float brakeDamping = 3f;
+        [SerializeField] private float normalDamping = 0.25f;
 
         private Rigidbody body;
         private float throttle;
@@ -18,25 +18,25 @@ namespace Fsp.Vehicles
         private bool driverPresent;
 
         public bool DriverPresent => driverPresent;
-        public float Speed => body != null ? body.velocity.magnitude : 0f;
+        public float Speed => body != null ? body.linearVelocity.magnitude : 0f;
 
         private void Awake()
         {
             body = GetComponent<Rigidbody>();
-            body.drag = normalDrag;
+            body.linearDamping = normalDamping;
         }
 
         private void FixedUpdate()
         {
-            if (!driverPresent) return;
+            if (!driverPresent || body == null) return;
 
-            if (body.velocity.magnitude < maxSpeed || throttle < 0f)
+            if (body.linearVelocity.magnitude < maxSpeed || throttle < 0f)
                 body.AddForce(transform.forward * (throttle * acceleration), ForceMode.Acceleration);
 
-            float speedFactor = Mathf.Clamp01(body.velocity.magnitude / 4f);
+            float speedFactor = Mathf.Clamp01(body.linearVelocity.magnitude / 4f);
             float yaw = steering * steeringPower * speedFactor * Time.fixedDeltaTime;
             body.MoveRotation(body.rotation * Quaternion.Euler(0f, yaw, 0f));
-            body.drag = braking ? brakeDrag : normalDrag;
+            body.linearDamping = braking ? brakeDamping : normalDamping;
         }
 
         public void SetDriverPresent(bool present)
@@ -47,6 +47,10 @@ namespace Fsp.Vehicles
                 throttle = 0f;
                 steering = 0f;
                 braking = true;
+            }
+            else
+            {
+                braking = false;
             }
         }
 
