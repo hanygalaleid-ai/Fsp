@@ -1,9 +1,10 @@
 using System;
 using UnityEngine;
+using Fsp.Combat;
 
 namespace Fsp.Player
 {
-    public sealed class PlayerVitals : MonoBehaviour
+    public sealed class PlayerVitals : MonoBehaviour, IDamageable
     {
         [SerializeField, Min(1f)] private float maxHealth = 100f;
         [SerializeField, Min(0f)] private float maxArmor = 100f;
@@ -32,6 +33,11 @@ namespace Fsp.Player
 
             Changed?.Invoke(Health, Armor);
             if (Health <= 0f) Died?.Invoke();
+        }
+
+        public void ApplyDamage(float amount, Vector3 point, Vector3 normal, GameObject source)
+        {
+            ApplyDamage(amount);
         }
 
         public void Heal(float amount)
