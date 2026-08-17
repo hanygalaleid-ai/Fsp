@@ -39,7 +39,7 @@ namespace Fsp.Inventory
                     vitals?.AddArmor(item.armorAmount);
                     break;
                 case InventoryItemType.Weapon:
-                    return false; // weapon pickup is wired by prefab/reference when the full Unity base is imported.
+                    return false;
             }
 
             InventoryChanged?.Invoke();
@@ -60,23 +60,24 @@ namespace Fsp.Inventory
             SetActiveWeapon(ActiveWeapon == primaryWeapon ? secondaryWeapon : primaryWeapon);
         }
 
-        public bool TryConsumeAmmo(int amount = 1)
+        public int ConsumeReserveAmmoFor(HitscanWeapon weapon, int requested)
         {
-            if (ActiveWeapon == null || amount <= 0) return false;
+            if (weapon == null || requested <= 0) return 0;
 
-            if (ActiveWeapon == secondaryWeapon)
+            int taken;
+            if (weapon == secondaryWeapon)
             {
-                if (SecondaryAmmo < amount) return false;
-                SecondaryAmmo -= amount;
+                taken = Mathf.Min(SecondaryAmmo, requested);
+                SecondaryAmmo -= taken;
             }
             else
             {
-                if (PrimaryAmmo < amount) return false;
-                PrimaryAmmo -= amount;
+                taken = Mathf.Min(PrimaryAmmo, requested);
+                PrimaryAmmo -= taken;
             }
 
-            InventoryChanged?.Invoke();
-            return true;
+            if (taken > 0) InventoryChanged?.Invoke();
+            return taken;
         }
 
         private void SetActiveWeapon(HitscanWeapon weapon)
