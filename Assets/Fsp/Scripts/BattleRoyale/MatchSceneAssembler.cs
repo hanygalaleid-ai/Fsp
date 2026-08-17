@@ -14,12 +14,16 @@ namespace Fsp.BattleRoyale
         [SerializeField] private bool createFallbackPlayer = true;
         [SerializeField] private bool createFallbackPopulation = true;
         [SerializeField] private bool createFallbackSafeZone = true;
+        [SerializeField] private bool createFallbackPlane = true;
+
+        private MatchParticipant localParticipant;
 
         private void Awake()
         {
             EnsureMatchManager();
             if (createFallbackSafeZone) EnsureSafeZone();
-            if (createFallbackPlayer) EnsureLocalPlayer();
+            if (createFallbackPlayer) localParticipant = EnsureLocalPlayer();
+            if (createFallbackPlane) EnsurePlane(localParticipant);
             if (createFallbackPopulation) EnsurePopulation();
         }
 
@@ -29,11 +33,11 @@ namespace Fsp.BattleRoyale
             new GameObject("MatchManager").AddComponent<MatchManager>();
         }
 
-        private static void EnsureLocalPlayer()
+        private static MatchParticipant EnsureLocalPlayer()
         {
             MatchParticipant[] participants = FindObjectsOfType<MatchParticipant>();
             foreach (MatchParticipant participant in participants)
-                if (participant != null && participant.IsLocalPlayer) return;
+                if (participant != null && participant.IsLocalPlayer) return participant;
 
             var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             player.name = "LocalPlayer_Placeholder";
@@ -52,6 +56,8 @@ namespace Fsp.BattleRoyale
             string displayName = LobbyState.Instance != null ? LobbyState.Instance.DisplayName : "Player";
             participant.ConfigureAsLocalPlayer(displayName);
             player.AddComponent<ThirdPersonMotor>();
+            player.AddComponent<ParachuteController>();
+            return participant;
         }
 
         private static void EnsurePopulation()
@@ -88,6 +94,46 @@ namespace Fsp.BattleRoyale
             var plan = ScriptableObject.CreateInstance<SafeZonePlan>();
             plan.hideFlags = HideFlags.DontSave;
             controller.ConfigurePlan(plan, visual.transform);
+        }
+
+        private static void EnsurePlane(MatchParticipant local)
+        {
+            DropPlaneController existing = FindObjectOfType<DropPlaneController>();
+            if (existing != null)
+            {
+                WirePassenger(local, existing, existing.transform);
+                return;
+            }
+
+            var start = new GameObject("PlaneRouteStart").transform;
+            start.position = new Vector3(-1100f, 260f, -900f);
+            start.rotation = Quaternion.LookRotation(new Vector3(1f, 0f, 0.8f).normalized, Vector3.up);
+
+            var end = new GameObject("PlaneRouteEnd").transform;
+            end.position = new Vector3(1100f, 260f, 900f);
+            end.rotation = start.rotation;
+
+            var plane = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            plane.name = "DropPlane_Placeholder";
+            plane.transform.localScale = new Vector3(8f, 1.4f, 6f);
+            Collider planeCollider = plane.GetComponent<Collider>();
+            if (planeCollider != null) Destroy(planeCollider);
+
+            var cabin = new GameObject("CabinAnchor").transform;
+            cabin.SetParent(plane.transform, false);
+            cabin.localPosition = new Vector3(0f, 0.8f, 0f);
+
+            var controller = plane.AddComponent<DropPlaneController>();
+            controller.ConfigureRoute(start, end, 72f, true);
+            WirePassenger(local, controller, cabin);
+        }
+
+        private static void WirePassenger(MatchParticipant local, DropPlaneController plane, Transform cabin)
+        {
+            if (local == null || plane == null || cabin == null) return;
+            var passenger = local.GetComponent<DropPlanePassenger>();
+            if (passenger == null) passenger = local.gameObject.AddComponent<DropPlanePassenger>();
+            passenger.Configure(plane, cabin);
         }
     }
 }
