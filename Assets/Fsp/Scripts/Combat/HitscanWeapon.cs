@@ -1,5 +1,6 @@
 using System;
 using Fsp.Inventory;
+using Fsp.Networking;
 using UnityEngine;
 
 namespace Fsp.Combat
@@ -19,6 +20,8 @@ namespace Fsp.Combat
         public int AmmoInMagazine => ammoInMagazine;
         public bool IsReloading => reloading;
         public event Action<int> AmmoChanged;
+        public event Action<Vector3, Vector3> ShotFired;
+        public event Action<string, float, Vector3> NetworkPlayerHit;
 
         private void Awake()
         {
@@ -42,10 +45,20 @@ namespace Fsp.Combat
                 0f) * direction;
 
             Vector3 origin = aimCamera.transform.position;
+            ShotFired?.Invoke(origin, direction);
+
             if (Physics.Raycast(origin, direction, out RaycastHit hit, config.range, hitMask, QueryTriggerInteraction.Ignore))
             {
-                var damageable = hit.collider.GetComponentInParent<IDamageable>();
-                damageable?.ApplyDamage(config.damage, hit.point, hit.normal, gameObject);
+                var identity = hit.collider.GetComponentInParent<NetworkPlayerIdentity>();
+                if (identity != null && !identity.IsLocalPlayer && !string.IsNullOrWhiteSpace(identity.PlayerId))
+                {
+                    NetworkPlayerHit?.Invoke(identity.PlayerId, config.damage, hit.point);
+                }
+                else
+                {
+                    var damageable = hit.collider.GetComponentInParent<IDamageable>();
+                    damageable?.ApplyDamage(config.damage, hit.point, hit.normal, gameObject);
+                }
             }
 
             return true;
