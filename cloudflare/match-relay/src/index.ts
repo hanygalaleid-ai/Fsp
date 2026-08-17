@@ -7,17 +7,14 @@ interface Env {
 }
 
 type SocketAttachment = { playerId: string };
-type Envelope = { type: "snapshot" | "fire" | "damage"; payload: string };
+type Envelope = { type: "snapshot" | "fire" | "damage" | "vehicle"; payload: string };
 
 async function authenticate(request: Request, env: Env): Promise<string | null> {
   const auth = request.headers.get("Authorization") ?? "";
   if (!auth.startsWith("Bearer ")) return null;
 
   const res = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
-    headers: {
-      Authorization: auth,
-      apikey: env.SUPABASE_PUBLISHABLE_KEY,
-    },
+    headers: { Authorization: auth, apikey: env.SUPABASE_PUBLISHABLE_KEY },
   });
   if (!res.ok) return null;
   const user = await res.json<{ id?: string }>();
@@ -28,10 +25,7 @@ async function isMatchMember(request: Request, env: Env, matchId: string, userId
   const auth = request.headers.get("Authorization") ?? "";
   const url = `${env.SUPABASE_URL}/rest/v1/match_room_members?match_id=eq.${encodeURIComponent(matchId)}&user_id=eq.${encodeURIComponent(userId)}&select=user_id&limit=1`;
   const res = await fetch(url, {
-    headers: {
-      Authorization: auth,
-      apikey: env.SUPABASE_PUBLISHABLE_KEY,
-    },
+    headers: { Authorization: auth, apikey: env.SUPABASE_PUBLISHABLE_KEY },
   });
   if (!res.ok) return false;
   const rows = await res.json<unknown[]>();
@@ -52,10 +46,7 @@ export default {
     if (!(await isMatchMember(request, env, matchId, userId))) return new Response("Forbidden", { status: 403 });
 
     return env.MATCH_ROOMS.getByName(matchId).fetch(new Request(request, {
-      headers: new Headers({
-        Upgrade: "websocket",
-        "x-fsp-player-id": userId,
-      }),
+      headers: new Headers({ Upgrade: "websocket", "x-fsp-player-id": userId }),
     }));
   },
 };
@@ -78,7 +69,7 @@ export class MatchRoom extends DurableObject<Env> {
 
     let envelope: Envelope;
     try { envelope = JSON.parse(message) as Envelope; } catch { return; }
-    if (!envelope || !["snapshot", "fire", "damage"].includes(envelope.type) || typeof envelope.payload !== "string") return;
+    if (!envelope || !["snapshot", "fire", "damage", "vehicle"].includes(envelope.type) || typeof envelope.payload !== "string") return;
 
     const attachment = ws.deserializeAttachment() as SocketAttachment | null;
     if (!attachment?.playerId) return;
@@ -88,6 +79,9 @@ export class MatchRoom extends DurableObject<Env> {
 
     if (envelope.type === "snapshot" || envelope.type === "fire") {
       if (payload.playerId !== attachment.playerId) return;
+    } else if (envelope.type === "vehicle") {
+      if (payload.driverId !== attachment.playerId) return;
+      if (typeof payload.vehicleId !== "string" || payload.vehicleId.length < 1 || payload.vehicleId.length > 64) return;
     } else {
       if (payload.attackerId !== attachment.playerId) return;
       const damage = Number(payload.damage ?? 0);
@@ -99,11 +93,6 @@ export class MatchRoom extends DurableObject<Env> {
     }
   }
 
-  async webSocketClose(ws: WebSocket, code: number, reason: string): Promise<void> {
-    ws.close(code, reason);
-  }
-
-  async webSocketError(_ws: WebSocket, error: unknown): Promise<void> {
-    console.error("match relay websocket error", error);
-  }
+  async webSocketClose(ws: WebSocket, code: number, reason: string): Promise<void> { ws.close(code, reason); }
+  async webSocketError(_ws: WebSocket, error: unknown): Promise<void> { console.error("match relay websocket error", error); }
 }
