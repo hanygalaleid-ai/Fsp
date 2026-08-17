@@ -16,5 +16,7 @@ if(Object.FindObjectOfType<AirstripRoadLink>()==null)new GameObject("RedlineAirs
 if(Object.FindObjectOfType<SaltworksRoadLink>()==null)new GameObject("Saltworks_Road_Links").AddComponent<SaltworksRoadLink>();
 if(Object.FindObjectOfType<LanternCoastRoadLink>()==null)new GameObject("LanternCoast_Road_Links").AddComponent<LanternCoastRoadLink>();
 if(Object.FindObjectOfType<SunscarIslandPolish>()==null)new GameObject("SunscarIsland_Polish").AddComponent<SunscarIslandPolish>();
-if(Object.FindObjectOfType<StarterVehicleDistribution>()==null)new GameObject("SunscarIsland_Vehicles").AddComponent<StarterVehicleDistribution>();}}
+if(Object.FindObjectOfType<StarterVehicleDistribution>()==null)new GameObject("SunscarIsland_Vehicles").AddComponent<StarterVehicleDistribution>();
+if(Object.FindObjectOfType<MobileWorldOptimizer>()==null)new GameObject("SunscarIsland_MobileOptimizer").AddComponent<MobileWorldOptimizer>();
+if(Object.FindObjectOfType<StarterSpawnBalance>()==null)new GameObject("SunscarIsland_SpawnBalance").AddComponent<StarterSpawnBalance>();}}
 }
