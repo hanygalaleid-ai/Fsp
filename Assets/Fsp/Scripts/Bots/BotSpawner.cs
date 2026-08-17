@@ -19,6 +19,11 @@ namespace Fsp.Bots
 
         public int SpawnedCount => spawnedBots.Count;
 
+        public void ConfigureSpawnPoints(Transform[] points)
+        {
+            spawnPoints = points;
+        }
+
         public void FillToTarget(int humanPlayers = 1)
         {
             int botsNeeded = Mathf.Max(0, targetPopulation - Mathf.Max(0, humanPlayers));
