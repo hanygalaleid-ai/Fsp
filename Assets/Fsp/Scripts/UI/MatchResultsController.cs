@@ -106,8 +106,10 @@ namespace Fsp.UI
 
         private static int CalculateXp(int placement, int kills)
         {
-            int placementXp = placement <= 1 ? 220 : placement <= 5 ? 140 : placement <= 10 ? 90 : placement <= 20 ? 50 : 25;
-            return placementXp + Mathf.Max(0, kills) * 30;
+            placement = Mathf.Max(1, placement);
+            kills = Mathf.Max(0, kills);
+            int placementXp = Mathf.Max(10, 120 - (placement - 1) * 4);
+            return 40 + kills * 25 + placementXp + (placement == 1 ? 200 : 0);
         }
 
         public void ReturnToLobby()
