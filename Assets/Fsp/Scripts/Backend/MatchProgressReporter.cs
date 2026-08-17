@@ -11,7 +11,6 @@ namespace Fsp.Backend
         [SerializeField] private MatchParticipant localParticipant;
         [SerializeField] private SupabaseProfileStore profileStore;
 
-        private int localPlacement;
         private bool saved;
 
         private void Awake()
@@ -54,27 +53,39 @@ namespace Fsp.Backend
         private void HandleParticipantEliminated(MatchParticipant participant, int placement)
         {
             if (participant != null && participant.IsLocalPlayer)
-                localPlacement = Mathf.Max(1, placement);
+                SaveResult(false, Mathf.Max(1, placement));
         }
 
-        private async void HandleMatchWon(MatchParticipant winner)
+        private void HandleMatchWon(MatchParticipant winner)
+        {
+            if (winner != null && winner.IsLocalPlayer)
+                SaveResult(true, 1);
+        }
+
+        private async void SaveResult(bool won, int placement)
         {
             if (saved || !SupabaseSession.IsSignedIn || profileStore == null || localParticipant == null) return;
             saved = true;
 
-            PlayerProfile profile = await profileStore.LoadAsync(SupabaseSession.UserId);
-            if (profile == null)
+            try
             {
-                profile = new PlayerProfile(
-                    SupabaseSession.UserId,
-                    LobbyState.Instance != null ? LobbyState.Instance.DisplayName : "Player",
-                    LobbyState.Instance != null ? LobbyState.Instance.SelectedCharacterId : "soldier_01");
-            }
+                PlayerProfile profile = await profileStore.LoadAsync(SupabaseSession.UserId);
+                if (profile == null)
+                {
+                    profile = new PlayerProfile(
+                        SupabaseSession.UserId,
+                        LobbyState.Instance != null ? LobbyState.Instance.DisplayName : "Player",
+                        LobbyState.Instance != null ? LobbyState.Instance.SelectedCharacterId : "soldier_01");
+                }
 
-            bool won = winner == localParticipant;
-            int placement = won ? 1 : (localPlacement > 0 ? localPlacement : Mathf.Max(2, localParticipant.Placement));
-            profile.ApplyMatchResult(won, KillFeedBus.LocalPlayerKills, placement);
-            await profileStore.SaveAsync(profile);
+                profile.ApplyMatchResult(won, KillFeedBus.LocalPlayerKills, Mathf.Max(1, placement));
+                await profileStore.SaveAsync(profile);
+            }
+            catch (System.Exception ex)
+            {
+                saved = false;
+                Debug.LogError("Failed to save match progress: " + ex.Message);
+            }
         }
     }
 }
