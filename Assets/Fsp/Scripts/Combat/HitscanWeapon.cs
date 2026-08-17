@@ -21,6 +21,7 @@ namespace Fsp.Combat
 
         public int AmmoInMagazine => ammoInMagazine;
         public bool IsReloading => reloading;
+        public WeaponConfig Config => config;
         public event Action<int> AmmoChanged;
         public event Action<Vector3, Vector3> ShotFired;
         public event Action<string, float, Vector3> NetworkPlayerHit;
@@ -31,6 +32,17 @@ namespace Fsp.Combat
         {
             ammoInMagazine = config != null ? config.magazineSize : 0;
             if (inventory == null) inventory = GetComponentInParent<PlayerInventory>();
+        }
+
+        public void Configure(WeaponConfig weaponConfig, Camera camera, Transform muzzleTransform, PlayerInventory ownerInventory)
+        {
+            config = weaponConfig;
+            aimCamera = camera;
+            muzzle = muzzleTransform;
+            inventory = ownerInventory != null ? ownerInventory : GetComponentInParent<PlayerInventory>();
+            reloadDuration = config != null ? Mathf.Max(0.1f, config.reloadSeconds) : reloadDuration;
+            ammoInMagazine = config != null ? Mathf.Max(0, config.magazineSize) : 0;
+            AmmoChanged?.Invoke(ammoInMagazine);
         }
 
         public bool TryFire()
@@ -48,7 +60,7 @@ namespace Fsp.Combat
                 UnityEngine.Random.Range(-config.spreadDegrees, config.spreadDegrees),
                 0f) * direction;
 
-            Vector3 origin = aimCamera.transform.position;
+            Vector3 origin = muzzle != null ? muzzle.position : aimCamera.transform.position;
             ShotFired?.Invoke(origin, direction);
 
             if (Physics.Raycast(origin, direction, out RaycastHit hit, config.range, hitMask, QueryTriggerInteraction.Ignore))
