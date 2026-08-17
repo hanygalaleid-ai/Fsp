@@ -4,8 +4,9 @@ using UnityEngine;
 namespace Fsp.Vehicles
 {
     /// <summary>
-    /// Desktop-only fallback vehicle interaction for the starter scene.
-    /// E enters/exits the nearest vehicle, WASD drives, Space brakes.
+    /// Fallback vehicle interaction for the starter scene.
+    /// Desktop: E enters/exits the nearest vehicle, WASD drives, Space brakes.
+    /// Mobile HUD can call ToggleVehicleInteraction().
     /// </summary>
     public sealed class StarterVehicleInput : MonoBehaviour
     {
@@ -29,10 +30,7 @@ namespace Fsp.Vehicles
         private void Update()
         {
             if (Input.GetKeyDown(KeyCode.E))
-            {
-                if (activeVehicle == null) TryEnterNearestVehicle();
-                else ExitVehicle();
-            }
+                ToggleVehicleInteraction();
 
             if (activeVehicle == null) return;
 
@@ -44,6 +42,25 @@ namespace Fsp.Vehicles
             if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) steering += 1f;
 
             activeVehicle.SetInput(throttle, steering, Input.GetKey(KeyCode.Space));
+        }
+
+        public void ToggleVehicleInteraction()
+        {
+            if (activeVehicle == null) TryEnterNearestVehicle();
+            else ExitVehicle();
+        }
+
+        public bool HasVehicleInRange()
+        {
+            if (activeVehicle != null) return true;
+            float maxSqr = enterDistance * enterDistance;
+            foreach (SimpleVehicleController vehicle in FindObjectsOfType<SimpleVehicleController>())
+            {
+                if (vehicle == null || vehicle.DriverPresent) continue;
+                if ((vehicle.transform.position - transform.position).sqrMagnitude <= maxSqr)
+                    return true;
+            }
+            return false;
         }
 
         private void TryEnterNearestVehicle()
