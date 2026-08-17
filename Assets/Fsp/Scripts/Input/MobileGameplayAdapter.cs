@@ -1,3 +1,4 @@
+using Fsp.BattleRoyale;
 using Fsp.Combat;
 using Fsp.Inventory;
 using Fsp.Player;
@@ -10,6 +11,8 @@ namespace Fsp.Input
     {
         [SerializeField] private ThirdPersonMotor motor;
         [SerializeField] private PlayerInventory inventory;
+        [SerializeField] private DropPlanePassenger planePassenger;
+        [SerializeField] private ParachuteController parachute;
         [SerializeField] private Transform cameraPivot;
         [SerializeField] private float lookSensitivity = 1f;
         [SerializeField] private float minPitch = -35f;
@@ -25,6 +28,8 @@ namespace Fsp.Input
         {
             if (motor == null) motor = GetComponent<ThirdPersonMotor>();
             if (inventory == null) inventory = GetComponent<PlayerInventory>();
+            if (planePassenger == null) planePassenger = GetComponent<DropPlanePassenger>();
+            if (parachute == null) parachute = GetComponent<ParachuteController>();
             if (cameraPivot != null)
             {
                 Vector3 euler = cameraPivot.eulerAngles;
@@ -40,6 +45,19 @@ namespace Fsp.Input
             if (input == null) return;
 
             UpdateLook(input.Look);
+
+            if (planePassenger != null && planePassenger.IsAboard)
+            {
+                if (input.JumpPressed) planePassenger.Jump();
+                return;
+            }
+
+            if (parachute != null && parachute.IsActive)
+            {
+                parachute.SetSteer(input.Move);
+                if (input.JumpPressed && !parachute.IsOpen) parachute.OpenParachute();
+                return;
+            }
 
             if (activeSeat != null && activeSeat.IsDriver(motor))
             {
