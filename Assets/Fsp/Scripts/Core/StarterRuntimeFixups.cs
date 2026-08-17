@@ -24,6 +24,8 @@ namespace Fsp.Core
                     player.AddComponent<SafeZoneDamageApplier>();
                 if (player.GetComponent<StarterVehicleInput>() == null)
                     player.AddComponent<StarterVehicleInput>();
+                if (player.GetComponent<StarterInteractInput>() == null)
+                    player.AddComponent<StarterInteractInput>();
                 break;
             }
         }
