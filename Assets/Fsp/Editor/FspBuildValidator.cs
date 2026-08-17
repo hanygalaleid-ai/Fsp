@@ -55,11 +55,20 @@ namespace Fsp.EditorTools
             if (File.Exists(lobbyPath)) ValidateLobby(lobbyPath, errors);
             if (File.Exists(matchPath)) ValidateMatch(matchPath, errors);
 
-            if (target == BuildTarget.Android)
+            if (target == BuildTarget.Android && EditorUserBuildSettings.buildAppBundle)
             {
-                string id = PlayerSettings.GetApplicationIdentifier(BuildTargetGroup.Android);
+                string id = PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Android);
                 if (string.IsNullOrWhiteSpace(id) || id.Contains("DefaultCompany") || id == "com.FspStudio.Fsp")
-                    errors.Add("Set a unique Android Application Identifier before Google Play release (Player Settings > Identification). Do not publish with a default package name.");
+                    errors.Add("Set a unique Android Application Identifier before Google Play AAB release.");
+
+                if ((PlayerSettings.Android.targetArchitectures & AndroidArchitecture.ARM64) == 0)
+                    errors.Add("Google Play AAB must include ARM64.");
+
+                if (PlayerSettings.GetScriptingBackend(NamedBuildTarget.Android) != ScriptingImplementation.IL2CPP)
+                    errors.Add("Google Play AAB must use IL2CPP in the Fsp release pipeline.");
+
+                if (EditorUserBuildSettings.development)
+                    errors.Add("Google Play AAB cannot be a Development Build.");
             }
 
             return errors.ToArray();
@@ -88,6 +97,7 @@ namespace Fsp.EditorTools
             try
             {
                 if (!FindInScene<MatchManager>(scene)) errors.Add("Match scene has no MatchManager.");
+                if (!FindInScene<MatchSceneAssembler>(scene)) errors.Add("Match scene has no MatchSceneAssembler.");
                 if (!FindInScene<Camera>(scene)) errors.Add("Match scene has no Camera.");
             }
             finally
