@@ -18,9 +18,12 @@ namespace Fsp.BattleRoyale
 
         public event Action ResultReady;
 
+        private bool finalizing;
+
         private void OnEnable()
         {
-            if (matchManager == null) matchManager = FindFirstObjectByType<MatchManager>();
+            if (matchManager == null) matchManager = FindObjectOfType<MatchManager>();
+            if (profileStore == null) profileStore = FindObjectOfType<SupabaseProfileStore>();
             if (matchManager != null)
             {
                 matchManager.ParticipantEliminated += OnParticipantEliminated;
@@ -47,7 +50,7 @@ namespace Fsp.BattleRoyale
             if (participant == null || !participant.IsLocalPlayer) return;
             Placement = placement;
             Won = false;
-            _ = FinalizeAsync();
+            BeginFinalize();
         }
 
         private void OnMatchWon(MatchParticipant winner)
@@ -55,14 +58,22 @@ namespace Fsp.BattleRoyale
             if (winner == null || !winner.IsLocalPlayer) return;
             Placement = 1;
             Won = true;
+            BeginFinalize();
+        }
+
+        private void BeginFinalize()
+        {
+            if (finalizing) return;
+            finalizing = true;
             _ = FinalizeAsync();
         }
 
         private async Task FinalizeAsync()
         {
-            if (Saved || !SupabaseSession.IsSignedIn || profileStore == null)
+            if (!SupabaseSession.IsSignedIn || profileStore == null)
             {
                 ResultReady?.Invoke();
+                finalizing = false;
                 return;
             }
 
@@ -80,7 +91,11 @@ namespace Fsp.BattleRoyale
             {
                 Debug.LogWarning("Failed to save match result: " + e.Message);
             }
-            ResultReady?.Invoke();
+            finally
+            {
+                ResultReady?.Invoke();
+                finalizing = false;
+            }
         }
     }
 }
