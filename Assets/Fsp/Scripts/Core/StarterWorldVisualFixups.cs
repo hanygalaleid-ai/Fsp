@@ -2,6 +2,7 @@ using Fsp.BattleRoyale;
 using Fsp.Presentation;
 using Fsp.World;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Fsp.Core
 {
@@ -10,6 +11,9 @@ namespace Fsp.Core
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Apply()
         {
+            bool isMatchScene = SceneManager.GetActiveScene().name == "Match";
+            if (!isMatchScene && Object.FindObjectOfType<MatchManager>() == null) return;
+
             DropPlaneController plane = Object.FindObjectOfType<DropPlaneController>();
             if (plane != null && plane.GetComponent<StarterPlaneVisual>() == null)
             {
