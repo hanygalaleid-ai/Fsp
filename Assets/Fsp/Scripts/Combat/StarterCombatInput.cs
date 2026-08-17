@@ -17,16 +17,19 @@ namespace Fsp.Combat
         private ParachuteController parachute;
         private StarterVehicleInput vehicleInput;
 
-        private void Awake()
+        private void Awake() => Resolve();
+
+        private void Resolve()
         {
             if (inventory == null) inventory = GetComponent<PlayerInventory>();
-            passenger = GetComponent<DropPlanePassenger>();
-            parachute = GetComponent<ParachuteController>();
-            vehicleInput = GetComponent<StarterVehicleInput>();
+            if (passenger == null) passenger = GetComponent<DropPlanePassenger>();
+            if (parachute == null) parachute = GetComponent<ParachuteController>();
+            if (vehicleInput == null) vehicleInput = GetComponent<StarterVehicleInput>();
         }
 
         private void Update()
         {
+            Resolve();
             if (inventory == null || IsCombatBlocked()) return;
             if (Input.GetMouseButton(0)) Fire();
             if (Input.GetKeyDown(KeyCode.R)) Reload();
@@ -36,6 +39,7 @@ namespace Fsp.Combat
 
         public bool IsCombatBlocked()
         {
+            Resolve();
             if (passenger != null && passenger.IsAboard) return true;
             if (parachute != null && parachute.IsActive) return true;
             if (vehicleInput != null && vehicleInput.IsDriving) return true;
