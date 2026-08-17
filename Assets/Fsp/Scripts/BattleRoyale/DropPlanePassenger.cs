@@ -23,15 +23,20 @@ namespace Fsp.BattleRoyale
             if (motor == null) motor = GetComponent<ThirdPersonMotor>();
         }
 
+        private void OnDisable()
+        {
+            UnsubscribePlane();
+        }
+
         public void Configure(DropPlaneController value, Transform cabin)
         {
+            UnsubscribePlane();
             plane = value;
             cabinAnchor = cabin;
             if (parachute == null) parachute = GetComponent<ParachuteController>();
             if (motor == null) motor = GetComponent<ThirdPersonMotor>();
+            SubscribePlane();
 
-            // Runtime fallback passengers are configured after the plane route has started.
-            // Board immediately so the offline starter follows the same plane -> jump loop as online matches.
             if (plane != null && plane.IsFlying && !aboard && !jumped)
                 Board();
         }
@@ -62,6 +67,21 @@ namespace Fsp.BattleRoyale
             if (!jumped || parachute == null || parachute.IsActive) return;
             if (motor != null) motor.enabled = true;
             enabled = false;
+        }
+
+        private void HandlePlaneFinished()
+        {
+            if (aboard && !jumped) Jump();
+        }
+
+        private void SubscribePlane()
+        {
+            if (plane != null) plane.RouteFinished += HandlePlaneFinished;
+        }
+
+        private void UnsubscribePlane()
+        {
+            if (plane != null) plane.RouteFinished -= HandlePlaneFinished;
         }
     }
 }
