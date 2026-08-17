@@ -17,6 +17,8 @@ namespace Fsp.Inventory
         public int SecondaryAmmo { get; private set; }
         public int Medkits { get; private set; }
         public HitscanWeapon ActiveWeapon { get; private set; }
+        public HitscanWeapon PrimaryWeapon => primaryWeapon;
+        public HitscanWeapon SecondaryWeapon => secondaryWeapon;
 
         public event Action InventoryChanged;
 
@@ -34,8 +36,7 @@ namespace Fsp.Inventory
                 case InventoryItemType.Medkit: return Medkits < maxMedkits;
                 case InventoryItemType.Weapon: return false;
                 case InventoryItemType.Ammo:
-                case InventoryItemType.Armor:
-                    return true;
+                case InventoryItemType.Armor: return true;
                 default: return false;
             }
         }
@@ -43,38 +44,21 @@ namespace Fsp.Inventory
         public bool TryPickup(InventoryItem item)
         {
             if (!CanPickup(item)) return false;
-
             switch (item.type)
             {
-                case InventoryItemType.Ammo:
-                    AddAmmo(item.ammoAmount);
-                    break;
-                case InventoryItemType.Medkit:
-                    Medkits++;
-                    break;
-                case InventoryItemType.Armor:
-                    vitals?.AddArmor(item.armorAmount);
-                    break;
-                case InventoryItemType.Weapon:
-                    return false;
+                case InventoryItemType.Ammo: AddAmmo(item.ammoAmount); break;
+                case InventoryItemType.Medkit: Medkits++; break;
+                case InventoryItemType.Armor: vitals?.AddArmor(item.armorAmount); break;
+                case InventoryItemType.Weapon: return false;
             }
-
             InventoryChanged?.Invoke();
             return true;
         }
 
         public DeathInventorySnapshot DrainForDeath()
         {
-            var snapshot = new DeathInventorySnapshot
-            {
-                primaryAmmo = PrimaryAmmo,
-                secondaryAmmo = SecondaryAmmo,
-                medkits = Medkits
-            };
-
-            PrimaryAmmo = 0;
-            SecondaryAmmo = 0;
-            Medkits = 0;
+            var snapshot = new DeathInventorySnapshot { primaryAmmo = PrimaryAmmo, secondaryAmmo = SecondaryAmmo, medkits = Medkits };
+            PrimaryAmmo = 0; SecondaryAmmo = 0; Medkits = 0;
             InventoryChanged?.Invoke();
             return snapshot;
         }
@@ -104,30 +88,19 @@ namespace Fsp.Inventory
 
         public bool TryUseMedkit()
         {
-            if (Medkits <= 0 || vitals == null || !vitals.IsAlive) return false;
-            if (vitals.Health >= 99.9f) return false;
-
+            if (Medkits <= 0 || vitals == null || !vitals.IsAlive || vitals.Health >= 99.9f) return false;
             Medkits--;
             vitals.Heal(medkitHealAmount);
             InventoryChanged?.Invoke();
             return true;
         }
 
-        public bool TryReloadActiveWeapon()
-        {
-            return ActiveWeapon != null && ActiveWeapon.BeginReload();
-        }
-
-        public int GetReserveAmmoForActiveWeapon()
-        {
-            if (ActiveWeapon == secondaryWeapon) return SecondaryAmmo;
-            return PrimaryAmmo;
-        }
+        public bool TryReloadActiveWeapon() => ActiveWeapon != null && ActiveWeapon.BeginReload();
+        public int GetReserveAmmoForActiveWeapon() => ActiveWeapon == secondaryWeapon ? SecondaryAmmo : PrimaryAmmo;
 
         public int ConsumeReserveAmmoFor(HitscanWeapon weapon, int requested)
         {
             if (weapon == null || requested <= 0) return 0;
-
             int taken;
             if (weapon == secondaryWeapon)
             {
@@ -139,7 +112,6 @@ namespace Fsp.Inventory
                 taken = Mathf.Min(PrimaryAmmo, requested);
                 PrimaryAmmo -= taken;
             }
-
             if (taken > 0) InventoryChanged?.Invoke();
             return taken;
         }
@@ -147,8 +119,11 @@ namespace Fsp.Inventory
         private void SetActiveWeapon(HitscanWeapon weapon)
         {
             ActiveWeapon = weapon;
-            if (primaryWeapon != null) primaryWeapon.gameObject.SetActive(primaryWeapon == weapon);
-            if (secondaryWeapon != null) secondaryWeapon.gameObject.SetActive(secondaryWeapon == weapon);
+            // Keep both weapon objects alive so the inactive one can be visibly stowed on the back.
+            if (primaryWeapon != null) primaryWeapon.gameObject.SetActive(true);
+            if (secondaryWeapon != null) secondaryWeapon.gameObject.SetActive(true);
+            if (primaryWeapon != null) primaryWeapon.enabled = primaryWeapon == weapon;
+            if (secondaryWeapon != null) secondaryWeapon.enabled = secondaryWeapon == weapon;
             InventoryChanged?.Invoke();
         }
     }
