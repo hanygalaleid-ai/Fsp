@@ -16,6 +16,13 @@ namespace Fsp.Inventory
         private PlayerInventory pendingInventory;
         private bool claimPending;
 
+        public string LootId => lootId;
+
+        public void SetLootId(string value)
+        {
+            if (!string.IsNullOrWhiteSpace(value)) lootId = value.Trim();
+        }
+
         private void Awake()
         {
             transport = transportBehaviour as INetworkTransport;
