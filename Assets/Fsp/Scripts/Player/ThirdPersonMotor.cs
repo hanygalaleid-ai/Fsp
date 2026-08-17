@@ -10,11 +10,15 @@ namespace Fsp.Player
         [SerializeField, Min(0.1f)] private float sprintSpeed = 7f;
         [SerializeField, Min(0.1f)] private float rotationSharpness = 12f;
         [SerializeField, Min(0.1f)] private float gravity = 22f;
+        [SerializeField, Min(0.1f)] private float jumpHeight = 1.25f;
 
         private CharacterController controller;
         private Vector2 moveInput;
         private bool sprint;
+        private bool jumpRequested;
         private float verticalVelocity;
+
+        public bool IsGrounded => controller != null && controller.isGrounded;
 
         private void Awake()
         {
@@ -24,6 +28,7 @@ namespace Fsp.Player
         public void SetMoveInput(Vector2 input) => moveInput = Vector2.ClampMagnitude(input, 1f);
         public void SetSprint(bool value) => sprint = value;
         public void SetCamera(Transform value) => cameraTransform = value;
+        public void RequestJump() => jumpRequested = true;
 
         private void Update()
         {
@@ -43,7 +48,14 @@ namespace Fsp.Player
                 transform.rotation = Quaternion.Slerp(transform.rotation, target, rotationSharpness * Time.deltaTime);
             }
 
-            if (controller.isGrounded && verticalVelocity < 0f) verticalVelocity = -2f;
+            if (controller.isGrounded)
+            {
+                if (verticalVelocity < 0f) verticalVelocity = -2f;
+                if (jumpRequested)
+                    verticalVelocity = Mathf.Sqrt(2f * gravity * jumpHeight);
+            }
+
+            jumpRequested = false;
             verticalVelocity -= gravity * Time.deltaTime;
 
             float speed = sprint ? sprintSpeed : walkSpeed;
