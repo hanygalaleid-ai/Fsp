@@ -28,21 +28,37 @@ namespace Fsp.BattleRoyale
         private Vector3 phaseStartCenter;
         private float phaseStartRadius;
         private float stateDuration;
+        private bool initialized;
 
         private void OnEnable()
         {
-            if (plan == null) return;
+            TryInitialize();
+        }
+
+        public void ConfigurePlan(SafeZonePlan value, Transform visual = null)
+        {
+            plan = value;
+            if (visual != null) zoneVisual = visual;
+            if (isActiveAndEnabled) TryInitialize(true);
+        }
+
+        private void TryInitialize(bool force = false)
+        {
+            if (plan == null || (initialized && !force)) return;
+            initialized = true;
+            PhaseIndex = -1;
             Center = Flatten(transform.position);
             CurrentRadius = plan.initialRadius;
             TargetCenter = Center;
             TargetRadius = CurrentRadius;
+            State = PhaseState.Waiting;
             RefreshVisual();
             StartNextPhase();
         }
 
         private void Update()
         {
-            if (plan == null || State == PhaseState.Complete) return;
+            if (!initialized || plan == null || State == PhaseState.Complete) return;
             StateTimeRemaining = Mathf.Max(0f, StateTimeRemaining - Time.deltaTime);
 
             if (State == PhaseState.Shrinking && stateDuration > 0f)
