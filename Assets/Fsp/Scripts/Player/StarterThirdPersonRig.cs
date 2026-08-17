@@ -1,3 +1,4 @@
+using Fsp.BattleRoyale;
 using UnityEngine;
 
 namespace Fsp.Player
@@ -12,25 +13,47 @@ namespace Fsp.Player
         [SerializeField] private Vector3 cameraOffset = new Vector3(0f, 3.2f, -5.8f);
         [SerializeField] private float cameraFollow = 10f;
 
+        private DropPlanePassenger passenger;
+        private ParachuteController parachute;
+
         private void Awake()
         {
             if (motor == null) motor = GetComponent<ThirdPersonMotor>();
+            passenger = GetComponent<DropPlanePassenger>();
+            parachute = GetComponent<ParachuteController>();
             if (cameraTransform == null && Camera.main != null) cameraTransform = Camera.main.transform;
             if (motor != null && cameraTransform != null) motor.SetCamera(cameraTransform);
         }
 
         private void Update()
         {
-            if (motor == null) return;
-
             float x = 0f;
             float y = 0f;
             if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) x -= 1f;
             if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) x += 1f;
             if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) y -= 1f;
             if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) y += 1f;
+            Vector2 input = Vector2.ClampMagnitude(new Vector2(x, y), 1f);
 
-            motor.SetMoveInput(Vector2.ClampMagnitude(new Vector2(x, y), 1f));
+            if (passenger == null) passenger = GetComponent<DropPlanePassenger>();
+            if (parachute == null) parachute = GetComponent<ParachuteController>();
+
+            if (passenger != null && passenger.IsAboard)
+            {
+                if (Input.GetKeyDown(KeyCode.Space)) passenger.Jump();
+                return;
+            }
+
+            if (parachute != null && parachute.IsActive)
+            {
+                parachute.SetSteer(input);
+                if (Input.GetKeyDown(KeyCode.Space) && !parachute.IsOpen)
+                    parachute.OpenParachute();
+                return;
+            }
+
+            if (motor == null || !motor.enabled) return;
+            motor.SetMoveInput(input);
             motor.SetSprint(Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift));
             if (Input.GetKeyDown(KeyCode.Space)) motor.RequestJump();
         }
