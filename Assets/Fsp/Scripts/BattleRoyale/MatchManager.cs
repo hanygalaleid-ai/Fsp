@@ -6,17 +6,27 @@ namespace Fsp.BattleRoyale
 {
     public sealed class MatchManager : MonoBehaviour
     {
+        public enum MatchPhase { Waiting, Countdown, Active, Finished }
+
         private static readonly HashSet<MatchParticipant> participants = new HashSet<MatchParticipant>();
         private static MatchManager instance;
 
         [SerializeField] private int minimumParticipantsToStart = 2;
         [SerializeField] private bool autoStart = true;
+        [SerializeField, Min(0f)] private float preMatchCountdown = 8f;
 
-        public bool MatchStarted { get; private set; }
-        public bool MatchEnded { get; private set; }
+        public bool MatchStarted => Phase == MatchPhase.Active || Phase == MatchPhase.Finished;
+        public bool MatchEnded => Phase == MatchPhase.Finished;
         public int AliveCount { get; private set; }
+        public int TotalParticipants { get; private set; }
+        public MatchPhase Phase { get; private set; } = MatchPhase.Waiting;
+        public float CountdownRemaining { get; private set; }
 
         public event Action<int> AliveCountChanged;
+        public event Action<int> ParticipantCountChanged;
+        public event Action<float> CountdownChanged;
+        public event Action<MatchPhase> PhaseChanged;
+        public event Action<MatchParticipant, int> ParticipantEliminated;
         public event Action<MatchParticipant> MatchWon;
 
         private void Awake()
@@ -28,14 +38,34 @@ namespace Fsp.BattleRoyale
         private void Start()
         {
             if (autoStart && participants.Count >= minimumParticipantsToStart)
-                StartMatch();
+                BeginCountdown();
+        }
+
+        private void Update()
+        {
+            if (Phase != MatchPhase.Countdown) return;
+            CountdownRemaining = Mathf.Max(0f, CountdownRemaining - Time.deltaTime);
+            CountdownChanged?.Invoke(CountdownRemaining);
+            if (CountdownRemaining <= 0f) StartMatch();
+        }
+
+        public void BeginCountdown()
+        {
+            if (Phase != MatchPhase.Waiting || participants.Count < minimumParticipantsToStart) return;
+            Phase = MatchPhase.Countdown;
+            CountdownRemaining = preMatchCountdown;
+            PhaseChanged?.Invoke(Phase);
+            CountdownChanged?.Invoke(CountdownRemaining);
+            if (preMatchCountdown <= 0f) StartMatch();
         }
 
         public void StartMatch()
         {
-            if (MatchStarted || MatchEnded) return;
-            MatchStarted = true;
+            if (Phase == MatchPhase.Active || Phase == MatchPhase.Finished) return;
+            Phase = MatchPhase.Active;
+            CountdownRemaining = 0f;
             RecountAlive();
+            PhaseChanged?.Invoke(Phase);
         }
 
         public static void Register(MatchParticipant participant)
@@ -43,6 +73,8 @@ namespace Fsp.BattleRoyale
             if (participant == null) return;
             participants.Add(participant);
             instance?.RecountAlive();
+            if (instance != null && instance.autoStart && instance.Phase == MatchPhase.Waiting && participants.Count >= instance.minimumParticipantsToStart)
+                instance.BeginCountdown();
         }
 
         public static void Unregister(MatchParticipant participant)
@@ -59,31 +91,44 @@ namespace Fsp.BattleRoyale
 
         private void HandleDeath(MatchParticipant participant)
         {
-            if (!MatchStarted || MatchEnded) return;
+            if (Phase != MatchPhase.Active) return;
             RecountAlive();
+            int placement = Mathf.Max(1, AliveCount + 1);
+            participant?.SetPlacement(placement);
+            ParticipantEliminated?.Invoke(participant, placement);
+
             if (AliveCount > 1) return;
 
-            MatchEnded = true;
+            Phase = MatchPhase.Finished;
             MatchParticipant winner = null;
             foreach (var p in participants)
             {
                 if (p != null && p.IsAlive)
                 {
                     winner = p;
+                    p.SetPlacement(1);
                     break;
                 }
             }
+            PhaseChanged?.Invoke(Phase);
             MatchWon?.Invoke(winner);
         }
 
         private void RecountAlive()
         {
-            int count = 0;
+            int alive = 0;
+            int total = 0;
             foreach (var p in participants)
-                if (p != null && p.IsAlive) count++;
+            {
+                if (p == null) continue;
+                total++;
+                if (p.IsAlive) alive++;
+            }
 
-            AliveCount = count;
+            AliveCount = alive;
+            TotalParticipants = total;
             AliveCountChanged?.Invoke(AliveCount);
+            ParticipantCountChanged?.Invoke(TotalParticipants);
         }
     }
 }
