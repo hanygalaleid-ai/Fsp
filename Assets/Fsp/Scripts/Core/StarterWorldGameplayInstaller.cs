@@ -27,6 +27,12 @@ namespace Fsp.Core
                 copperPort.AddComponent<CopperPortPrototype>();
             }
 
+            if (Object.FindObjectOfType<DryfieldPrototype>() == null)
+            {
+                var dryfield = new GameObject("Dryfield_Prototype");
+                dryfield.AddComponent<DryfieldPrototype>();
+            }
+
             if (Object.FindObjectOfType<StarterPoiRoadLink>() == null)
             {
                 var road = new GameObject("OldCrown_CopperPort_Road");
