@@ -14,15 +14,18 @@ namespace Fsp.Core
         private ParachuteController parachute;
         private StarterVehicleInput vehicleInput;
 
-        private void Awake()
+        private void Awake() => Resolve();
+
+        private void Resolve()
         {
-            passenger = GetComponent<DropPlanePassenger>();
-            parachute = GetComponent<ParachuteController>();
-            vehicleInput = GetComponent<StarterVehicleInput>();
+            if (passenger == null) passenger = GetComponent<DropPlanePassenger>();
+            if (parachute == null) parachute = GetComponent<ParachuteController>();
+            if (vehicleInput == null) vehicleInput = GetComponent<StarterVehicleInput>();
         }
 
         public void Interact()
         {
+            Resolve();
             if (passenger != null && passenger.IsAboard)
             {
                 passenger.Jump();
@@ -40,6 +43,7 @@ namespace Fsp.Core
 
         public bool IsAvailable()
         {
+            Resolve();
             if (passenger != null && passenger.IsAboard) return true;
             if (parachute != null && parachute.IsActive && !parachute.IsOpen) return true;
             return vehicleInput != null && vehicleInput.HasVehicleInRange();
