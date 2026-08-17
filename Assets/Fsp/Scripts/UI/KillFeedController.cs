@@ -16,12 +16,14 @@ namespace Fsp.UI
         private void OnEnable()
         {
             KillFeedBus.KillReported += OnKillReported;
+            KillFeedBus.NetworkKillReported += OnNetworkKillReported;
             Refresh();
         }
 
         private void OnDisable()
         {
             KillFeedBus.KillReported -= OnKillReported;
+            KillFeedBus.NetworkKillReported -= OnNetworkKillReported;
         }
 
         private void Update()
@@ -39,11 +41,19 @@ namespace Fsp.UI
         {
             string killerName = killer != null ? killer.DisplayName : "المنطقة";
             string victimName = victim != null ? victim.DisplayName : "Player";
+            AddEntry(killerName, victimName);
+        }
+
+        private void OnNetworkKillReported(string killerName, string victimName)
+        {
+            AddEntry(string.IsNullOrWhiteSpace(killerName) ? "Player" : killerName,
+                string.IsNullOrWhiteSpace(victimName) ? "Player" : victimName);
+        }
+
+        private void AddEntry(string killerName, string victimName)
+        {
             entries.Enqueue(new Entry($"{killerName}  •  {victimName}", Time.unscaledTime));
-
-            while (entries.Count > rows.Length)
-                entries.Dequeue();
-
+            while (entries.Count > rows.Length) entries.Dequeue();
             Refresh();
         }
 
@@ -73,6 +83,8 @@ namespace Fsp.UI
     public static class KillFeedBus
     {
         public static event Action<MatchParticipant, MatchParticipant> KillReported;
+        public static event Action<string, string> NetworkKillReported;
         public static void Report(MatchParticipant killer, MatchParticipant victim) => KillReported?.Invoke(killer, victim);
+        public static void ReportNetwork(string killerName, string victimName) => NetworkKillReported?.Invoke(killerName, victimName);
     }
 }
