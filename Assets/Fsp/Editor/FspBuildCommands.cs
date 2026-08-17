@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
@@ -19,8 +20,8 @@ namespace Fsp.EditorTools
         public static void BuildAndroidApk()
         {
             PrepareCommonPlayerSettings();
+            PrepareAndroidSettings(false);
             EditorUserBuildSettings.buildAppBundle = false;
-            PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevelAuto;
             Build(BuildTarget.Android, "Builds/Android/Fsp-test.apk");
         }
 
@@ -28,8 +29,8 @@ namespace Fsp.EditorTools
         public static void BuildAndroidAab()
         {
             PrepareCommonPlayerSettings();
+            PrepareAndroidSettings(true);
             EditorUserBuildSettings.buildAppBundle = true;
-            PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevelAuto;
             Build(BuildTarget.Android, "Builds/Android/Fsp-release.aab");
         }
 
@@ -51,9 +52,22 @@ namespace Fsp.EditorTools
         {
             PlayerSettings.companyName = "Fsp Studio";
             PlayerSettings.productName = "Fsp";
+            PlayerSettings.bundleVersion = "0.1.0";
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;
             PlayerSettings.fullScreenMode = FullScreenMode.FullScreenWindow;
             PlayerSettings.runInBackground = false;
+        }
+
+        private static void PrepareAndroidSettings(bool release)
+        {
+            PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevelAuto;
+            PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+            PlayerSettings.Android.bundleVersionCode = 1;
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
+
+            // AAB must never inherit a development-build flag from a previous local session.
+            if (release)
+                EditorUserBuildSettings.development = false;
         }
 
         private static void Build(BuildTarget target, string outputPath)
@@ -64,6 +78,7 @@ namespace Fsp.EditorTools
             {
                 scenes = Scenes,
                 target = target,
+                targetGroup = BuildPipeline.GetBuildTargetGroup(target),
                 locationPathName = outputPath,
                 options = BuildOptions.CompressWithLz4HC
             };
