@@ -1,7 +1,7 @@
 using Fsp.BattleRoyale;
-using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace Fsp.Presentation
 {
@@ -9,9 +9,9 @@ namespace Fsp.Presentation
     {
         [SerializeField] private LocalMatchResultController results;
         [SerializeField] private CanvasGroup panel;
-        [SerializeField] private TMP_Text placementText;
-        [SerializeField] private TMP_Text killsText;
-        [SerializeField] private TMP_Text statusText;
+        [SerializeField] private Text placementText;
+        [SerializeField] private Text killsText;
+        [SerializeField] private Text statusText;
         [SerializeField] private string lobbySceneName = "Lobby";
 
         private void Awake()
