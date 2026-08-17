@@ -1,4 +1,3 @@
-using System.Collections;
 using Fsp.Combat;
 using UnityEngine;
 
@@ -37,12 +36,16 @@ namespace Fsp.Presentation
 
         private void OnEnable()
         {
-            if (weapon != null) weapon.ShotFired += HandleShot;
+            if (weapon == null) return;
+            weapon.ShotFired += HandleShot;
+            weapon.ReloadStarted += HandleReloadStarted;
         }
 
         private void OnDisable()
         {
-            if (weapon != null) weapon.ShotFired -= HandleShot;
+            if (weapon == null) return;
+            weapon.ShotFired -= HandleShot;
+            weapon.ReloadStarted -= HandleReloadStarted;
         }
 
         private void LateUpdate()
@@ -61,7 +64,7 @@ namespace Fsp.Presentation
             if (animator != null) animator.SetBool(Aim, aiming);
         }
 
-        public void PlayReload()
+        private void HandleReloadStarted()
         {
             if (animator != null) animator.SetTrigger(Reload);
         }
