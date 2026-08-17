@@ -1,5 +1,4 @@
 #if UNITY_EDITOR
-using System;
 using System.IO;
 using System.Linq;
 using UnityEditor;
@@ -19,7 +18,7 @@ namespace Fsp.EditorTools
 
         public void OnPreprocessBuild(BuildReport report)
         {
-            string[] errors = ValidateProject();
+            string[] errors = ValidateProject(report.summary.platform);
             if (errors.Length == 0)
             {
                 Debug.Log("Fsp pre-build validation passed.");
@@ -33,14 +32,14 @@ namespace Fsp.EditorTools
         [MenuItem("Fsp/Project/Validate MVP Build")]
         public static void ValidateFromMenu()
         {
-            string[] errors = ValidateProject();
+            string[] errors = ValidateProject(EditorUserBuildSettings.activeBuildTarget);
             if (errors.Length == 0)
                 Debug.Log("Fsp MVP validation passed.");
             else
                 Debug.LogError("Fsp MVP validation failed:\n- " + string.Join("\n- ", errors));
         }
 
-        private static string[] ValidateProject()
+        private static string[] ValidateProject(BuildTarget target)
         {
             var errors = new System.Collections.Generic.List<string>();
             const string lobbyPath = "Assets/Fsp/Scenes/Lobby.unity";
@@ -55,6 +54,13 @@ namespace Fsp.EditorTools
 
             if (File.Exists(lobbyPath)) ValidateLobby(lobbyPath, errors);
             if (File.Exists(matchPath)) ValidateMatch(matchPath, errors);
+
+            if (target == BuildTarget.Android)
+            {
+                string id = PlayerSettings.GetApplicationIdentifier(BuildTargetGroup.Android);
+                if (string.IsNullOrWhiteSpace(id) || id.Contains("DefaultCompany") || id == "com.FspStudio.Fsp")
+                    errors.Add("Set a unique Android Application Identifier before Google Play release (Player Settings > Identification). Do not publish with a default package name.");
+            }
 
             return errors.ToArray();
         }
