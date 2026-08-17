@@ -12,8 +12,8 @@ namespace Fsp.BattleRoyale
 
         private void Awake()
         {
-            if (plane == null) plane = FindFirstObjectByType<DropPlaneController>();
-            if (localPassenger == null) localPassenger = FindFirstObjectByType<DropPlanePassenger>();
+            if (plane == null) plane = FindObjectOfType<DropPlaneController>();
+            if (localPassenger == null) localPassenger = FindObjectOfType<DropPlanePassenger>();
         }
 
         private void OnEnable()
