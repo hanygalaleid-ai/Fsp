@@ -45,6 +45,21 @@ namespace Fsp.UI
             RefreshAll();
         }
 
+        public void ConfigureWidgets(Slider health, Slider armor, Text ammo, Text alive, Text medkits, Text zoneWarning, Button reload, Button heal)
+        {
+            Unsubscribe();
+            healthBar = health;
+            armorBar = armor;
+            ammoText = ammo;
+            aliveText = alive;
+            medkitText = medkits;
+            zoneWarningText = zoneWarning;
+            reloadButton = reload;
+            healButton = heal;
+            if (isActiveAndEnabled) Subscribe();
+            RefreshAll();
+        }
+
         private void OnEnable()
         {
             Subscribe();
