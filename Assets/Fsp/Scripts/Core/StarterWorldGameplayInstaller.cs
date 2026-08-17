@@ -8,37 +8,13 @@ namespace Fsp.Core
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
         {
-            if (Object.FindObjectOfType<OldCrownInteriorPrototype>() == null)
-            {
-                var oldCrown = new GameObject("OldCrown_Interiors");
-                oldCrown.transform.position = new Vector3(-60f, 0f, 35f);
-                oldCrown.AddComponent<OldCrownInteriorPrototype>();
-            }
-            if (Object.FindObjectOfType<OldCrownDoorInstaller>() == null)
-            {
-                var doors = new GameObject("OldCrown_Doors");
-                doors.AddComponent<OldCrownDoorInstaller>();
-            }
-            if (Object.FindObjectOfType<CopperPortPrototype>() == null)
-            {
-                var copperPort = new GameObject("CopperPort_Prototype");
-                copperPort.AddComponent<CopperPortPrototype>();
-            }
-            if (Object.FindObjectOfType<DryfieldPrototype>() == null)
-            {
-                var dryfield = new GameObject("Dryfield_Prototype");
-                dryfield.AddComponent<DryfieldPrototype>();
-            }
-            if (Object.FindObjectOfType<StarterPoiRoadLink>() == null)
-            {
-                var road = new GameObject("OldCrown_CopperPort_Road");
-                road.AddComponent<StarterPoiRoadLink>();
-            }
-            if (Object.FindObjectOfType<DryfieldRoadLinks>() == null)
-            {
-                var roads = new GameObject("Dryfield_Road_Links");
-                roads.AddComponent<DryfieldRoadLinks>();
-            }
+            if (Object.FindObjectOfType<OldCrownInteriorPrototype>() == null){var g=new GameObject("OldCrown_Interiors");g.transform.position=new Vector3(-60f,0f,35f);g.AddComponent<OldCrownInteriorPrototype>();}
+            if (Object.FindObjectOfType<OldCrownDoorInstaller>() == null)new GameObject("OldCrown_Doors").AddComponent<OldCrownDoorInstaller>();
+            if (Object.FindObjectOfType<CopperPortPrototype>() == null)new GameObject("CopperPort_Prototype").AddComponent<CopperPortPrototype>();
+            if (Object.FindObjectOfType<DryfieldPrototype>() == null)new GameObject("Dryfield_Prototype").AddComponent<DryfieldPrototype>();
+            if (Object.FindObjectOfType<WhiteQuarryPrototype>() == null)new GameObject("WhiteQuarry_Prototype").AddComponent<WhiteQuarryPrototype>();
+            if (Object.FindObjectOfType<StarterPoiRoadLink>() == null)new GameObject("OldCrown_CopperPort_Road").AddComponent<StarterPoiRoadLink>();
+            if (Object.FindObjectOfType<DryfieldRoadLinks>() == null)new GameObject("Dryfield_Road_Links").AddComponent<DryfieldRoadLinks>();
         }
     }
 }
