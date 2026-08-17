@@ -13,6 +13,8 @@ namespace Fsp.Vehicles
         private Transform originalParent;
 
         public bool Occupied => currentDriver != null;
+        public SimpleVehicleController Vehicle => vehicle;
+        public bool IsDriver(ThirdPersonMotor driver) => currentDriver == driver;
 
         public bool TryEnter(ThirdPersonMotor driver)
         {
