@@ -84,7 +84,10 @@ namespace Fsp.AI
                 return;
             }
 
-            string seedText = (MatchRoomState.HasMatch ? MatchRoomState.MatchId : "offline") + ":botdrop:" + gameObject.GetInstanceID();
+            string matchId = MatchRoomState.Instance != null && MatchRoomState.Instance.HasMatch
+                ? MatchRoomState.Instance.MatchId
+                : "offline";
+            string seedText = matchId + ":botdrop:" + gameObject.GetInstanceID();
             var random = new System.Random(StableHash(seedText));
             Transform chosen = dropTargets[random.Next(0, dropTargets.Length)];
             if (chosen == null) return;
