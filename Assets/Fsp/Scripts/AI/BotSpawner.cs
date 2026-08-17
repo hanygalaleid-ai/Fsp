@@ -37,15 +37,9 @@ namespace Fsp.Bots
                 position = transform.position + new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
             }
 
-            GameObject instance;
-            if (botPrefab != null)
-            {
-                instance = Instantiate(botPrefab, position, rotation);
-            }
-            else
-            {
-                instance = CreatePlaceholderBot(index, position, rotation);
-            }
+            GameObject instance = botPrefab != null
+                ? Instantiate(botPrefab, position, rotation)
+                : CreatePlaceholderBot(index, position, rotation);
 
             instance.name = $"Bot_{index + 1:00}";
             SpawnedBots++;
@@ -55,9 +49,15 @@ namespace Fsp.Bots
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             go.transform.SetPositionAndRotation(position, rotation);
+
+            var primitiveCollider = go.GetComponent<Collider>();
+            if (primitiveCollider != null) Object.Destroy(primitiveCollider);
+
             var controller = go.AddComponent<CharacterController>();
             controller.height = 1.8f;
             controller.radius = 0.35f;
+            controller.center = new Vector3(0f, 0.9f, 0f);
+
             go.AddComponent<Fsp.Player.PlayerVitals>();
             var participant = go.AddComponent<MatchParticipant>();
             participant.ConfigureAsBot($"Bot {index + 1}");
