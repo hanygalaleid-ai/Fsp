@@ -19,7 +19,10 @@ namespace Fsp.World
         private void Awake()
         {
             if (map == null) return;
-            int seed = StableSeed(MatchRoomState.MatchId, map.mapId);
+            string matchId = MatchRoomState.Instance != null && MatchRoomState.Instance.HasMatch
+                ? MatchRoomState.Instance.MatchId
+                : "offline";
+            int seed = StableSeed(matchId, map.mapId);
             var rng = new System.Random(seed);
 
             if (map.safeZonePresets != null && map.safeZonePresets.Length > 0)
