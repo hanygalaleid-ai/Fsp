@@ -51,6 +51,25 @@ namespace Fsp.Lobby
             matchesPlayed = Mathf.Max(0, played);
             wins = Mathf.Max(0, totalWins);
             kills = Mathf.Max(0, totalKills);
+            RecalculateLevel();
+        }
+
+        public void ApplyMatchResult(bool won, int matchKills, int placement)
+        {
+            matchKills = Mathf.Max(0, matchKills);
+            placement = Mathf.Max(1, placement);
+            matchesPlayed++;
+            kills += matchKills;
+            if (won) wins++;
+
+            int placementXp = Mathf.Max(10, 120 - (placement - 1) * 4);
+            xp += 40 + matchKills * 25 + placementXp + (won ? 200 : 0);
+            rankPoints += (won ? 30 : Mathf.Max(-12, 12 - placement)) + matchKills * 2;
+            RecalculateLevel();
+        }
+
+        private void RecalculateLevel()
+        {
             level = Mathf.Max(1, 1 + xp / 1000);
         }
     }
