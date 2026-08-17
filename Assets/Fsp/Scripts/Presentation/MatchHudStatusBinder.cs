@@ -1,15 +1,15 @@
 using Fsp.BattleRoyale;
-using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Fsp.Presentation
 {
     public sealed class MatchHudStatusBinder : MonoBehaviour
     {
         [SerializeField] private MatchManager matchManager;
-        [SerializeField] private TMP_Text aliveText;
-        [SerializeField] private TMP_Text countdownText;
-        [SerializeField] private TMP_Text phaseText;
+        [SerializeField] private Text aliveText;
+        [SerializeField] private Text countdownText;
+        [SerializeField] private Text phaseText;
 
         private void OnEnable()
         {
@@ -38,12 +38,10 @@ namespace Fsp.Presentation
 
         private void OnCountdown(float value)
         {
-            if (countdownText != null)
-            {
-                bool show = matchManager != null && matchManager.Phase == MatchManager.MatchPhase.Countdown;
-                countdownText.gameObject.SetActive(show);
-                if (show) countdownText.text = Mathf.CeilToInt(value).ToString();
-            }
+            if (countdownText == null) return;
+            bool show = matchManager != null && matchManager.Phase == MatchManager.MatchPhase.Countdown;
+            countdownText.gameObject.SetActive(show);
+            if (show) countdownText.text = Mathf.CeilToInt(value).ToString();
         }
 
         private void OnPhase(MatchManager.MatchPhase value)
