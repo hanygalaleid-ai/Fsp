@@ -1,0 +1,60 @@
+# Unity generated
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+UserSettings/
+MemoryCaptures/
+Recordings/
+
+# IDE
+.vs/
+.idea/
+.vscode/
+*.csproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Crash / diagnostic
+sysinfo.txt
+
+# Addressables / server data
+/[Aa]ssets/[Aa]ddressableAssetsData/*/*.bin*
+/[Aa]ssets/[Ss]treamingAssets/aa.meta
+/[Aa]ssets/[Ss]treamingAssets/aa/*
+/[Ss]erverData/
+
+# Builds and packages
+*.apk
+*.aab
+*.ipa
+*.app
+*.exe
+*.unitypackage
+
+# Secrets
+.env
+.env.*
+!.env.example
+secrets.*
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+
+# Large temporary archives
+*.zip
+*.7z
+*.rar
