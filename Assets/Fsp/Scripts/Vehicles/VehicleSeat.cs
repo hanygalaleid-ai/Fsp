@@ -1,3 +1,4 @@
+using System;
 using Fsp.Player;
 using UnityEngine;
 
@@ -14,6 +15,9 @@ namespace Fsp.Vehicles
 
         public bool Occupied => currentDriver != null;
         public SimpleVehicleController Vehicle => vehicle;
+        public Transform SeatPoint => seatPoint;
+        public event Action<ThirdPersonMotor> DriverEntered;
+        public event Action<ThirdPersonMotor> DriverExited;
         public bool IsDriver(ThirdPersonMotor driver) => currentDriver == driver;
 
         public bool TryEnter(ThirdPersonMotor driver)
@@ -27,6 +31,7 @@ namespace Fsp.Vehicles
             driver.transform.localPosition = Vector3.zero;
             driver.transform.localRotation = Quaternion.identity;
             vehicle.SetDriverPresent(true);
+            DriverEntered?.Invoke(driver);
             return true;
         }
 
@@ -34,7 +39,8 @@ namespace Fsp.Vehicles
         {
             if (currentDriver == null) return;
 
-            Transform driverTransform = currentDriver.transform;
+            ThirdPersonMotor leavingDriver = currentDriver;
+            Transform driverTransform = leavingDriver.transform;
             driverTransform.SetParent(originalParent, true);
             if (exitPoint != null)
             {
@@ -42,10 +48,11 @@ namespace Fsp.Vehicles
                 driverTransform.rotation = exitPoint.rotation;
             }
 
-            currentDriver.enabled = true;
+            leavingDriver.enabled = true;
             vehicle.SetDriverPresent(false);
             currentDriver = null;
             originalParent = null;
+            DriverExited?.Invoke(leavingDriver);
         }
     }
 }
