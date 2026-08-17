@@ -35,6 +35,20 @@ namespace Fsp.BattleRoyale
             MatchManager.Unregister(this);
         }
 
+        public void ConfigureAsBot(string name)
+        {
+            isBot = true;
+            isLocalPlayer = false;
+            displayName = string.IsNullOrWhiteSpace(name) ? "Bot" : name.Trim();
+        }
+
+        public void ConfigureAsLocalPlayer(string name)
+        {
+            isBot = false;
+            isLocalPlayer = true;
+            displayName = string.IsNullOrWhiteSpace(name) ? "Player" : name.Trim();
+        }
+
         public void SetPlacement(int value) => Placement = Mathf.Max(1, value);
 
         private void HandleDeath()
