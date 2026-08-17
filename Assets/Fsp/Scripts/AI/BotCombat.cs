@@ -18,6 +18,20 @@ namespace Fsp.AI
         private float burstEndsAt;
         private float nextBurstAt;
 
+        public void ConfigureDifficulty(BotDifficultyProfile profile)
+        {
+            if (profile == null) return;
+            aimErrorDegrees = profile.aimErrorDegrees;
+            float aggression = Mathf.Max(0.5f, profile.aggression);
+            burstPauseMin = 0.2f / aggression;
+            burstPauseMax = 0.75f / aggression;
+        }
+
+        public void SetWeapon(WeaponConfig config)
+        {
+            if (config != null) weapon = config;
+        }
+
         public void TryAttack(Transform target)
         {
             if (target == null || weapon == null || Time.time < nextBurstAt) return;
