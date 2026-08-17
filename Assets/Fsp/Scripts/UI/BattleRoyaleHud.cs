@@ -31,28 +31,53 @@ namespace Fsp.UI
         [SerializeField] private Button healButton;
 
         private HitscanWeapon observedWeapon;
+        private bool subscribed;
+
+        public void ConfigureSources(PlayerVitals playerVitals, PlayerInventory playerInventory, MatchManager manager, SafeZoneController zone, Transform playerTransform)
+        {
+            Unsubscribe();
+            vitals = playerVitals;
+            inventory = playerInventory;
+            matchManager = manager;
+            safeZone = zone;
+            trackedPlayer = playerTransform;
+            if (isActiveAndEnabled) Subscribe();
+            RefreshAll();
+        }
 
         private void OnEnable()
         {
-            if (vitals != null) vitals.Changed += OnVitalsChanged;
-            if (inventory != null) inventory.InventoryChanged += RefreshInventory;
-            if (matchManager != null) matchManager.AliveCountChanged += OnAliveChanged;
-
-            if (reloadButton != null) reloadButton.onClick.AddListener(Reload);
-            if (healButton != null) healButton.onClick.AddListener(Heal);
-
+            Subscribe();
             RefreshAll();
         }
 
         private void OnDisable()
         {
+            Unsubscribe();
+        }
+
+        private void Subscribe()
+        {
+            if (subscribed) return;
+            if (vitals != null) vitals.Changed += OnVitalsChanged;
+            if (inventory != null) inventory.InventoryChanged += RefreshInventory;
+            if (matchManager != null) matchManager.AliveCountChanged += OnAliveChanged;
+            if (reloadButton != null) reloadButton.onClick.AddListener(Reload);
+            if (healButton != null) healButton.onClick.AddListener(Heal);
+            subscribed = true;
+        }
+
+        private void Unsubscribe()
+        {
+            if (!subscribed) return;
             if (vitals != null) vitals.Changed -= OnVitalsChanged;
             if (inventory != null) inventory.InventoryChanged -= RefreshInventory;
             if (matchManager != null) matchManager.AliveCountChanged -= OnAliveChanged;
-
             if (observedWeapon != null) observedWeapon.AmmoChanged -= OnAmmoChanged;
             if (reloadButton != null) reloadButton.onClick.RemoveListener(Reload);
             if (healButton != null) healButton.onClick.RemoveListener(Heal);
+            observedWeapon = null;
+            subscribed = false;
         }
 
         private void Update()
