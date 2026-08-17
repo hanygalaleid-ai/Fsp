@@ -1,0 +1,12 @@
+{
+  "name": "fsp-match-relay",
+  "private": true,
+  "scripts": {
+    "check": "wrangler check",
+    "types": "wrangler types --check",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
