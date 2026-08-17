@@ -55,6 +55,7 @@ namespace Fsp.Bots
                 ? Instantiate(botPrefab, candidate, rotation)
                 : CreatePlaceholderBot(index, candidate, rotation);
 
+            EnsureBattleRoyaleComponents(bot);
             spawnedBots.Add(bot);
             return true;
         }
@@ -79,9 +80,17 @@ namespace Fsp.Bots
             go.AddComponent<PlayerVitals>();
             var participant = go.AddComponent<MatchParticipant>();
             participant.ConfigureAsBot($"Bot {index + 1}");
-            go.AddComponent<PlayerDamageable>();
             go.name = $"Bot_{index + 1:00}_Placeholder";
             return go;
+        }
+
+        private static void EnsureBattleRoyaleComponents(GameObject bot)
+        {
+            if (bot == null) return;
+            if (bot.GetComponent<PlayerDamageable>() == null)
+                bot.AddComponent<PlayerDamageable>();
+            if (bot.GetComponent<SafeZoneDamageApplier>() == null)
+                bot.AddComponent<SafeZoneDamageApplier>();
         }
     }
 }
