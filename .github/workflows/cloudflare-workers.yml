@@ -1,0 +1,77 @@
+name: Cloudflare Workers
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy workers after validation
+        required: true
+        default: false
+        type: boolean
+  push:
+    paths:
+      - 'cloudflare/**'
+      - '.github/workflows/cloudflare-workers.yml'
+
+jobs:
+  validate-match-relay:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloudflare/match-relay
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npx wrangler check
+
+  validate-voice-worker:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloudflare/voice-worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npx wrangler check
+
+  deploy-match-relay:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy }}
+    needs: [validate-match-relay, validate-voice-worker]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloudflare/match-relay
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  deploy-voice-worker:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy }}
+    needs: [validate-match-relay, validate-voice-worker]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloudflare/voice-worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
