@@ -1,4 +1,5 @@
 using Fsp.BattleRoyale;
+using Fsp.Vehicles;
 using UnityEngine;
 
 namespace Fsp.Player
@@ -15,12 +16,14 @@ namespace Fsp.Player
 
         private DropPlanePassenger passenger;
         private ParachuteController parachute;
+        private StarterVehicleInput vehicleInput;
 
         private void Awake()
         {
             if (motor == null) motor = GetComponent<ThirdPersonMotor>();
             passenger = GetComponent<DropPlanePassenger>();
             parachute = GetComponent<ParachuteController>();
+            vehicleInput = GetComponent<StarterVehicleInput>();
             if (cameraTransform == null && Camera.main != null) cameraTransform = Camera.main.transform;
             if (motor != null && cameraTransform != null) motor.SetCamera(cameraTransform);
         }
@@ -37,18 +40,27 @@ namespace Fsp.Player
 
             if (passenger == null) passenger = GetComponent<DropPlanePassenger>();
             if (parachute == null) parachute = GetComponent<ParachuteController>();
+            if (vehicleInput == null) vehicleInput = GetComponent<StarterVehicleInput>();
 
             if (passenger != null && passenger.IsAboard)
             {
+                if (motor != null) motor.SetMoveInput(Vector2.zero);
                 if (Input.GetKeyDown(KeyCode.Space)) passenger.Jump();
                 return;
             }
 
             if (parachute != null && parachute.IsActive)
             {
+                if (motor != null) motor.SetMoveInput(Vector2.zero);
                 parachute.SetSteer(input);
                 if (Input.GetKeyDown(KeyCode.Space) && !parachute.IsOpen)
                     parachute.OpenParachute();
+                return;
+            }
+
+            if (vehicleInput != null && vehicleInput.IsDriving)
+            {
+                if (motor != null) motor.SetMoveInput(Vector2.zero);
                 return;
             }
 
