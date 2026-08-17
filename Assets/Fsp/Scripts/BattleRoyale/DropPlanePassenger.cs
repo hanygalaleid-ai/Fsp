@@ -23,6 +23,14 @@ namespace Fsp.BattleRoyale
             if (motor == null) motor = GetComponent<ThirdPersonMotor>();
         }
 
+        public void Configure(DropPlaneController value, Transform cabin)
+        {
+            plane = value;
+            cabinAnchor = cabin;
+            if (parachute == null) parachute = GetComponent<ParachuteController>();
+            if (motor == null) motor = GetComponent<ThirdPersonMotor>();
+        }
+
         public void Board()
         {
             if (cabinAnchor == null || jumped) return;
