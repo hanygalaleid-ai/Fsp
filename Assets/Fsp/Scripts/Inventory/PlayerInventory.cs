@@ -98,6 +98,7 @@ namespace Fsp.Inventory
         public void SwitchWeapon()
         {
             if (primaryWeapon == null && secondaryWeapon == null) return;
+            if (ActiveWeapon != null && ActiveWeapon.IsReloading) return;
             SetActiveWeapon(ActiveWeapon == primaryWeapon ? secondaryWeapon : primaryWeapon);
         }
 
@@ -114,7 +115,7 @@ namespace Fsp.Inventory
 
         public bool TryReloadActiveWeapon()
         {
-            return ActiveWeapon != null && ActiveWeapon.ReloadInstant();
+            return ActiveWeapon != null && ActiveWeapon.BeginReload();
         }
 
         public int GetReserveAmmoForActiveWeapon()
