@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Fsp.Backend;
+using Fsp.BattleRoyale;
 using Fsp.Player;
 using UnityEngine;
 
@@ -10,6 +11,8 @@ namespace Fsp.Networking
         [SerializeField] private MonoBehaviour transportBehaviour;
         [SerializeField] private Transform localPlayer;
         [SerializeField] private PlayerVitals localVitals;
+        [SerializeField] private DropPlanePassenger planePassenger;
+        [SerializeField] private ParachuteController parachute;
         [SerializeField] private GameObject remotePlayerPrefab;
         [SerializeField, Min(1f)] private float snapshotRate = 12f;
 
@@ -20,8 +23,12 @@ namespace Fsp.Networking
         private void Awake()
         {
             transport = transportBehaviour as INetworkTransport;
-            if (localPlayer != null && localVitals == null)
-                localVitals = localPlayer.GetComponent<PlayerVitals>();
+            if (localPlayer != null)
+            {
+                if (localVitals == null) localVitals = localPlayer.GetComponent<PlayerVitals>();
+                if (planePassenger == null) planePassenger = localPlayer.GetComponent<DropPlanePassenger>();
+                if (parachute == null) parachute = localPlayer.GetComponent<ParachuteController>();
+            }
         }
 
         private void Start()
@@ -45,8 +52,17 @@ namespace Fsp.Networking
                 health = localVitals != null ? localVitals.Health : 100f,
                 armor = localVitals != null ? localVitals.Armor : 0f,
                 alive = localVitals == null || localVitals.IsAlive,
+                dropState = ResolveDropState(),
                 sentAt = Time.realtimeSinceStartupAsDouble
             });
+        }
+
+        private NetworkDropState ResolveDropState()
+        {
+            if (planePassenger != null && planePassenger.IsAboard) return NetworkDropState.AboardPlane;
+            if (parachute != null && parachute.IsActive)
+                return parachute.IsOpen ? NetworkDropState.Parachute : NetworkDropState.Freefall;
+            return NetworkDropState.Grounded;
         }
 
         private void HandleSnapshot(NetworkPlayerSnapshot snapshot)
