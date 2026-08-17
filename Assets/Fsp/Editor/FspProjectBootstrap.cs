@@ -15,7 +15,7 @@ namespace Fsp.EditorTools
         private const string ScenesFolder = "Assets/Fsp/Scenes";
         private const string LobbyScene = ScenesFolder + "/Lobby.unity";
         private const string MatchScene = ScenesFolder + "/Match.unity";
-        private const string PrefKey = "Fsp.ProjectBootstrap.v1";
+        private const string PrefKey = "Fsp.ProjectBootstrap.v2";
 
         static FspProjectBootstrap()
         {
@@ -83,8 +83,9 @@ namespace Fsp.EditorTools
             CreateCamera(new Vector3(0f, 8f, -12f), new Vector3(24f, 0f, 0f));
             CreateSun();
 
-            var manager = new GameObject("MatchManager");
-            manager.AddComponent<MatchManager>();
+            var systems = new GameObject("MatchSystems");
+            systems.AddComponent<MatchManager>();
+            systems.AddComponent<MatchSceneAssembler>();
 
             var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.name = "Ground_Placeholder";
