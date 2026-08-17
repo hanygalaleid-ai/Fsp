@@ -14,5 +14,7 @@ if(Object.FindObjectOfType<DryfieldRoadLinks>()==null)new GameObject("Dryfield_R
 if(Object.FindObjectOfType<QuarryRoadLink>()==null)new GameObject("WhiteQuarry_Road_Links").AddComponent<QuarryRoadLink>();
 if(Object.FindObjectOfType<AirstripRoadLink>()==null)new GameObject("RedlineAirstrip_Road_Links").AddComponent<AirstripRoadLink>();
 if(Object.FindObjectOfType<SaltworksRoadLink>()==null)new GameObject("Saltworks_Road_Links").AddComponent<SaltworksRoadLink>();
-if(Object.FindObjectOfType<LanternCoastRoadLink>()==null)new GameObject("LanternCoast_Road_Links").AddComponent<LanternCoastRoadLink>();}}
+if(Object.FindObjectOfType<LanternCoastRoadLink>()==null)new GameObject("LanternCoast_Road_Links").AddComponent<LanternCoastRoadLink>();
+if(Object.FindObjectOfType<SunscarIslandPolish>()==null)new GameObject("SunscarIsland_Polish").AddComponent<SunscarIslandPolish>();
+if(Object.FindObjectOfType<StarterVehicleDistribution>()==null)new GameObject("SunscarIsland_Vehicles").AddComponent<StarterVehicleDistribution>();}}
 }
