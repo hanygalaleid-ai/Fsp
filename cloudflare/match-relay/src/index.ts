@@ -7,7 +7,7 @@ interface Env {
 }
 
 type SocketAttachment = { playerId: string };
-type Envelope = { type: "snapshot" | "fire" | "damage" | "vehicle"; payload: string };
+type Envelope = { type: "snapshot" | "fire" | "damage" | "vehicle" | "seat" | "loot_claim" | "loot_claimed"; payload: string };
 
 async function authenticate(request: Request, env: Env): Promise<string | null> {
   const auth = request.headers.get("Authorization") ?? "";
@@ -69,7 +69,7 @@ export class MatchRoom extends DurableObject<Env> {
 
     let envelope: Envelope;
     try { envelope = JSON.parse(message) as Envelope; } catch { return; }
-    if (!envelope || !["snapshot", "fire", "damage", "vehicle"].includes(envelope.type) || typeof envelope.payload !== "string") return;
+    if (!envelope || !["snapshot", "fire", "damage", "vehicle", "seat", "loot_claim"].includes(envelope.type) || typeof envelope.payload !== "string") return;
 
     const attachment = ws.deserializeAttachment() as SocketAttachment | null;
     if (!attachment?.playerId) return;
@@ -77,7 +77,7 @@ export class MatchRoom extends DurableObject<Env> {
     let payload: Record<string, unknown>;
     try { payload = JSON.parse(envelope.payload) as Record<string, unknown>; } catch { return; }
 
-    if (envelope.type === "snapshot" || envelope.type === "fire") {
+    if (envelope.type === "snapshot" || envelope.type === "fire" || envelope.type === "seat" || envelope.type === "loot_claim") {
       if (payload.playerId !== attachment.playerId) return;
     } else if (envelope.type === "vehicle") {
       if (payload.driverId !== attachment.playerId) return;
@@ -88,8 +88,38 @@ export class MatchRoom extends DurableObject<Env> {
       if (!Number.isFinite(damage) || damage <= 0 || damage > 200) return;
     }
 
+    if (envelope.type === "seat") {
+      if (typeof payload.vehicleId !== "string" || payload.vehicleId.length < 1 || payload.vehicleId.length > 64) return;
+      this.broadcast(message, ws);
+      return;
+    }
+
+    if (envelope.type === "loot_claim") {
+      const lootId = typeof payload.lootId === "string" ? payload.lootId.trim() : "";
+      if (!lootId || lootId.length > 96) return;
+
+      const key = `loot:${lootId}`;
+      const existing = await this.ctx.storage.get<string>(key);
+      const accepted = existing == null;
+      if (accepted) await this.ctx.storage.put(key, attachment.playerId);
+
+      const resultPayload = JSON.stringify({
+        playerId: accepted ? attachment.playerId : existing,
+        lootId,
+        accepted,
+        timestamp: Date.now() / 1000,
+      });
+      const result = JSON.stringify({ type: "loot_claimed", payload: resultPayload });
+      this.broadcast(result);
+      return;
+    }
+
+    this.broadcast(message, ws);
+  }
+
+  private broadcast(message: string, except?: WebSocket): void {
     for (const peer of this.ctx.getWebSockets()) {
-      if (peer !== ws && peer.readyState === WebSocket.OPEN) peer.send(message);
+      if (peer !== except && peer.readyState === WebSocket.OPEN) peer.send(message);
     }
   }
 
