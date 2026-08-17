@@ -1,4 +1,5 @@
 using System;
+using Fsp.Inventory;
 using UnityEngine;
 
 namespace Fsp.Combat
@@ -9,6 +10,7 @@ namespace Fsp.Combat
         [SerializeField] private Transform muzzle;
         [SerializeField] private Camera aimCamera;
         [SerializeField] private LayerMask hitMask = ~0;
+        [SerializeField] private PlayerInventory inventory;
 
         private int ammoInMagazine;
         private float nextShotTime;
@@ -21,6 +23,7 @@ namespace Fsp.Combat
         private void Awake()
         {
             ammoInMagazine = config != null ? config.magazineSize : 0;
+            if (inventory == null) inventory = GetComponentInParent<PlayerInventory>();
         }
 
         public bool TryFire()
@@ -48,12 +51,18 @@ namespace Fsp.Combat
             return true;
         }
 
-        public void ReloadInstant()
+        public bool ReloadInstant()
         {
-            if (config == null) return;
-            ammoInMagazine = config.magazineSize;
+            if (config == null || ammoInMagazine >= config.magazineSize) return false;
+
+            int needed = config.magazineSize - ammoInMagazine;
+            int supplied = inventory != null ? inventory.ConsumeReserveAmmoFor(this, needed) : 0;
+            if (supplied <= 0) return false;
+
+            ammoInMagazine += supplied;
             reloading = false;
             AmmoChanged?.Invoke(ammoInMagazine);
+            return true;
         }
     }
 
