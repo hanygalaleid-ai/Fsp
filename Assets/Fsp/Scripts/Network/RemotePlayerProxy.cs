@@ -7,6 +7,8 @@ namespace Fsp.Networking
     {
         [SerializeField, Min(1f)] private float positionLerp = 12f;
         [SerializeField, Min(1f)] private float rotationLerp = 14f;
+        [SerializeField] private GameObject parachuteVisual;
+        [SerializeField] private GameObject bodyVisual;
 
         private static readonly Dictionary<string, RemotePlayerProxy> registry = new();
         private Vector3 targetPosition;
@@ -19,6 +21,7 @@ namespace Fsp.Networking
         public float Health { get; private set; } = 100f;
         public float Armor { get; private set; }
         public bool IsAlive { get; private set; } = true;
+        public NetworkDropState DropState { get; private set; } = NetworkDropState.Grounded;
 
         public static bool TryFind(string playerId, out RemotePlayerProxy proxy) => registry.TryGetValue(playerId, out proxy) && proxy != null;
 
@@ -29,6 +32,7 @@ namespace Fsp.Networking
             targetRotation = transform.rotation;
             worldParent = transform.parent;
             initialized = true;
+            if (parachuteVisual != null) parachuteVisual.SetActive(false);
             if (!string.IsNullOrWhiteSpace(playerId)) registry[playerId] = this;
         }
 
@@ -40,7 +44,14 @@ namespace Fsp.Networking
             Health = snapshot.health;
             Armor = snapshot.armor;
             IsAlive = snapshot.alive;
+            DropState = snapshot.dropState;
             gameObject.SetActive(snapshot.alive);
+
+            if (parachuteVisual != null)
+                parachuteVisual.SetActive(snapshot.alive && snapshot.dropState == NetworkDropState.Parachute);
+
+            if (bodyVisual != null)
+                bodyVisual.SetActive(snapshot.alive);
         }
 
         public void SetVehicleSeat(Transform seatPoint, bool isSeated)
