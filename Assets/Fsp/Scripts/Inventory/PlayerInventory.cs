@@ -63,6 +63,30 @@ namespace Fsp.Inventory
             return true;
         }
 
+        public DeathInventorySnapshot DrainForDeath()
+        {
+            var snapshot = new DeathInventorySnapshot
+            {
+                primaryAmmo = PrimaryAmmo,
+                secondaryAmmo = SecondaryAmmo,
+                medkits = Medkits
+            };
+
+            PrimaryAmmo = 0;
+            SecondaryAmmo = 0;
+            Medkits = 0;
+            InventoryChanged?.Invoke();
+            return snapshot;
+        }
+
+        public void AddDeathLoot(DeathInventorySnapshot snapshot)
+        {
+            PrimaryAmmo += Mathf.Max(0, snapshot.primaryAmmo);
+            SecondaryAmmo += Mathf.Max(0, snapshot.secondaryAmmo);
+            Medkits = Mathf.Min(maxMedkits, Medkits + Mathf.Max(0, snapshot.medkits));
+            InventoryChanged?.Invoke();
+        }
+
         public void AddAmmo(int amount)
         {
             if (amount <= 0) return;
