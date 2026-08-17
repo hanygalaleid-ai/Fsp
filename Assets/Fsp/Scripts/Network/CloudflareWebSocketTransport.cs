@@ -12,7 +12,6 @@ namespace Fsp.Networking
     public sealed class CloudflareWebSocketTransport : MonoBehaviour, INetworkTransport
     {
         [Serializable] private sealed class Envelope { public string type; public string payload; }
-
         [SerializeField] private string relayBaseUrl = "wss://YOUR_MATCH_RELAY.workers.dev/ws";
 
         private readonly ConcurrentQueue<Action> mainThread = new();
@@ -27,11 +26,9 @@ namespace Fsp.Networking
         public event Action<NetworkVehicleSnapshot> VehicleReceived;
         public event Action<NetworkSeatEvent> SeatReceived;
         public event Action<NetworkLootClaimEvent> LootClaimReceived;
+        public event Action<NetworkAppearanceEvent> AppearanceReceived;
 
-        private void Update()
-        {
-            while (mainThread.TryDequeue(out var action)) action?.Invoke();
-        }
+        private void Update() { while (mainThread.TryDequeue(out var action)) action?.Invoke(); }
 
         public async void Connect(string matchId, string playerId)
         {
@@ -41,22 +38,12 @@ namespace Fsp.Networking
 #else
             Disconnect();
             if (string.IsNullOrWhiteSpace(matchId) || !SupabaseSession.IsSignedIn) return;
-
             lifetime = new CancellationTokenSource();
             socket = new ClientWebSocket();
             socket.Options.SetRequestHeader("Authorization", "Bearer " + SupabaseSession.AccessToken);
-
             string url = relayBaseUrl.TrimEnd('/') + "?matchId=" + Uri.EscapeDataString(matchId);
-            try
-            {
-                await socket.ConnectAsync(new Uri(url), lifetime.Token);
-                _ = ReceiveLoop(lifetime.Token);
-            }
-            catch (Exception e)
-            {
-                mainThread.Enqueue(() => Debug.LogError("Match relay connection failed: " + e.Message));
-                Disconnect();
-            }
+            try { await socket.ConnectAsync(new Uri(url), lifetime.Token); _ = ReceiveLoop(lifetime.Token); }
+            catch (Exception e) { mainThread.Enqueue(() => Debug.LogError("Match relay connection failed: " + e.Message)); Disconnect(); }
 #endif
         }
 
@@ -71,37 +58,27 @@ namespace Fsp.Networking
             catch { }
             finally
             {
-                socket?.Dispose();
-                socket = null;
-                lifetime?.Dispose();
-                lifetime = null;
+                socket?.Dispose(); socket = null;
+                lifetime?.Dispose(); lifetime = null;
             }
         }
 
-        public void SendSnapshot(NetworkPlayerSnapshot snapshot) => Send("snapshot", JsonUtility.ToJson(snapshot));
-        public void SendFire(NetworkFireEvent fireEvent) => Send("fire", JsonUtility.ToJson(fireEvent));
-        public void SendDamage(NetworkDamageEvent damageEvent) => Send("damage", JsonUtility.ToJson(damageEvent));
-        public void SendVehicle(NetworkVehicleSnapshot vehicleSnapshot) => Send("vehicle", JsonUtility.ToJson(vehicleSnapshot));
-        public void SendSeat(NetworkSeatEvent seatEvent) => Send("seat", JsonUtility.ToJson(seatEvent));
-        public void SendLootClaim(NetworkLootClaimEvent lootClaim) => Send("loot_claim", JsonUtility.ToJson(lootClaim));
+        public void SendSnapshot(NetworkPlayerSnapshot v) => Send("snapshot", JsonUtility.ToJson(v));
+        public void SendFire(NetworkFireEvent v) => Send("fire", JsonUtility.ToJson(v));
+        public void SendDamage(NetworkDamageEvent v) => Send("damage", JsonUtility.ToJson(v));
+        public void SendVehicle(NetworkVehicleSnapshot v) => Send("vehicle", JsonUtility.ToJson(v));
+        public void SendSeat(NetworkSeatEvent v) => Send("seat", JsonUtility.ToJson(v));
+        public void SendLootClaim(NetworkLootClaimEvent v) => Send("loot_claim", JsonUtility.ToJson(v));
+        public void SendAppearance(NetworkAppearanceEvent v) => Send("appearance", JsonUtility.ToJson(v));
 
         private async void Send(string type, string payload)
         {
             if (!IsConnected) return;
-            var envelope = new Envelope { type = type, payload = payload };
-            byte[] bytes = Encoding.UTF8.GetBytes(JsonUtility.ToJson(envelope));
+            byte[] bytes = Encoding.UTF8.GetBytes(JsonUtility.ToJson(new Envelope { type = type, payload = payload }));
             if (bytes.Length > 12 * 1024) return;
-
             await sendLock.WaitAsync();
-            try
-            {
-                if (IsConnected)
-                    await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, lifetime.Token);
-            }
-            catch (Exception e)
-            {
-                mainThread.Enqueue(() => Debug.LogWarning("Match relay send failed: " + e.Message));
-            }
+            try { if (IsConnected) await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, lifetime.Token); }
+            catch (Exception e) { mainThread.Enqueue(() => Debug.LogWarning("Match relay send failed: " + e.Message)); }
             finally { sendLock.Release(); }
         }
 
@@ -109,7 +86,6 @@ namespace Fsp.Networking
         {
             byte[] buffer = new byte[16 * 1024];
             var builder = new StringBuilder();
-
             try
             {
                 while (!token.IsCancellationRequested && socket != null && socket.State == WebSocketState.Open)
@@ -123,23 +99,18 @@ namespace Fsp.Networking
                         builder.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
                         if (builder.Length > 16 * 1024) return;
                     } while (!result.EndOfMessage);
-
                     string json = builder.ToString();
                     mainThread.Enqueue(() => Dispatch(json));
                 }
             }
             catch (OperationCanceledException) { }
-            catch (Exception e)
-            {
-                mainThread.Enqueue(() => Debug.LogWarning("Match relay receive stopped: " + e.Message));
-            }
+            catch (Exception e) { mainThread.Enqueue(() => Debug.LogWarning("Match relay receive stopped: " + e.Message)); }
         }
 
         private void Dispatch(string json)
         {
             var envelope = JsonUtility.FromJson<Envelope>(json);
             if (envelope == null || string.IsNullOrWhiteSpace(envelope.type)) return;
-
             switch (envelope.type)
             {
                 case "snapshot": SnapshotReceived?.Invoke(JsonUtility.FromJson<NetworkPlayerSnapshot>(envelope.payload)); break;
@@ -148,6 +119,7 @@ namespace Fsp.Networking
                 case "vehicle": VehicleReceived?.Invoke(JsonUtility.FromJson<NetworkVehicleSnapshot>(envelope.payload)); break;
                 case "seat": SeatReceived?.Invoke(JsonUtility.FromJson<NetworkSeatEvent>(envelope.payload)); break;
                 case "loot_claimed": LootClaimReceived?.Invoke(JsonUtility.FromJson<NetworkLootClaimEvent>(envelope.payload)); break;
+                case "appearance": AppearanceReceived?.Invoke(JsonUtility.FromJson<NetworkAppearanceEvent>(envelope.payload)); break;
             }
         }
 
