@@ -20,6 +20,14 @@ namespace Fsp.BattleRoyale
             if (startOnEnable) BeginRoute();
         }
 
+        public void ConfigureRoute(Transform start, Transform end, float routeSpeed = 65f, bool beginImmediately = true)
+        {
+            routeStart = start;
+            routeEnd = end;
+            speed = Mathf.Max(1f, routeSpeed);
+            if (beginImmediately && isActiveAndEnabled) BeginRoute();
+        }
+
         public void BeginRoute()
         {
             if (routeStart == null || routeEnd == null) return;
