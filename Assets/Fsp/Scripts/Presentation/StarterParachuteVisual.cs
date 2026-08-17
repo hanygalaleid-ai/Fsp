@@ -1,3 +1,4 @@
+using Fsp.BattleRoyale;
 using UnityEngine;
 
 namespace Fsp.Presentation
@@ -6,6 +7,7 @@ namespace Fsp.Presentation
     {
         [SerializeField] private float canopyHeight = 2.9f;
         private GameObject visualRoot;
+        private ParachuteController parachute;
 
         public void Show(bool visible)
         {
@@ -15,8 +17,17 @@ namespace Fsp.Presentation
 
         private void Awake()
         {
+            parachute = GetComponent<ParachuteController>();
             EnsureBuilt();
             if (visualRoot != null) visualRoot.SetActive(false);
+        }
+
+        private void Update()
+        {
+            if (parachute == null) parachute = GetComponent<ParachuteController>();
+            if (visualRoot == null) EnsureBuilt();
+            if (visualRoot != null)
+                visualRoot.SetActive(parachute != null && parachute.IsActive && parachute.IsOpen);
         }
 
         private void EnsureBuilt()
