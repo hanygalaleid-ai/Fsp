@@ -79,6 +79,7 @@ namespace Fsp.Bots
             go.AddComponent<PlayerVitals>();
             var participant = go.AddComponent<MatchParticipant>();
             participant.ConfigureAsBot($"Bot {index + 1}");
+            go.AddComponent<PlayerDamageable>();
             go.name = $"Bot_{index + 1:00}_Placeholder";
             return go;
         }
