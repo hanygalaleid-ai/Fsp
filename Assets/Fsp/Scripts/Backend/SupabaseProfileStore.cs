@@ -1,6 +1,7 @@
 using System;
-using System.Collections;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Fsp.Lobby;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -13,32 +14,37 @@ namespace Fsp.Backend
         {
             public string user_id;
             public string display_name;
-            public int character_id;
-            public long xp;
+            public string character_id;
+            public int xp;
             public int rank_points;
             public int matches_played;
             public int wins;
             public int kills;
         }
 
-        public IEnumerator Load(Action<PlayerProfileData> done, Action<string> failed)
+        [Serializable] private sealed class ProfileRows { public ProfileRow[] items; }
+
+        public async Task<PlayerProfile> LoadAsync(string playerId, CancellationToken cancellationToken = default)
         {
-            if (!SupabaseSession.IsSignedIn) { failed?.Invoke("Not signed in."); yield break; }
-            string url = SupabaseRuntimeConfig.ProjectUrl + "/rest/v1/profiles?user_id=eq." + UnityWebRequest.EscapeURL(SupabaseSession.UserId) + "&select=*";
+            if (!SupabaseSession.IsSignedIn) return null;
+            string id = string.IsNullOrWhiteSpace(playerId) ? SupabaseSession.UserId : playerId;
+            string url = SupabaseRuntimeConfig.ProjectUrl + "/rest/v1/profiles?user_id=eq." + UnityWebRequest.EscapeURL(id) + "&select=*";
             using var req = UnityWebRequest.Get(url);
             ApplyHeaders(req);
-            yield return req.SendWebRequest();
-            if (req.result != UnityWebRequest.Result.Success) { failed?.Invoke(req.downloadHandler.text); yield break; }
+            await SendAsync(req, cancellationToken);
+            if (req.result != UnityWebRequest.Result.Success) throw new Exception(req.downloadHandler.text);
 
-            string wrapped = "{\"items\":" + req.downloadHandler.text + "}";
-            var rows = JsonUtility.FromJson<ProfileRows>(wrapped);
-            if (rows == null || rows.items == null || rows.items.Length == 0) { done?.Invoke(null); yield break; }
-            done?.Invoke(ToProfile(rows.items[0]));
+            var rows = JsonUtility.FromJson<ProfileRows>("{\"items\":" + req.downloadHandler.text + "}");
+            if (rows?.items == null || rows.items.Length == 0) return null;
+            var row = rows.items[0];
+            var profile = new PlayerProfile(row.user_id, row.display_name, row.character_id);
+            profile.SetProgress(row.xp, row.rank_points, row.matches_played, row.wins, row.kills);
+            return profile;
         }
 
-        public IEnumerator Save(PlayerProfileData profile, Action<bool> done, Action<string> failed)
+        public async Task SaveAsync(PlayerProfile profile, CancellationToken cancellationToken = default)
         {
-            if (!SupabaseSession.IsSignedIn || profile == null) { failed?.Invoke("No session/profile."); yield break; }
+            if (!SupabaseSession.IsSignedIn || profile == null) throw new InvalidOperationException("No signed-in profile.");
             var row = new ProfileRow
             {
                 user_id = SupabaseSession.UserId,
@@ -58,9 +64,22 @@ namespace Fsp.Backend
             ApplyHeaders(req);
             req.SetRequestHeader("Content-Type", "application/json");
             req.SetRequestHeader("Prefer", "resolution=merge-duplicates,return=minimal");
-            yield return req.SendWebRequest();
-            if (req.result != UnityWebRequest.Result.Success) { failed?.Invoke(req.downloadHandler.text); yield break; }
-            done?.Invoke(true);
+            await SendAsync(req, cancellationToken);
+            if (req.result != UnityWebRequest.Result.Success) throw new Exception(req.downloadHandler.text);
+        }
+
+        private static async Task SendAsync(UnityWebRequest req, CancellationToken token)
+        {
+            var op = req.SendWebRequest();
+            while (!op.isDone)
+            {
+                if (token.IsCancellationRequested)
+                {
+                    req.Abort();
+                    token.ThrowIfCancellationRequested();
+                }
+                await Task.Yield();
+            }
         }
 
         private static void ApplyHeaders(UnityWebRequest req)
@@ -68,18 +87,5 @@ namespace Fsp.Backend
             req.SetRequestHeader("apikey", SupabaseRuntimeConfig.PublishableKey);
             req.SetRequestHeader("Authorization", "Bearer " + SupabaseSession.AccessToken);
         }
-
-        private static PlayerProfileData ToProfile(ProfileRow row) => new PlayerProfileData
-        {
-            DisplayName = row.display_name,
-            CharacterId = row.character_id,
-            Xp = row.xp,
-            RankPoints = row.rank_points,
-            MatchesPlayed = row.matches_played,
-            Wins = row.wins,
-            Kills = row.kills
-        };
-
-        [Serializable] private sealed class ProfileRows { public ProfileRow[] items; }
     }
 }
