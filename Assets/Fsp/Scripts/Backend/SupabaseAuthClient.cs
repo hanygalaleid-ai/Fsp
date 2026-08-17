@@ -27,6 +27,30 @@ namespace Fsp.Backend
             yield return SendAuth("/auth/v1/token?grant_type=password", body, true, done);
         }
 
+        public IEnumerator RefreshSession(Action<bool, string> done)
+        {
+            if (string.IsNullOrWhiteSpace(SupabaseSession.RefreshToken))
+            {
+                done?.Invoke(false, "No refresh token available.");
+                yield break;
+            }
+
+            string body = JsonUtility.ToJson(new RefreshBody { refresh_token = SupabaseSession.RefreshToken });
+            yield return SendAuth("/auth/v1/token?grant_type=refresh_token", body, true, done);
+        }
+
+        public IEnumerator RestoreOrRefresh(Action<bool, string> done)
+        {
+            SupabaseSession.Load();
+            if (!SupabaseSession.IsSignedIn)
+            {
+                done?.Invoke(false, "No saved session.");
+                yield break;
+            }
+
+            yield return RefreshSession(done);
+        }
+
         private IEnumerator SendAuth(string path, string json, bool expectSession, Action<bool, string> done)
         {
             using var req = new UnityWebRequest(SupabaseRuntimeConfig.ProjectUrl + path, UnityWebRequest.kHttpVerbPOST);
@@ -45,7 +69,8 @@ namespace Fsp.Backend
             var response = JsonUtility.FromJson<AuthResponse>(req.downloadHandler.text);
             if (response != null && response.user != null && !string.IsNullOrWhiteSpace(response.access_token))
             {
-                SupabaseSession.Save(response.access_token, response.refresh_token, response.user.id);
+                string refresh = string.IsNullOrWhiteSpace(response.refresh_token) ? SupabaseSession.RefreshToken : response.refresh_token;
+                SupabaseSession.Save(response.access_token, refresh, response.user.id);
                 done?.Invoke(true, string.Empty);
                 yield break;
             }
@@ -57,6 +82,11 @@ namespace Fsp.Backend
         {
             public string email;
             public string password;
+        }
+
+        [Serializable] private sealed class RefreshBody
+        {
+            public string refresh_token;
         }
     }
 }
