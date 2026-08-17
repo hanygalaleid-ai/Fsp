@@ -23,7 +23,8 @@ namespace Fsp.BattleRoyale
 
         private void Start()
         {
-            if (!MatchRoomState.HasMatch) return;
+            bool hasRoom = MatchRoomState.Instance != null && MatchRoomState.Instance.HasMatch;
+            if (!hasRoom) return;
             if (autoBoardOnStart && localPassenger != null && !localPassenger.HasJumped)
                 localPassenger.Board();
         }
