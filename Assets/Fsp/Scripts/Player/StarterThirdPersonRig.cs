@@ -22,9 +22,16 @@ namespace Fsp.Player
         private void Update()
         {
             if (motor == null) return;
-            Vector2 move = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
-            motor.SetMoveInput(move);
-            motor.SetSprint(Input.GetKey(KeyCode.LeftShift));
+
+            float x = 0f;
+            float y = 0f;
+            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) x -= 1f;
+            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) x += 1f;
+            if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) y -= 1f;
+            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) y += 1f;
+
+            motor.SetMoveInput(Vector2.ClampMagnitude(new Vector2(x, y), 1f));
+            motor.SetSprint(Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift));
             if (Input.GetKeyDown(KeyCode.Space)) motor.RequestJump();
         }
 
