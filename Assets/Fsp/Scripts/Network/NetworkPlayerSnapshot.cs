@@ -3,6 +3,14 @@ using UnityEngine;
 
 namespace Fsp.Networking
 {
+    public enum NetworkDropState
+    {
+        Grounded = 0,
+        AboardPlane = 1,
+        Freefall = 2,
+        Parachute = 3
+    }
+
     [Serializable]
     public struct NetworkPlayerSnapshot
     {
@@ -13,6 +21,7 @@ namespace Fsp.Networking
         public float health;
         public float armor;
         public bool alive;
+        public NetworkDropState dropState;
         public double sentAt;
     }
 }
