@@ -17,6 +17,16 @@ namespace Fsp.Inventory
         private bool claimPending;
 
         public string LootId => lootId;
+        public InventoryItem Item => item;
+
+        public void Configure(InventoryItem inventoryItem, string id, bool pickupAutomatically = true)
+        {
+            item = inventoryItem;
+            autoPickup = pickupAutomatically;
+            SetLootId(id);
+            Collider c = GetComponent<Collider>();
+            if (c != null) c.isTrigger = true;
+        }
 
         public void SetLootId(string value)
         {
