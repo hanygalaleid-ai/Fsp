@@ -14,29 +14,30 @@ namespace Fsp.Core
                 oldCrown.transform.position = new Vector3(-60f, 0f, 35f);
                 oldCrown.AddComponent<OldCrownInteriorPrototype>();
             }
-
             if (Object.FindObjectOfType<OldCrownDoorInstaller>() == null)
             {
                 var doors = new GameObject("OldCrown_Doors");
                 doors.AddComponent<OldCrownDoorInstaller>();
             }
-
             if (Object.FindObjectOfType<CopperPortPrototype>() == null)
             {
                 var copperPort = new GameObject("CopperPort_Prototype");
                 copperPort.AddComponent<CopperPortPrototype>();
             }
-
             if (Object.FindObjectOfType<DryfieldPrototype>() == null)
             {
                 var dryfield = new GameObject("Dryfield_Prototype");
                 dryfield.AddComponent<DryfieldPrototype>();
             }
-
             if (Object.FindObjectOfType<StarterPoiRoadLink>() == null)
             {
                 var road = new GameObject("OldCrown_CopperPort_Road");
                 road.AddComponent<StarterPoiRoadLink>();
+            }
+            if (Object.FindObjectOfType<DryfieldRoadLinks>() == null)
+            {
+                var roads = new GameObject("Dryfield_Road_Links");
+                roads.AddComponent<DryfieldRoadLinks>();
             }
         }
     }
