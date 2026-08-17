@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Fsp.BattleRoyale;
 using Fsp.Player;
+using Fsp.Presentation;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -80,6 +81,7 @@ namespace Fsp.Bots
             go.AddComponent<PlayerVitals>();
             var participant = go.AddComponent<MatchParticipant>();
             participant.ConfigureAsBot($"Bot {index + 1}");
+            go.AddComponent<StarterProceduralCharacterVisual>();
             go.name = $"Bot_{index + 1:00}_Placeholder";
             return go;
         }
