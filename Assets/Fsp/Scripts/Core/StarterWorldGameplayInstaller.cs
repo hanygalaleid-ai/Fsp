@@ -15,6 +15,7 @@ namespace Fsp.Core
    if(Object.FindObjectOfType<StarterPoiRoadLink>()==null)new GameObject("OldCrown_CopperPort_Road").AddComponent<StarterPoiRoadLink>();
    if(Object.FindObjectOfType<DryfieldRoadLinks>()==null)new GameObject("Dryfield_Road_Links").AddComponent<DryfieldRoadLinks>();
    if(Object.FindObjectOfType<QuarryRoadLink>()==null)new GameObject("WhiteQuarry_Road_Links").AddComponent<QuarryRoadLink>();
+   if(Object.FindObjectOfType<AirstripRoadLink>()==null)new GameObject("RedlineAirstrip_Road_Links").AddComponent<AirstripRoadLink>();
   }
  }
 }
