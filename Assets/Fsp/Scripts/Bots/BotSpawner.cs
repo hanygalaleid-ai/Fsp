@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Fsp.BattleRoyale;
+using Fsp.Player;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -10,6 +12,7 @@ namespace Fsp.Bots
         [SerializeField] private Transform[] spawnPoints;
         [SerializeField, Min(1)] private int targetPopulation = 32;
         [SerializeField, Min(0f)] private float spawnRadius = 8f;
+        [SerializeField] private float fallbackRingRadius = 40f;
 
         private readonly List<GameObject> spawnedBots = new();
 
@@ -26,17 +29,32 @@ namespace Fsp.Bots
 
         public bool TrySpawnOne()
         {
-            if (botPrefab == null || spawnPoints == null || spawnPoints.Length == 0)
-                return false;
+            int index = spawnedBots.Count;
+            Vector3 candidate;
+            Quaternion rotation = Quaternion.identity;
 
-            Transform point = spawnPoints[Random.Range(0, spawnPoints.Length)];
-            Vector3 candidate = point.position + Random.insideUnitSphere * spawnRadius;
-            candidate.y = point.position.y;
+            if (spawnPoints != null && spawnPoints.Length > 0)
+            {
+                Transform point = spawnPoints[index % spawnPoints.Length];
+                if (point == null) return false;
+                candidate = point.position + Random.insideUnitSphere * spawnRadius;
+                candidate.y = point.position.y;
+                rotation = point.rotation;
 
-            if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, Mathf.Max(2f, spawnRadius), NavMesh.AllAreas))
-                candidate = hit.position;
+                if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, Mathf.Max(2f, spawnRadius), NavMesh.AllAreas))
+                    candidate = hit.position;
+            }
+            else
+            {
+                float angle = index * 137.508f * Mathf.Deg2Rad;
+                float radius = Mathf.Max(6f, fallbackRingRadius * Mathf.Sqrt((index + 1f) / Mathf.Max(1f, targetPopulation)));
+                candidate = transform.position + new Vector3(Mathf.Cos(angle) * radius, 1.05f, Mathf.Sin(angle) * radius);
+            }
 
-            GameObject bot = Instantiate(botPrefab, candidate, point.rotation);
+            GameObject bot = botPrefab != null
+                ? Instantiate(botPrefab, candidate, rotation)
+                : CreatePlaceholderBot(index, candidate, rotation);
+
             spawnedBots.Add(bot);
             return true;
         }
@@ -44,6 +62,25 @@ namespace Fsp.Bots
         public void RemoveDestroyedBots()
         {
             spawnedBots.RemoveAll(x => x == null);
+        }
+
+        private static GameObject CreatePlaceholderBot(int index, Vector3 position, Quaternion rotation)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            go.transform.SetPositionAndRotation(position, rotation);
+            Collider primitiveCollider = go.GetComponent<Collider>();
+            if (primitiveCollider != null) Object.Destroy(primitiveCollider);
+
+            var controller = go.AddComponent<CharacterController>();
+            controller.height = 1.8f;
+            controller.radius = 0.35f;
+            controller.center = new Vector3(0f, 0.9f, 0f);
+
+            go.AddComponent<PlayerVitals>();
+            var participant = go.AddComponent<MatchParticipant>();
+            participant.ConfigureAsBot($"Bot {index + 1}");
+            go.name = $"Bot_{index + 1:00}_Placeholder";
+            return go;
         }
     }
 }
