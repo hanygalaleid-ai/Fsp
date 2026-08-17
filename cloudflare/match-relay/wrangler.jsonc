@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "fsp-match-relay",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-17",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MATCH_ROOMS",
+        "class_name": "MatchRoom"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["MatchRoom"]
+    }
+  ],
+  "vars": {
+    "SUPABASE_URL": "https://izjdvlkwuqgtawwbksun.supabase.co"
+  }
+}
