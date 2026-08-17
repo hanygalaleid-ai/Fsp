@@ -29,11 +29,16 @@ namespace Fsp.BattleRoyale
             cabinAnchor = cabin;
             if (parachute == null) parachute = GetComponent<ParachuteController>();
             if (motor == null) motor = GetComponent<ThirdPersonMotor>();
+
+            // Runtime fallback passengers are configured after the plane route has started.
+            // Board immediately so the offline starter follows the same plane -> jump loop as online matches.
+            if (plane != null && plane.IsFlying && !aboard && !jumped)
+                Board();
         }
 
         public void Board()
         {
-            if (cabinAnchor == null || jumped) return;
+            if (cabinAnchor == null || jumped || aboard) return;
             originalParent = transform.parent;
             transform.SetParent(cabinAnchor, false);
             transform.localPosition = Vector3.zero;
