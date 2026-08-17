@@ -25,6 +25,8 @@ namespace Fsp.Networking
         public event Action<NetworkFireEvent> FireReceived;
         public event Action<NetworkDamageEvent> DamageReceived;
         public event Action<NetworkVehicleSnapshot> VehicleReceived;
+        public event Action<NetworkSeatEvent> SeatReceived;
+        public event Action<NetworkLootClaimEvent> LootClaimReceived;
 
         private void Update()
         {
@@ -80,6 +82,8 @@ namespace Fsp.Networking
         public void SendFire(NetworkFireEvent fireEvent) => Send("fire", JsonUtility.ToJson(fireEvent));
         public void SendDamage(NetworkDamageEvent damageEvent) => Send("damage", JsonUtility.ToJson(damageEvent));
         public void SendVehicle(NetworkVehicleSnapshot vehicleSnapshot) => Send("vehicle", JsonUtility.ToJson(vehicleSnapshot));
+        public void SendSeat(NetworkSeatEvent seatEvent) => Send("seat", JsonUtility.ToJson(seatEvent));
+        public void SendLootClaim(NetworkLootClaimEvent lootClaim) => Send("loot_claim", JsonUtility.ToJson(lootClaim));
 
         private async void Send(string type, string payload)
         {
@@ -142,6 +146,8 @@ namespace Fsp.Networking
                 case "fire": FireReceived?.Invoke(JsonUtility.FromJson<NetworkFireEvent>(envelope.payload)); break;
                 case "damage": DamageReceived?.Invoke(JsonUtility.FromJson<NetworkDamageEvent>(envelope.payload)); break;
                 case "vehicle": VehicleReceived?.Invoke(JsonUtility.FromJson<NetworkVehicleSnapshot>(envelope.payload)); break;
+                case "seat": SeatReceived?.Invoke(JsonUtility.FromJson<NetworkSeatEvent>(envelope.payload)); break;
+                case "loot_claimed": LootClaimReceived?.Invoke(JsonUtility.FromJson<NetworkLootClaimEvent>(envelope.payload)); break;
             }
         }
 
