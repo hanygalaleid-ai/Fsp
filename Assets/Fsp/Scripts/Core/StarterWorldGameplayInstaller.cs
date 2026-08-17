@@ -15,6 +15,12 @@ namespace Fsp.Core
                 oldCrown.AddComponent<OldCrownInteriorPrototype>();
             }
 
+            if (Object.FindObjectOfType<OldCrownDoorInstaller>() == null)
+            {
+                var doors = new GameObject("OldCrown_Doors");
+                doors.AddComponent<OldCrownDoorInstaller>();
+            }
+
             if (Object.FindObjectOfType<CopperPortPrototype>() == null)
             {
                 var copperPort = new GameObject("CopperPort_Prototype");
