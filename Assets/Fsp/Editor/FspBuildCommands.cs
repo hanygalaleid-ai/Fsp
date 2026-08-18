@@ -23,6 +23,7 @@ namespace Fsp.EditorTools
             PrepareCommonPlayerSettings();
             PrepareAndroidSettings(false);
             EditorUserBuildSettings.buildAppBundle = false;
+            EditorUserBuildSettings.development = false;
             Build(BuildTarget.Android, "Builds/Android/Fsp-test.apk");
         }
 
@@ -33,6 +34,7 @@ namespace Fsp.EditorTools
             PrepareCommonPlayerSettings();
             PrepareAndroidSettings(true);
             EditorUserBuildSettings.buildAppBundle = true;
+            EditorUserBuildSettings.development = false;
             Build(BuildTarget.Android, "Builds/Android/Fsp-release.aab");
         }
 
@@ -64,6 +66,7 @@ namespace Fsp.EditorTools
 
         private static void PrepareAndroidSettings(bool release)
         {
+            PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel23;
             PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevelAuto;
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
             PlayerSettings.Android.bundleVersionCode = 1;
