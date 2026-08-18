@@ -14,7 +14,7 @@ public sealed class PoiLootTierBalancer:MonoBehaviour{
   new PoiTier{id="lantern_coast",center=new Vector3(-155,0,105),radius=74,highTierChance=.25f,ammoBonus=6,armorBonus=5}
  };
  void Start(){Balance();}
- public void Balance(){var pickups=Object.FindObjectsOfType<LootPickup>();foreach(var pickup in pickups){if(pickup==null)continue;var tier=FindTier(pickup.transform.position);if(!tier.HasValue)continue;ApplyTier(pickup,tier.Value);}}
+ public void Balance(){var pickups=UnityEngine.Object.FindObjectsOfType<LootPickup>();foreach(var pickup in pickups){if(pickup==null)continue;var tier=FindTier(pickup.transform.position);if(!tier.HasValue)continue;ApplyTier(pickup,tier.Value);}}
  PoiTier? FindTier(Vector3 p){PoiTier? best=null;float bestD=float.MaxValue;foreach(var t in tiers){float d=(new Vector2(p.x-t.center.x,p.z-t.center.z)).sqrMagnitude;if(d<=t.radius*t.radius&&d<bestD){best=t;bestD=d;}}return best;}
  void ApplyTier(LootPickup pickup,PoiTier tier){var item=pickup.Item;if(item==null)return;int seed=StableHash(pickup.name+tier.id);var rng=new System.Random(seed);bool high=rng.NextDouble()<tier.highTierChance;if(item.type==InventoryItemType.Ammo)item.ammoAmount=Mathf.Max(item.ammoAmount,high?75+tier.ammoBonus:40+tier.ammoBonus);else if(item.type==InventoryItemType.Armor)item.armorAmount=Mathf.Max(item.armorAmount,high?50+tier.armorBonus:25+tier.armorBonus);}
  static int StableHash(string s){unchecked{int h=23;for(int i=0;i<s.Length;i++)h=h*31+s[i];return h;}}
