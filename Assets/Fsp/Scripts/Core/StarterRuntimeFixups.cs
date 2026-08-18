@@ -1,7 +1,6 @@
 using Fsp.Backend;
 using Fsp.BattleRoyale;
 using Fsp.Player;
-using Fsp.Presentation;
 using Fsp.Vehicles;
 using UnityEngine;
 
@@ -28,8 +27,6 @@ namespace Fsp.Core
                     player.AddComponent<StarterVehicleInput>();
                 if (player.GetComponent<StarterInteractInput>() == null)
                     player.AddComponent<StarterInteractInput>();
-                if (player.GetComponent<StarterProceduralCharacterVisual>() == null)
-                    player.AddComponent<StarterProceduralCharacterVisual>();
 
                 MatchManager manager = Object.FindObjectOfType<MatchManager>();
                 if (manager != null && manager.GetComponent<MatchProgressReporter>() == null)
