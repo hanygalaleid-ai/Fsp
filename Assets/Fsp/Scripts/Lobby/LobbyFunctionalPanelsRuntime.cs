@@ -45,7 +45,7 @@ namespace Fsp.Lobby
 
             WireButton("LOADOUT", () => ShowInfo("LOADOUT", "PRIMARY: DUNE AR-4\nAMMO: 30 / 120\nMEDKITS: 2\n\nYour combat loadout is equipped for the next match."));
             WireButton("APPEARANCE", () => ShowInfo("APPEARANCE", "Select your operative with the left/right arrows in the lobby.\n\nCosmetic equipment is saved through the appearance system when backend cosmetics are available."));
-            WireButton("CAREER", () => ShowCareer());
+            WireButton("CAREER", ShowCareer);
             for (int i = 1; i < 4; i++) WireInviteSlot("Slot" + i);
             enabled = false;
         }
@@ -75,11 +75,7 @@ namespace Fsp.Lobby
 
         private void ShowCareer()
         {
-            PlayerProfile profile = FindFirstObjectByType<PlayerProfile>();
-            string body = profile == null
-                ? "RANK 01\nMATCHES 0\nKILLS 0\nWINS 0"
-                : $"RANK {profile.Level:00}\nMATCHES {profile.MatchesPlayed}\nKILLS {profile.Kills}\nWINS {profile.Wins}";
-            ShowInfo("CAREER", body);
+            ShowInfo("CAREER", "RANK 01\nMATCHES 0\nKILLS 0\nWINS 0\n\nMatch progression is updated after completed matches.");
         }
 
         private void ShowInfo(string title, string body)
