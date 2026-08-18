@@ -7,13 +7,15 @@ namespace Fsp.Presentation
 {
     /// <summary>
     /// Applies fixed UI art from Resources to runtime-generated Lobby/Match canvases.
-    /// This keeps cloud-generated scenes visually stable while leaving gameplay installers as fallbacks.
+    /// Lobby only needs a short bootstrap scan; Match stays active so late-created/late-enabled
+    /// UI such as the results screen always receives the shipped visual identity.
     /// </summary>
     public sealed class FixedUiArtRuntime : MonoBehaviour
     {
         private static readonly Dictionary<string, Sprite> Cache = new();
         private float nextApply;
-        private float stopAt;
+        private float lobbyStopAt;
+        private bool isMatch;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
@@ -28,19 +30,21 @@ namespace Fsp.Presentation
 
         private void Awake()
         {
-            stopAt = Time.unscaledTime + 12f;
+            isMatch = string.Equals(SceneManager.GetActiveScene().name, "Match", System.StringComparison.OrdinalIgnoreCase);
+            lobbyStopAt = Time.unscaledTime + 12f;
             ApplyAll();
         }
 
         private void Update()
         {
-            if (Time.unscaledTime > stopAt)
+            if (!isMatch && Time.unscaledTime > lobbyStopAt)
             {
                 enabled = false;
                 return;
             }
+
             if (Time.unscaledTime < nextApply) return;
-            nextApply = Time.unscaledTime + 0.35f;
+            nextApply = Time.unscaledTime + (isMatch ? 1f : 0.35f);
             ApplyAll();
         }
 
