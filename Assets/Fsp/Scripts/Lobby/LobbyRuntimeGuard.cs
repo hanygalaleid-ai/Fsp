@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -20,6 +21,7 @@ namespace Fsp.Lobby
                 return;
 
             EnsureState();
+            EnsureRuntimeComponents();
 
             if (GameObject.Find("LobbyCanvas") != null)
                 return;
@@ -44,6 +46,21 @@ namespace Fsp.Lobby
                 BuildFallbackUi();
         }
 
+        private static GameObject GetRuntimeHost()
+        {
+            GameObject host = GameObject.Find("LobbyRuntime");
+            return host != null ? host : new GameObject("LobbyRuntime");
+        }
+
+        private static void EnsureRuntimeComponents()
+        {
+            GameObject host = GetRuntimeHost();
+            if (host.GetComponent<LobbyController>() == null)
+                host.AddComponent<LobbyController>();
+            if (host.GetComponent<LobbyMatchLauncher>() == null)
+                host.AddComponent<LobbyMatchLauncher>();
+        }
+
         private static void EnsureState()
         {
             if (LobbyState.Instance != null)
@@ -56,8 +73,20 @@ namespace Fsp.Lobby
                 stateObject.AddComponent<LobbyState>();
         }
 
+        private static void EnsureEventSystem()
+        {
+            if (UnityEngine.Object.FindFirstObjectByType<EventSystem>() != null)
+                return;
+
+            GameObject eventSystem = new GameObject("EventSystem");
+            eventSystem.AddComponent<EventSystem>();
+            eventSystem.AddComponent<StandaloneInputModule>();
+        }
+
         private static void BuildFallbackUi()
         {
+            EnsureEventSystem();
+
             GameObject canvasObject = new GameObject("LobbyCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             Canvas canvas = canvasObject.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
