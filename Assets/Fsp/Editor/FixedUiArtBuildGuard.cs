@@ -16,6 +16,7 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Art/Resources/UI/ui_panel_dark.png",
             "Assets/Fsp/Art/Resources/UI/ui_button_primary.png",
             "Assets/Fsp/Art/Resources/UI/ui_button_secondary.png",
+            "Assets/Fsp/Art/Resources/UI/action_icons.png",
             "Assets/Fsp/Art/Resources/World/sand_ground.png",
             "Assets/Fsp/Art/Resources/World/rock_cliff.png",
             "Assets/Fsp/Art/Resources/World/road_dust.png",
