@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 
 namespace Fsp.Lobby
 {
-    /// <summary>Ensures generated Lobby scenes have the backend squad services required by the invite UI.</summary>
+    /// <summary>Ensures generated Lobby scenes have squad and profile backend services.</summary>
     public static class LobbyBackendRuntimeInstaller
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -24,6 +24,14 @@ namespace Fsp.Lobby
             SquadLobbyController controller = host.GetComponent<SquadLobbyController>();
             if (controller == null) controller = host.AddComponent<SquadLobbyController>();
             controller.ConfigureRuntime(squad, matchmaking);
+
+            SupabaseProfileStore profileStore = host.GetComponent<SupabaseProfileStore>();
+            if (profileStore == null) profileStore = host.AddComponent<SupabaseProfileStore>();
+
+            LobbyProfileSync profileSync = host.GetComponent<LobbyProfileSync>();
+            if (profileSync == null) profileSync = host.AddComponent<LobbyProfileSync>();
+            profileSync.ConfigureRuntime(profileStore);
+            profileSync.LoadRuntimeProfile();
 
             if (SquadLobbyState.Instance == null)
             {
