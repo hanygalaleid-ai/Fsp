@@ -43,8 +43,7 @@ namespace Fsp.AI
             {
                 Vector3 flat = target - transform.position;
                 flat.y = 0f;
-                if (flat.sqrMagnitude <= jumpTriggerDistance * jumpTriggerDistance)
-                    passenger.Jump();
+                if (flat.sqrMagnitude <= jumpTriggerDistance * jumpTriggerDistance) passenger.Jump();
                 return;
             }
 
@@ -52,18 +51,13 @@ namespace Fsp.AI
             {
                 Vector3 delta = target - transform.position;
                 delta.y = 0f;
-                Vector2 steer = delta.sqrMagnitude > 1f
-                    ? new Vector2(Vector3.Dot(delta.normalized, transform.right), Vector3.Dot(delta.normalized, transform.forward))
-                    : Vector2.zero;
+                Vector2 steer = delta.sqrMagnitude > 1f ? new Vector2(Vector3.Dot(delta.normalized, transform.right), Vector3.Dot(delta.normalized, transform.forward)) : Vector2.zero;
                 parachute.SetSteer(steer);
-
-                if (!parachute.IsOpen && Physics.Raycast(transform.position, Vector3.down, out _, parachuteOpenHeight, groundMask, QueryTriggerInteraction.Ignore))
-                    parachute.OpenParachute();
+                if (!parachute.IsOpen && Physics.Raycast(transform.position, Vector3.down, out _, parachuteOpenHeight, groundMask, QueryTriggerInteraction.Ignore)) parachute.OpenParachute();
                 return;
             }
 
-            if (passenger != null && passenger.HasJumped)
-                FinishLanding();
+            if (passenger != null && passenger.HasJumped) FinishLanding();
         }
 
         private void FinishLanding()
@@ -84,9 +78,7 @@ namespace Fsp.AI
                 return;
             }
 
-            string matchId = MatchRoomState.Instance != null && MatchRoomState.Instance.HasMatch
-                ? MatchRoomState.Instance.MatchId
-                : "offline";
+            string matchId = MatchRoomState.HasMatch ? MatchRoomState.MatchId : "offline";
             string seedText = matchId + ":botdrop:" + gameObject.GetInstanceID();
             var random = new System.Random(StableHash(seedText));
             Transform chosen = dropTargets[random.Next(0, dropTargets.Length)];
