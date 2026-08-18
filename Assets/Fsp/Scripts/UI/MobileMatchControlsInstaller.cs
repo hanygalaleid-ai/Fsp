@@ -18,6 +18,7 @@ namespace Fsp.UI
         private static readonly Color PanelStrong = new Color(0.025f, 0.055f, 0.09f, 0.90f);
         private static readonly Color Accent = new Color(0.90f, 0.43f, 0.05f, 0.96f);
         private static readonly Color TextColor = new Color(0.96f, 0.94f, 0.89f, 1f);
+        private static Texture2D actionAtlas;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void InstallAfterSceneLoad()
@@ -58,16 +59,15 @@ namespace Fsp.UI
             CreateLookArea(root);
             CreateJoystick(root);
 
-            // Right-side combat cluster. Anchors are deliberately separated so 16:9 and wider devices
-            // keep every action reachable without overlapping the camera look area or each other.
-            CreateActionButton(root, "Fire", "FIRE", new Vector2(0.875f, 0.13f), new Vector2(150f, 150f), Accent, MobileButtonActionType.Fire, 28);
-            CreateActionButton(root, "Aim", "AIM", new Vector2(0.765f, 0.34f), new Vector2(118f, 82f), PanelStrong, MobileButtonActionType.Aim, 18);
-            CreateActionButton(root, "Jump", "JUMP", new Vector2(0.755f, 0.20f), new Vector2(112f, 112f), PanelStrong, MobileButtonActionType.Jump, 19);
-            CreateActionButton(root, "Reload", "RELOAD", new Vector2(0.895f, 0.30f), new Vector2(118f, 78f), PanelStrong, MobileButtonActionType.Reload, 17);
-            CreateActionButton(root, "Heal", "HEAL", new Vector2(0.735f, 0.075f), new Vector2(110f, 74f), PanelStrong, MobileButtonActionType.Heal, 17);
-            CreateActionButton(root, "Interact", "USE", new Vector2(0.625f, 0.19f), new Vector2(108f, 76f), PanelStrong, MobileButtonActionType.Interact, 17);
-            CreateActionButton(root, "Switch", "SWAP", new Vector2(0.895f, 0.405f), new Vector2(110f, 68f), PanelStrong, MobileButtonActionType.SwitchWeapon, 16);
-            CreateActionButton(root, "Sprint", "SPRINT", new Vector2(0.185f, 0.095f), new Vector2(118f, 72f), PanelStrong, MobileButtonActionType.Sprint, 16);
+            // action_icons.png is a 4x2 atlas: FIRE, AIM, JUMP, RELOAD / HEAL, USE, SWAP, SPRINT.
+            CreateActionButton(root, "Fire", "FIRE", new Vector2(0.875f, 0.13f), new Vector2(150f, 150f), Accent, MobileButtonActionType.Fire, 28, 0);
+            CreateActionButton(root, "Aim", "AIM", new Vector2(0.765f, 0.34f), new Vector2(118f, 82f), PanelStrong, MobileButtonActionType.Aim, 18, 1);
+            CreateActionButton(root, "Jump", "JUMP", new Vector2(0.755f, 0.20f), new Vector2(112f, 112f), PanelStrong, MobileButtonActionType.Jump, 19, 2);
+            CreateActionButton(root, "Reload", "RELOAD", new Vector2(0.895f, 0.30f), new Vector2(118f, 78f), PanelStrong, MobileButtonActionType.Reload, 17, 3);
+            CreateActionButton(root, "Heal", "HEAL", new Vector2(0.735f, 0.075f), new Vector2(110f, 74f), PanelStrong, MobileButtonActionType.Heal, 17, 4);
+            CreateActionButton(root, "Interact", "USE", new Vector2(0.625f, 0.19f), new Vector2(108f, 76f), PanelStrong, MobileButtonActionType.Interact, 17, 5);
+            CreateActionButton(root, "Switch", "SWAP", new Vector2(0.895f, 0.405f), new Vector2(110f, 68f), PanelStrong, MobileButtonActionType.SwitchWeapon, 16, 6);
+            CreateActionButton(root, "Sprint", "SPRINT", new Vector2(0.185f, 0.095f), new Vector2(118f, 72f), PanelStrong, MobileButtonActionType.Sprint, 16, 7);
 
             CreateTopBadge(root, "FSP // SUNSCAR", new Vector2(0.5f, 0.955f));
         }
@@ -127,7 +127,7 @@ namespace Fsp.UI
             handle.GetComponent<Image>().color = new Color(0.88f, 0.89f, 0.87f, 0.74f);
         }
 
-        private static void CreateActionButton(RectTransform root, string name, string label, Vector2 anchor, Vector2 size, Color color, MobileButtonActionType action, int fontSize)
+        private static void CreateActionButton(RectTransform root, string name, string label, Vector2 anchor, Vector2 size, Color color, MobileButtonActionType action, int fontSize, int iconIndex)
         {
             GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(MobileButtonAction));
             go.transform.SetParent(root, false);
@@ -138,7 +138,30 @@ namespace Fsp.UI
             rt.anchoredPosition = Vector2.zero;
             go.GetComponent<Image>().color = color;
             go.GetComponent<MobileButtonAction>().Configure(action);
+            CreateActionIcon(go.transform, iconIndex);
             CreateLabel(go.transform, label, fontSize);
+        }
+
+        private static void CreateActionIcon(Transform parent, int iconIndex)
+        {
+            if (actionAtlas == null) actionAtlas = Resources.Load<Texture2D>("UI/action_icons");
+            if (actionAtlas == null || iconIndex < 0 || iconIndex > 7) return;
+
+            GameObject icon = new GameObject("Icon", typeof(RectTransform), typeof(RawImage));
+            icon.transform.SetParent(parent, false);
+            RectTransform rt = icon.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.25f, 0.39f);
+            rt.anchorMax = new Vector2(0.75f, 0.91f);
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+
+            int column = iconIndex % 4;
+            int rowFromTop = iconIndex / 4;
+            RawImage image = icon.GetComponent<RawImage>();
+            image.texture = actionAtlas;
+            image.uvRect = new Rect(column * 0.25f, rowFromTop == 0 ? 0.5f : 0f, 0.25f, 0.5f);
+            image.color = Color.white;
+            image.raycastTarget = false;
         }
 
         private static void CreateTopBadge(RectTransform root, string label, Vector2 anchor)
@@ -158,8 +181,8 @@ namespace Fsp.UI
             GameObject labelObject = new GameObject("Label", typeof(RectTransform), typeof(Text));
             labelObject.transform.SetParent(parent, false);
             RectTransform rect = labelObject.GetComponent<RectTransform>();
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
+            rect.anchorMin = new Vector2(0f, 0.02f);
+            rect.anchorMax = new Vector2(1f, 0.42f);
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
 
@@ -172,8 +195,9 @@ namespace Fsp.UI
             text.alignment = TextAnchor.MiddleCenter;
             text.color = TextColor;
             text.resizeTextForBestFit = true;
-            text.resizeTextMinSize = 12;
+            text.resizeTextMinSize = 10;
             text.resizeTextMaxSize = size;
+            text.raycastTarget = false;
         }
     }
 }
