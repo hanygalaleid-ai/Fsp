@@ -14,6 +14,12 @@ namespace Fsp.Input
         private void Awake()
         {
             if (background == null) background = transform as RectTransform;
+            if (handle == null)
+            {
+                Transform found = transform.Find("Handle");
+                if (found != null) handle = found as RectTransform;
+            }
+
             Canvas canvas = GetComponentInParent<Canvas>();
             if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
                 uiCamera = canvas.worldCamera;
