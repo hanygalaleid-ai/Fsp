@@ -9,9 +9,10 @@ namespace Fsp.Core
     public static class StarterWorldGameplayInstaller
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void Install()
+        private static void Install() => EnsureInstalled();
+
+        public static void EnsureInstalled()
         {
-            // Never build the battle-royale island inside the Lobby or any utility scene.
             bool isMatchScene = SceneManager.GetActiveScene().name == "Match";
             if (!isMatchScene && Object.FindObjectOfType<MatchManager>() == null) return;
 
@@ -42,6 +43,21 @@ namespace Fsp.Core
             if (Object.FindObjectOfType<MobileWorldOptimizer>() == null) new GameObject("SunscarIsland_MobileOptimizer").AddComponent<MobileWorldOptimizer>();
             if (Object.FindObjectOfType<StarterSpawnBalance>() == null) new GameObject("SunscarIsland_SpawnBalance").AddComponent<StarterSpawnBalance>();
             if (Object.FindObjectOfType<PoiLootTierBalancer>() == null) new GameObject("SunscarIsland_LootBalance").AddComponent<PoiLootTierBalancer>();
+
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.34f, 0.31f, 0.27f);
+            RenderSettings.fog = true;
+            RenderSettings.fogColor = new Color(0.58f, 0.61f, 0.62f);
+            RenderSettings.fogDensity = 0.0018f;
+
+            Camera camera = Camera.main != null ? Camera.main : Object.FindObjectOfType<Camera>();
+            if (camera != null)
+            {
+                camera.clearFlags = CameraClearFlags.Skybox;
+                camera.nearClipPlane = 0.08f;
+                camera.farClipPlane = 1600f;
+                camera.allowHDR = false;
+            }
         }
     }
 }

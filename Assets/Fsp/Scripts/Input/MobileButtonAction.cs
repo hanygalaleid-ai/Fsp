@@ -10,12 +10,16 @@ namespace Fsp.Input
         Sprint,
         Jump,
         Interact,
-        SwitchWeapon
+        SwitchWeapon,
+        Reload,
+        Heal
     }
 
     public sealed class MobileButtonAction : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
     {
         [SerializeField] private MobileButtonActionType action;
+
+        public void Configure(MobileButtonActionType value) => action = value;
 
         public void OnPointerDown(PointerEventData eventData)
         {
@@ -30,6 +34,8 @@ namespace Fsp.Input
                 case MobileButtonActionType.Jump: input.PressJump(); break;
                 case MobileButtonActionType.Interact: input.PressInteract(); break;
                 case MobileButtonActionType.SwitchWeapon: input.PressSwitchWeapon(); break;
+                case MobileButtonActionType.Reload: input.PressReload(); break;
+                case MobileButtonActionType.Heal: input.PressHeal(); break;
             }
         }
 
