@@ -1,3 +1,4 @@
+using Fsp.Backend;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -44,7 +45,7 @@ namespace Fsp.Lobby
             }
 
             WireButton("LOADOUT", () => ShowInfo("LOADOUT", "PRIMARY: DUNE AR-4\nAMMO: 30 / 120\nMEDKITS: 2\n\nYour combat loadout is equipped for the next match."));
-            WireButton("APPEARANCE", () => ShowInfo("APPEARANCE", "Select your operative with the left/right arrows in the lobby.\n\nCosmetic equipment is saved through the appearance system when backend cosmetics are available."));
+            WireButton("APPEARANCE", () => ShowInfo("APPEARANCE", "Use the left/right arrows below your operative to change character.\n\nSelected appearance is kept in the lobby profile and synced when signed in."));
             WireButton("CAREER", ShowCareer);
             for (int i = 1; i < 4; i++) WireInviteSlot("Slot" + i);
             enabled = false;
@@ -75,7 +76,18 @@ namespace Fsp.Lobby
 
         private void ShowCareer()
         {
-            ShowInfo("CAREER", "RANK 01\nMATCHES 0\nKILLS 0\nWINS 0\n\nMatch progression is updated after completed matches.");
+            LobbyProfileSync sync = FindFirstObjectByType<LobbyProfileSync>();
+            PlayerProfile profile = sync != null ? sync.CurrentProfile : null;
+            if (profile == null)
+            {
+                ShowInfo("CAREER", SupabaseSession.IsSignedIn
+                    ? "PROFILE LOADING...\n\nOpen CAREER again in a moment."
+                    : "LOCAL OPERATIVE\n\nSign in to sync RANK, MATCHES, KILLS and WINS across devices.");
+                return;
+            }
+
+            ShowInfo("CAREER",
+                $"RANK {profile.Level:00}\nXP {profile.Xp}\nRANK POINTS {profile.RankPoints}\nMATCHES {profile.MatchesPlayed}\nKILLS {profile.Kills}\nWINS {profile.Wins}");
         }
 
         private void ShowInfo(string title, string body)
@@ -92,7 +104,9 @@ namespace Fsp.Lobby
         {
             EnsureModal();
             modalTitle.text = "INVITE PLAYER";
-            modalBody.text = "Enter the player name to send a squad invite.";
+            modalBody.text = SupabaseSession.IsSignedIn
+                ? "Enter the player name to send a squad invite. A squad will be created automatically if needed."
+                : "Sign in first to create a squad and invite players.";
             inviteInput.text = string.Empty;
             inviteInput.gameObject.SetActive(true);
             inviteSend.gameObject.SetActive(true);
@@ -109,7 +123,7 @@ namespace Fsp.Lobby
             }
 
             SquadLobbyController controller = FindFirstObjectByType<SquadLobbyController>();
-            if (controller == null)
+            if (controller == null || !controller.HasService)
             {
                 modalBody.text = "Squad service is not connected in this build.";
                 return;
