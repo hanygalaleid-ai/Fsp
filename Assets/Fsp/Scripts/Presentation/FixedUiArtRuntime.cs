@@ -28,7 +28,7 @@ namespace Fsp.Presentation
 
         private void Awake()
         {
-            stopAt = Time.unscaledTime + 8f;
+            stopAt = Time.unscaledTime + 12f;
             ApplyAll();
         }
 
@@ -47,10 +47,8 @@ namespace Fsp.Presentation
         private static void ApplyAll()
         {
             string scene = SceneManager.GetActiveScene().name;
-            if (string.Equals(scene, "Lobby", System.StringComparison.OrdinalIgnoreCase))
-                ApplyLobby();
-            else if (string.Equals(scene, "Match", System.StringComparison.OrdinalIgnoreCase))
-                ApplyMatch();
+            if (string.Equals(scene, "Lobby", System.StringComparison.OrdinalIgnoreCase)) ApplyLobby();
+            else if (string.Equals(scene, "Match", System.StringComparison.OrdinalIgnoreCase)) ApplyMatch();
         }
 
         private static void ApplyLobby()
@@ -84,6 +82,8 @@ namespace Fsp.Presentation
             ApplyNamed("Switch", "UI/ui_button_secondary", Image.Type.Sliced);
             ApplyNamed("Sprint", "UI/ui_button_secondary", Image.Type.Sliced);
             ApplyNamed("TopBadge", "UI/ui_panel_dark", Image.Type.Sliced);
+            ApplyNamed("ResultsPanel", "UI/ui_panel_dark", Image.Type.Sliced);
+            ApplyNamed("ReturnToLobby", "UI/ui_button_primary", Image.Type.Sliced);
         }
 
         private static void ApplyNamed(string objectName, string resourcePath, Image.Type type)
