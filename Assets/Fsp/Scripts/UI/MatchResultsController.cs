@@ -1,5 +1,6 @@
 using Fsp.BattleRoyale;
 using Fsp.Combat;
+using Fsp.Input;
 using Fsp.Player;
 using Fsp.Vehicles;
 using UnityEngine;
@@ -92,11 +93,26 @@ namespace Fsp.UI
 
         private void DisableGameplayInput()
         {
-            if (localPlayer == null) return;
-            SetEnabled(localPlayer.GetComponent<StarterCombatInput>(), false);
-            SetEnabled(localPlayer.GetComponent<StarterThirdPersonRig>(), false);
-            SetEnabled(localPlayer.GetComponent<StarterVehicleInput>(), false);
-            SetEnabled(localPlayer.GetComponentInChildren<ThirdPersonMotor>(), false);
+            if (localPlayer != null)
+            {
+                SetEnabled(localPlayer.GetComponent<StarterCombatInput>(), false);
+                SetEnabled(localPlayer.GetComponent<StarterThirdPersonRig>(), false);
+                SetEnabled(localPlayer.GetComponent<StarterVehicleInput>(), false);
+                SetEnabled(localPlayer.GetComponent<MobileGameplayAdapter>(), false);
+                SetEnabled(localPlayer.GetComponentInChildren<ThirdPersonMotor>(), false);
+            }
+
+            GameObject mobileHud = GameObject.Find("MobileCombatHUD");
+            if (mobileHud != null) mobileHud.SetActive(false);
+
+            MobileInputBridge input = MobileInputBridge.Instance;
+            if (input != null)
+            {
+                input.SetMove(Vector2.zero);
+                input.SetFire(false);
+                input.SetAim(false);
+                input.SetSprint(false);
+            }
         }
 
         private static void SetEnabled(Behaviour behaviour, bool value)
