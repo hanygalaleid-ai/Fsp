@@ -8,8 +8,8 @@ using UnityEngine.SceneManagement;
 namespace Fsp.Presentation
 {
     /// <summary>
-    /// Lightweight visual safety net for cloud-generated Match scenes.
-    /// Keeps presentation helpers alive without fighting FixedWorldArtRuntime lighting/materials or ADS FOV.
+    /// Lightweight visual/gameplay safety net for cloud-generated Match scenes.
+    /// Keeps generated participants and presentation helpers aligned with release rules.
     /// </summary>
     public sealed class MatchRuntimePolish : MonoBehaviour
     {
@@ -96,6 +96,8 @@ namespace Fsp.Presentation
                     participant.gameObject.AddComponent<StarterProceduralCharacterVisual>();
                 if (participant.GetComponent<ParachuteController>() != null && participant.GetComponent<StarterParachuteVisual>() == null)
                     participant.gameObject.AddComponent<StarterParachuteVisual>();
+                if (participant.GetComponent<SafeZoneDamageApplier>() == null)
+                    participant.gameObject.AddComponent<SafeZoneDamageApplier>();
             }
 
             SimpleVehicleController[] vehicles = FindObjectsByType<SimpleVehicleController>(FindObjectsSortMode.None);
