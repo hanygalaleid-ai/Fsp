@@ -7,12 +7,18 @@ namespace Fsp.Backend
     {
         public static MatchRoomState Instance { get; private set; }
 
-        public string MatchId { get; private set; } = string.Empty;
-        public string Mode { get; private set; } = string.Empty;
-        public string Region { get; private set; } = string.Empty;
-        public int MaxPlayers { get; private set; }
-        public int MemberCount { get; private set; }
-        public bool HasMatch => !string.IsNullOrWhiteSpace(MatchId);
+        private string matchId = string.Empty;
+        private string mode = string.Empty;
+        private string region = string.Empty;
+        private int maxPlayers;
+        private int memberCount;
+
+        public static string MatchId => Instance != null ? Instance.matchId : string.Empty;
+        public static string Mode => Instance != null ? Instance.mode : string.Empty;
+        public static string Region => Instance != null ? Instance.region : string.Empty;
+        public static int MaxPlayers => Instance != null ? Instance.maxPlayers : 0;
+        public static int MemberCount => Instance != null ? Instance.memberCount : 0;
+        public static bool HasMatch => !string.IsNullOrWhiteSpace(MatchId);
 
         public event Action Changed;
 
@@ -28,20 +34,20 @@ namespace Fsp.Backend
             DontDestroyOnLoad(gameObject);
         }
 
-        public void SetMatch(string matchId, string mode, string region, int maxPlayers, int memberCount)
+        public void SetMatch(string newMatchId, string newMode, string newRegion, int newMaxPlayers, int newMemberCount)
         {
-            MatchId = matchId ?? string.Empty;
-            Mode = mode ?? string.Empty;
-            Region = region ?? string.Empty;
-            MaxPlayers = Mathf.Max(0, maxPlayers);
-            MemberCount = Mathf.Max(0, memberCount);
+            matchId = newMatchId ?? string.Empty;
+            mode = newMode ?? string.Empty;
+            region = newRegion ?? string.Empty;
+            maxPlayers = Mathf.Max(0, newMaxPlayers);
+            memberCount = Mathf.Max(0, newMemberCount);
             Changed?.Invoke();
         }
 
         public void Clear()
         {
-            MatchId = Mode = Region = string.Empty;
-            MaxPlayers = MemberCount = 0;
+            matchId = mode = region = string.Empty;
+            maxPlayers = memberCount = 0;
             Changed?.Invoke();
         }
     }
