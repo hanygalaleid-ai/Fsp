@@ -5,7 +5,7 @@ namespace Fsp.Lobby
 {
     public sealed class LobbyMatchLauncher : MonoBehaviour
     {
-        [SerializeField] private string battleSceneName = "BattleRoyale";
+        [SerializeField] private string battleSceneName = "Match";
         private bool subscribed;
 
         private void Update()
