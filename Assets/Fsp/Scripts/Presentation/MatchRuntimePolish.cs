@@ -9,7 +9,7 @@ namespace Fsp.Presentation
 {
     /// <summary>
     /// Lightweight visual safety net for cloud-generated Match scenes.
-    /// Keeps presentation helpers alive without fighting FixedWorldArtRuntime lighting/materials.
+    /// Keeps presentation helpers alive without fighting FixedWorldArtRuntime lighting/materials or ADS FOV.
     /// </summary>
     public sealed class MatchRuntimePolish : MonoBehaviour
     {
@@ -39,8 +39,6 @@ namespace Fsp.Presentation
 
         private static void ApplySafeCameraAndLighting()
         {
-            // Keep these values identical to FixedWorldArtRuntime so two runtime safety nets
-            // never alternate between different exposure/fog states on Android.
             RenderSettings.ambientMode = AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.30f, 0.27f, 0.23f, 1f);
             RenderSettings.fog = true;
@@ -80,7 +78,7 @@ namespace Fsp.Presentation
             {
                 camera.allowHDR = false;
                 camera.allowMSAA = true;
-                camera.fieldOfView = FspFixedTheme.MatchFieldOfView;
+                // Do not write fieldOfView here: AimDownSightsController owns gameplay FOV.
                 camera.nearClipPlane = 0.08f;
                 camera.farClipPlane = 1600f;
                 camera.clearFlags = CameraClearFlags.SolidColor;
@@ -124,9 +122,6 @@ namespace Fsp.Presentation
                     weapon.gameObject.AddComponent<StarterProceduralWeaponVisual>();
             }
 
-            // The generated safe-zone helper is a huge flat cylinder whose diameter tracks the zone.
-            // It must never render as world geometry; otherwise it can cover the terrain and even be
-            // mistaken for a ground mesh by the runtime material pass. Zone gameplay/minimap data remains intact.
             SafeZoneController[] zones = FindObjectsByType<SafeZoneController>(FindObjectsSortMode.None);
             foreach (SafeZoneController zone in zones)
             {
