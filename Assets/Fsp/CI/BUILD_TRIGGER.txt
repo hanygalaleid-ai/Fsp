@@ -1,2 +1,1 @@
-Trigger Unity Android CI build for current main revision.
-Requested: 2026-08-18
+Android art integration in progress. Do not build until fixed lobby art and UI assets are fully attached and reviewed.
