@@ -31,10 +31,10 @@ namespace Fsp.Combat
         {
             Resolve();
             if (inventory == null || IsCombatBlocked()) return;
-            if (Input.GetMouseButton(0)) Fire();
-            if (Input.GetKeyDown(KeyCode.R)) Reload();
-            if (Input.GetKeyDown(KeyCode.Q)) SwitchWeapon();
-            if (Input.GetKeyDown(KeyCode.H)) Heal();
+            if (UnityEngine.Input.GetMouseButton(0)) Fire();
+            if (UnityEngine.Input.GetKeyDown(KeyCode.R)) Reload();
+            if (UnityEngine.Input.GetKeyDown(KeyCode.Q)) SwitchWeapon();
+            if (UnityEngine.Input.GetKeyDown(KeyCode.H)) Heal();
         }
 
         public bool IsCombatBlocked()
