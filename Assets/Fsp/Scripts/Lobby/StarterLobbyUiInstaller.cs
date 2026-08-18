@@ -5,8 +5,8 @@ using UnityEngine.UI;
 namespace Fsp.Lobby
 {
     /// <summary>
-    /// Builds the complete starter lobby at runtime so cloud-generated scenes are never blank.
-    /// It intentionally uses only built-in Unity primitives/UI and the project's LobbyState.
+    /// Builds the starter lobby runtime UI. Checked-in lobby art is the release visual source of truth;
+    /// primitive backdrop/hero generation is reserved for emergency recovery when that art is missing.
     /// </summary>
     public sealed class StarterLobbyUiInstaller : MonoBehaviour
     {
@@ -31,8 +31,17 @@ namespace Fsp.Lobby
                 font = Resources.GetBuiltinResource<Font>("Arial.ttf");
 
             EnsureEventSystem();
-            BuildBackdrop();
-            BuildHero();
+
+            // Release rule: never put primitive fort/camp/character geometry in front of shipped lobby art.
+            // Procedural visuals exist only so a corrupted/missing Resources asset cannot leave a blank scene.
+            bool hasFixedLobbyArt = Resources.Load<Texture2D>("Lobby/lobby_reference") != null;
+            if (!hasFixedLobbyArt)
+            {
+                BuildBackdrop();
+                BuildHero();
+                Debug.LogWarning("Fsp fixed lobby art is missing; emergency procedural lobby visuals were enabled.");
+            }
+
             BuildUi();
         }
 
@@ -41,13 +50,16 @@ namespace Fsp.Lobby
             state = LobbyState.Instance;
             if (state == null)
             {
-                statusText.text = "Lobby state unavailable";
+                if (statusText != null) statusText.text = "Lobby state unavailable";
                 return;
             }
 
-            nameInput.text = string.IsNullOrWhiteSpace(state.DisplayName) ? "Player" : state.DisplayName;
-            state.SetDisplayName(nameInput.text);
-            nameInput.onValueChanged.AddListener(state.SetDisplayName);
+            if (nameInput != null)
+            {
+                nameInput.text = string.IsNullOrWhiteSpace(state.DisplayName) ? "Player" : state.DisplayName;
+                state.SetDisplayName(nameInput.text);
+                nameInput.onValueChanged.AddListener(state.SetDisplayName);
+            }
             state.Changed += Refresh;
             Refresh();
         }
@@ -191,9 +203,9 @@ namespace Fsp.Lobby
         private void Refresh()
         {
             if (state == null) return;
-            modeText.text = state.SelectedMode == MatchMode.Solo ? "SOLO" : "SQUAD";
-            characterText.text = state.SelectedCharacterId.ToUpperInvariant();
-            statusText.text = "ONLINE  •  " + (state.SelectedMode == MatchMode.Solo ? "SOLO READY" : "SQUAD READY");
+            if (modeText != null) modeText.text = state.SelectedMode == MatchMode.Solo ? "SOLO" : "SQUAD";
+            if (characterText != null) characterText.text = state.SelectedCharacterId.ToUpperInvariant();
+            if (statusText != null) statusText.text = "ONLINE  •  " + (state.SelectedMode == MatchMode.Solo ? "SOLO READY" : "SQUAD READY");
             if (heroRoot != null)
             {
                 float hue = state.SelectedCharacterId == "soldier_02" ? 0.56f : state.SelectedCharacterId == "soldier_03" ? 0.08f : 0.48f;
