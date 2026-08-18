@@ -86,6 +86,8 @@ namespace Fsp.Bots
             go.AddComponent<PlayerVitals>();
             var participant = go.AddComponent<MatchParticipant>();
             participant.ConfigureAsBot($"Bot {index + 1}");
+            go.AddComponent<PlayerDamageable>();
+            go.AddComponent<FallbackBotAgent>();
             go.AddComponent<StarterProceduralCharacterVisual>();
             go.name = $"Bot_{index + 1:00}_Placeholder";
             return go;
@@ -98,6 +100,8 @@ namespace Fsp.Bots
                 bot.AddComponent<PlayerDamageable>();
             if (bot.GetComponent<SafeZoneDamageApplier>() == null)
                 bot.AddComponent<SafeZoneDamageApplier>();
+            if (bot.GetComponent<FallbackBotAgent>() == null && bot.GetComponent<CharacterController>() != null)
+                bot.AddComponent<FallbackBotAgent>();
         }
     }
 }
