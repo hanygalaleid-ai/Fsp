@@ -46,8 +46,8 @@ namespace Fsp.BattleRoyale
         private static MatchParticipant EnsureLocalPlayer()
         {
             MatchParticipant[] participants = FindObjectsOfType<MatchParticipant>();
-            foreach (MatchParticipant participant in participants)
-                if (participant != null && participant.IsLocalPlayer) return participant;
+            foreach (MatchParticipant existingParticipant in participants)
+                if (existingParticipant != null && existingParticipant.IsLocalPlayer) return existingParticipant;
 
             var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             player.name = "LocalPlayer_Placeholder";
