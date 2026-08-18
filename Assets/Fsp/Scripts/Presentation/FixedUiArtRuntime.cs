@@ -31,7 +31,7 @@ namespace Fsp.Presentation
         private void Awake()
         {
             isMatch = string.Equals(SceneManager.GetActiveScene().name, "Match", System.StringComparison.OrdinalIgnoreCase);
-            lobbyStopAt = Time.unscaledTime + 12f;
+            lobbyStopAt = Time.unscaledTime + 20f;
             ApplyAll();
         }
 
@@ -60,9 +60,13 @@ namespace Fsp.Presentation
             ApplyNamed("Start", "UI/ui_button_primary", Image.Type.Sliced);
             ApplyNamed("Solo", "UI/ui_button_secondary", Image.Type.Sliced);
             ApplyNamed("Squad", "UI/ui_button_secondary", Image.Type.Sliced);
-            ApplyNamed("Loadout", "UI/ui_button_secondary", Image.Type.Sliced);
-            ApplyNamed("Appearance", "UI/ui_button_secondary", Image.Type.Sliced);
-            ApplyNamed("Career", "UI/ui_button_secondary", Image.Type.Sliced);
+            ApplyNamed("LOADOUT", "UI/ui_button_secondary", Image.Type.Sliced);
+            ApplyNamed("APPEARANCE", "UI/ui_button_secondary", Image.Type.Sliced);
+            ApplyNamed("CAREER", "UI/ui_button_secondary", Image.Type.Sliced);
+            ApplyNamed("LobbyModal", "UI/ui_panel_dark", Image.Type.Sliced);
+            ApplyNamed("InviteName", "UI/ui_panel_dark", Image.Type.Sliced);
+            ApplyNamed("InviteSend", "UI/ui_button_primary", Image.Type.Sliced);
+            ApplyNamed("ModalClose", "UI/ui_button_secondary", Image.Type.Sliced);
 
             GameObject canvas = GameObject.Find("LobbyCanvas");
             if (canvas == null) return;
@@ -70,7 +74,7 @@ namespace Fsp.Presentation
             {
                 if (image == null || image.sprite != null) continue;
                 string n = image.gameObject.name;
-                if (n.Contains("Panel") || n.Contains("Card") || n.Contains("Profile") || n.Contains("Squad"))
+                if (n.Contains("Panel") || n.Contains("Card") || n.Contains("Profile") || n.Contains("Squad") || n.StartsWith("Slot"))
                     SetSprite(image, "UI/ui_panel_dark", Image.Type.Sliced);
             }
         }
@@ -79,6 +83,7 @@ namespace Fsp.Presentation
         {
             ApplyNamed("MoveJoystick", "UI/joystick_base", Image.Type.Simple);
             ApplyNamed("Fire", "UI/ui_button_primary", Image.Type.Sliced);
+            ApplyNamed("Aim", "UI/ui_button_secondary", Image.Type.Sliced);
             ApplyNamed("Jump", "UI/ui_button_secondary", Image.Type.Sliced);
             ApplyNamed("Reload", "UI/ui_button_secondary", Image.Type.Sliced);
             ApplyNamed("Heal", "UI/ui_button_secondary", Image.Type.Sliced);
