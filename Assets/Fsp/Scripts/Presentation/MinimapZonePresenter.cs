@@ -38,7 +38,7 @@ namespace Fsp.Presentation
         {
             if (circle == null) return;
             float mapSize = Mathf.Min(mapRect.rect.width, mapRect.rect.height);
-            Vector2 normalized = new(center.x / worldHalfExtent, center.z / worldHalfExtent) * 0.5f;
+            Vector2 normalized = new Vector2(center.x / worldHalfExtent, center.z / worldHalfExtent) * 0.5f;
             circle.anchoredPosition = new Vector2(normalized.x * mapSize, normalized.y * mapSize);
             float diameter = Mathf.Max(2f, radius / worldHalfExtent * mapSize);
             circle.sizeDelta = new Vector2(diameter, diameter);
