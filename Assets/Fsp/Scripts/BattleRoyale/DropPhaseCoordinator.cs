@@ -9,36 +9,10 @@ namespace Fsp.BattleRoyale
         [SerializeField] private DropPlanePassenger localPassenger;
         [SerializeField] private bool autoBoardOnStart = true;
         [SerializeField] private bool forceJumpAtRouteEnd = true;
-
-        private void Awake()
-        {
-            if (plane == null) plane = FindObjectOfType<DropPlaneController>();
-            if (localPassenger == null) localPassenger = FindObjectOfType<DropPlanePassenger>();
-        }
-
-        private void OnEnable()
-        {
-            if (plane != null) plane.RouteFinished += HandleRouteFinished;
-        }
-
-        private void Start()
-        {
-            bool hasRoom = MatchRoomState.Instance != null && MatchRoomState.Instance.HasMatch;
-            if (!hasRoom) return;
-            if (autoBoardOnStart && localPassenger != null && !localPassenger.HasJumped)
-                localPassenger.Board();
-        }
-
-        private void HandleRouteFinished()
-        {
-            if (!forceJumpAtRouteEnd || localPassenger == null) return;
-            if (localPassenger.IsAboard && !localPassenger.HasJumped)
-                localPassenger.Jump();
-        }
-
-        private void OnDisable()
-        {
-            if (plane != null) plane.RouteFinished -= HandleRouteFinished;
-        }
+        private void Awake() { if (plane == null) plane = FindObjectOfType<DropPlaneController>(); if (localPassenger == null) localPassenger = FindObjectOfType<DropPlanePassenger>(); }
+        private void OnEnable() { if (plane != null) plane.RouteFinished += HandleRouteFinished; }
+        private void Start() { if (!MatchRoomState.HasMatch) return; if (autoBoardOnStart && localPassenger != null && !localPassenger.HasJumped) localPassenger.Board(); }
+        private void HandleRouteFinished() { if (!forceJumpAtRouteEnd || localPassenger == null) return; if (localPassenger.IsAboard && !localPassenger.HasJumped) localPassenger.Jump(); }
+        private void OnDisable() { if (plane != null) plane.RouteFinished -= HandleRouteFinished; }
     }
 }
