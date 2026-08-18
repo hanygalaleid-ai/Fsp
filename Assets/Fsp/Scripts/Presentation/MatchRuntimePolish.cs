@@ -1,6 +1,4 @@
 using Fsp.BattleRoyale;
-using Fsp.Combat;
-using Fsp.Vehicles;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
@@ -8,8 +6,8 @@ using UnityEngine.SceneManagement;
 namespace Fsp.Presentation
 {
     /// <summary>
-    /// Lightweight visual/gameplay safety net for cloud-generated Match scenes.
-    /// Keeps generated participants and presentation helpers aligned with release rules.
+    /// Conservative device-safe presentation guard for the Match scene.
+    /// It fixes camera/lighting state only and never injects prototype geometry.
     /// </summary>
     public sealed class MatchRuntimePolish : MonoBehaviour
     {
@@ -26,7 +24,7 @@ namespace Fsp.Presentation
         private void Awake()
         {
             ApplySafeCameraAndLighting();
-            Scan();
+            HidePrototypeZoneRenderers();
         }
 
         private void Update()
@@ -34,32 +32,27 @@ namespace Fsp.Presentation
             if (Time.unscaledTime < nextScan) return;
             nextScan = Time.unscaledTime + 1.25f;
             ApplySafeCameraAndLighting();
-            Scan();
+            HidePrototypeZoneRenderers();
         }
 
         private static void ApplySafeCameraAndLighting()
         {
             RenderSettings.ambientMode = AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.30f, 0.27f, 0.23f, 1f);
+            RenderSettings.ambientLight = new Color(0.16f, 0.15f, 0.14f, 1f);
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = new Color(0.47f, 0.52f, 0.55f, 1f);
-            RenderSettings.fogStartDistance = 450f;
-            RenderSettings.fogEndDistance = 1450f;
+            RenderSettings.fogColor = new Color(0.30f, 0.37f, 0.40f, 1f);
+            RenderSettings.fogStartDistance = 350f;
+            RenderSettings.fogEndDistance = 1350f;
 
             Light sun = RenderSettings.sun;
             if (sun == null)
             {
                 foreach (Light light in FindObjectsByType<Light>(FindObjectsSortMode.None))
                 {
-                    if (light != null && light.type == LightType.Directional)
-                    {
-                        sun = light;
-                        break;
-                    }
+                    if (light != null && light.type == LightType.Directional) { sun = light; break; }
                 }
             }
-
             if (sun == null)
             {
                 GameObject sunObject = new GameObject("FSP_Sun");
@@ -67,72 +60,34 @@ namespace Fsp.Presentation
                 sun.type = LightType.Directional;
                 RenderSettings.sun = sun;
             }
-
-            sun.color = new Color(1f, 0.83f, 0.66f, 1f);
-            sun.intensity = 0.85f;
+            sun.color = new Color(1f, 0.90f, 0.78f, 1f);
+            sun.intensity = 0.62f;
             sun.shadows = LightShadows.Soft;
             sun.transform.rotation = Quaternion.Euler(48f, -32f, 0f);
 
-            Camera camera = Camera.main;
-            if (camera != null)
+            foreach (Camera camera in FindObjectsByType<Camera>(FindObjectsSortMode.None))
             {
+                if (camera == null || !camera.enabled) continue;
                 camera.allowHDR = false;
                 camera.allowMSAA = true;
-                // Do not write fieldOfView here: AimDownSightsController owns gameplay FOV.
-                camera.nearClipPlane = 0.08f;
-                camera.farClipPlane = 1600f;
-                camera.clearFlags = CameraClearFlags.SolidColor;
-                camera.backgroundColor = new Color(0.36f, 0.54f, 0.68f, 1f);
+                camera.nearClipPlane = Mathf.Max(0.08f, camera.nearClipPlane);
+                camera.farClipPlane = Mathf.Max(1600f, camera.farClipPlane);
+                if (camera == Camera.main)
+                {
+                    camera.clearFlags = CameraClearFlags.SolidColor;
+                    camera.backgroundColor = new Color(0.25f, 0.40f, 0.52f, 1f);
+                }
             }
         }
 
-        private static void Scan()
+        private static void HidePrototypeZoneRenderers()
         {
-            MatchParticipant[] participants = FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None);
-            foreach (MatchParticipant participant in participants)
-            {
-                if (participant == null) continue;
-                if (participant.GetComponent<StarterProceduralCharacterVisual>() == null)
-                    participant.gameObject.AddComponent<StarterProceduralCharacterVisual>();
-                if (participant.GetComponent<ParachuteController>() != null && participant.GetComponent<StarterParachuteVisual>() == null)
-                    participant.gameObject.AddComponent<StarterParachuteVisual>();
-                if (participant.GetComponent<SafeZoneDamageApplier>() == null)
-                    participant.gameObject.AddComponent<SafeZoneDamageApplier>();
-            }
-
-            SimpleVehicleController[] vehicles = FindObjectsByType<SimpleVehicleController>(FindObjectsSortMode.None);
-            foreach (SimpleVehicleController vehicle in vehicles)
-            {
-                if (vehicle == null) continue;
-                if (vehicle.GetComponent<StarterProceduralVehicleVisual>() == null)
-                    vehicle.gameObject.AddComponent<StarterProceduralVehicleVisual>();
-            }
-
-            DropPlaneController[] planes = FindObjectsByType<DropPlaneController>(FindObjectsSortMode.None);
-            foreach (DropPlaneController plane in planes)
-            {
-                if (plane == null) continue;
-                if (plane.GetComponent<StarterPlaneVisual>() == null)
-                    plane.gameObject.AddComponent<StarterPlaneVisual>();
-            }
-
-            HitscanWeapon[] weapons = FindObjectsByType<HitscanWeapon>(FindObjectsSortMode.None);
-            foreach (HitscanWeapon weapon in weapons)
-            {
-                if (weapon == null) continue;
-                if (weapon.GetComponent<StarterProceduralWeaponVisual>() == null)
-                    weapon.gameObject.AddComponent<StarterProceduralWeaponVisual>();
-            }
-
             SafeZoneController[] zones = FindObjectsByType<SafeZoneController>(FindObjectsSortMode.None);
             foreach (SafeZoneController zone in zones)
             {
                 if (zone == null) continue;
                 foreach (Renderer renderer in zone.GetComponentsInChildren<Renderer>(true))
-                {
-                    if (renderer != null && renderer.gameObject.name.Contains("Placeholder"))
-                        renderer.enabled = false;
-                }
+                    if (renderer != null && renderer.gameObject.name.Contains("Placeholder")) renderer.enabled = false;
             }
         }
     }
