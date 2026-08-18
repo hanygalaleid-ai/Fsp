@@ -19,6 +19,7 @@ namespace Fsp.EditorTools
         [MenuItem("Fsp/Build/Android/Build APK (Test)")]
         public static void BuildAndroidApk()
         {
+            FspProjectBootstrap.EnsureProjectForBuild();
             PrepareCommonPlayerSettings();
             PrepareAndroidSettings(false);
             EditorUserBuildSettings.buildAppBundle = false;
@@ -28,6 +29,7 @@ namespace Fsp.EditorTools
         [MenuItem("Fsp/Build/Android/Build AAB (Google Play)")]
         public static void BuildAndroidAab()
         {
+            FspProjectBootstrap.EnsureProjectForBuild();
             PrepareCommonPlayerSettings();
             PrepareAndroidSettings(true);
             EditorUserBuildSettings.buildAppBundle = true;
@@ -37,6 +39,7 @@ namespace Fsp.EditorTools
         [MenuItem("Fsp/Build/Windows/Build x64")]
         public static void BuildWindows()
         {
+            FspProjectBootstrap.EnsureProjectForBuild();
             PrepareCommonPlayerSettings();
             Build(BuildTarget.StandaloneWindows64, "Builds/Windows/Fsp/Fsp.exe");
         }
@@ -44,6 +47,7 @@ namespace Fsp.EditorTools
         [MenuItem("Fsp/Build/iOS/Export Xcode Project")]
         public static void BuildIos()
         {
+            FspProjectBootstrap.EnsureProjectForBuild();
             PrepareCommonPlayerSettings();
             Build(BuildTarget.iOS, "Builds/iOS");
         }
@@ -65,13 +69,18 @@ namespace Fsp.EditorTools
             PlayerSettings.Android.bundleVersionCode = 1;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
 
-            // AAB must never inherit a development-build flag from a previous local session.
             if (release)
                 EditorUserBuildSettings.development = false;
         }
 
         private static void Build(BuildTarget target, string outputPath)
         {
+            foreach (string scene in Scenes)
+            {
+                if (!File.Exists(scene))
+                    throw new BuildFailedException("Required build scene is missing: " + scene);
+            }
+
             EnsureOutputDirectory(outputPath, target == BuildTarget.iOS);
 
             var options = new BuildPlayerOptions
@@ -83,9 +92,10 @@ namespace Fsp.EditorTools
                 options = BuildOptions.CompressWithLz4HC
             };
 
+            Debug.Log($"Fsp build starting: target={target}, output={outputPath}, scenes={string.Join(", ", Scenes)}");
             BuildReport report = BuildPipeline.BuildPlayer(options);
             if (report.summary.result != BuildResult.Succeeded)
-                throw new Exception($"Fsp build failed: {report.summary.result} ({report.summary.totalErrors} errors)");
+                throw new BuildFailedException($"Fsp build failed: {report.summary.result} ({report.summary.totalErrors} errors, {report.summary.totalWarnings} warnings)");
 
             Debug.Log($"Fsp build succeeded: {outputPath} | {report.summary.totalSize / (1024f * 1024f):0.0} MB");
         }
