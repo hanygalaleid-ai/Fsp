@@ -8,7 +8,7 @@ namespace Fsp.Presentation
         [SerializeField] private Camera gameplayCamera;
         [SerializeField] private Transform cameraRig;
         [SerializeField] private WeaponPresentation presentation;
-        [SerializeField] private float hipFov = 68f;
+        [SerializeField] private float hipFov = FspFixedTheme.MatchFieldOfView;
         [SerializeField] private float aimFov = 52f;
         [SerializeField] private Vector3 hipLocalPosition;
         [SerializeField] private Vector3 aimLocalPosition = new(0.18f, 0.02f, 0.18f);
@@ -24,6 +24,8 @@ namespace Fsp.Presentation
 
         private void Update()
         {
+            if (gameplayCamera == null) gameplayCamera = Camera.main;
+
             MobileInputBridge input = MobileInputBridge.Instance;
             if (input != null) SetAim(input.AimHeld);
 
