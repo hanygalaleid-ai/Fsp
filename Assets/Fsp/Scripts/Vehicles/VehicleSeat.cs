@@ -20,6 +20,13 @@ namespace Fsp.Vehicles
         public event Action<ThirdPersonMotor> DriverExited;
         public bool IsDriver(ThirdPersonMotor driver) => currentDriver == driver;
 
+        public void Configure(SimpleVehicleController targetVehicle, Transform targetSeatPoint, Transform targetExitPoint)
+        {
+            vehicle = targetVehicle;
+            seatPoint = targetSeatPoint;
+            exitPoint = targetExitPoint;
+        }
+
         public bool TryEnter(ThirdPersonMotor driver)
         {
             if (driver == null || Occupied || vehicle == null || seatPoint == null) return false;
