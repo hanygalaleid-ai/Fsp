@@ -31,24 +31,49 @@ namespace Fsp.Presentation
         {
             if (Time.unscaledTime < nextScan) return;
             nextScan = Time.unscaledTime + 1.25f;
+            ApplySceneLighting();
             Scan();
         }
 
         private static void ApplySceneLighting()
         {
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.33f, 0.30f, 0.26f);
+            RenderSettings.ambientLight = new Color(0.39f, 0.33f, 0.27f);
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.52f, 0.56f, 0.57f);
-            RenderSettings.fogDensity = 0.0018f;
+            RenderSettings.fogColor = new Color(0.58f, 0.53f, 0.46f);
+            RenderSettings.fogDensity = 0.00135f;
+
+            Light sun = null;
+            foreach (Light light in FindObjectsByType<Light>(FindObjectsSortMode.None))
+            {
+                if (light != null && light.type == LightType.Directional)
+                {
+                    sun = light;
+                    break;
+                }
+            }
+
+            if (sun == null)
+            {
+                GameObject sunObject = new GameObject("FSP_Sun");
+                sun = sunObject.AddComponent<Light>();
+                sun.type = LightType.Directional;
+            }
+
+            sun.color = new Color(1f, 0.79f, 0.58f);
+            sun.intensity = 1.15f;
+            sun.shadows = LightShadows.Soft;
+            sun.transform.rotation = Quaternion.Euler(34f, -42f, 0f);
 
             Camera camera = Camera.main;
             if (camera != null)
             {
                 camera.allowHDR = false;
-                camera.fieldOfView = 64f;
+                camera.fieldOfView = FspFixedTheme.MatchFieldOfView;
                 camera.nearClipPlane = 0.08f;
                 camera.farClipPlane = 1600f;
+                camera.clearFlags = CameraClearFlags.SolidColor;
+                camera.backgroundColor = new Color(0.46f, 0.63f, 0.74f, 1f);
             }
         }
 
