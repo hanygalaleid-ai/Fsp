@@ -6,10 +6,6 @@ using UnityEngine.UI;
 
 namespace Fsp.Localization
 {
-    /// <summary>
-    /// Completes localization for dynamic/multiline runtime text that cannot be represented by the
-    /// first-pass exact-string table alone. It is intentionally data-only and never changes gameplay.
-    /// </summary>
     public sealed class FspLocalizationCoverageRuntime : MonoBehaviour
     {
         private static FspLocalizationCoverageRuntime instance;
@@ -96,11 +92,9 @@ namespace Fsp.Localization
                 string englishPrefix = prefix.TrimEnd();
                 string recovered = RecoverDynamicPrefix(source, englishPrefix);
                 if (recovered == null) continue;
-
-                string suffix;
-                if (englishPrefix == "PLACE #") suffix = recovered.Substring("PLACE #".Length);
-                else suffix = recovered.Length > englishPrefix.Length ? recovered.Substring(englishPrefix.Length).TrimStart() : string.Empty;
-
+                string suffix = englishPrefix == "PLACE #"
+                    ? recovered.Substring("PLACE #".Length)
+                    : recovered.Length > englishPrefix.Length ? recovered.Substring(englishPrefix.Length).TrimStart() : string.Empty;
                 string translatedPrefix = T(englishPrefix);
                 if (englishPrefix == "PLACE #") return translatedPrefix + suffix;
                 return string.IsNullOrEmpty(suffix) ? translatedPrefix : translatedPrefix + " " + suffix;
@@ -116,7 +110,6 @@ namespace Fsp.Localization
                     return T("Sending invite to") + " " + player + "...";
                 }
             }
-
             return source;
         }
 
@@ -126,8 +119,7 @@ namespace Fsp.Localization
             if (!Table.TryGetValue(englishPrefix, out string[] values)) return null;
             foreach (string value in values)
             {
-                if (string.IsNullOrEmpty(value)) continue;
-                if (current.StartsWith(value, StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrEmpty(value) && current.StartsWith(value, StringComparison.OrdinalIgnoreCase))
                     return englishPrefix + current.Substring(value.Length);
             }
             return null;
@@ -136,12 +128,8 @@ namespace Fsp.Localization
         private static string RecoverKey(string current)
         {
             foreach (KeyValuePair<string, string[]> pair in Table)
-            {
                 foreach (string value in pair.Value)
-                {
                     if (string.Equals(current, value, StringComparison.Ordinal)) return pair.Key;
-                }
-            }
             return current;
         }
 
@@ -155,7 +143,6 @@ namespace Fsp.Localization
 
         private static Dictionary<string, string[]> BuildTable()
         {
-            // Order: EN, AR, HI, TR, PT-BR, ID.
             return new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
                 ["MATCH COMPLETE"] = A("MATCH COMPLETE", "انتهت المباراة", "मैच समाप्त", "MAÇ TAMAMLANDI", "PARTIDA CONCLUÍDA", "PERTANDINGAN SELESAI"),
@@ -174,6 +161,13 @@ namespace Fsp.Localization
                 ["Sign in first to create a squad and invite players."] = A("Sign in first to create a squad and invite players.", "سجّل الدخول أولاً لإنشاء فريق ودعوة اللاعبين.", "स्क्वाड बनाने और खिलाड़ियों को आमंत्रित करने के लिए पहले साइन इन करें।", "Takım oluşturmak ve oyuncu davet etmek için önce giriş yap.", "Entre primeiro para criar um esquadrão e convidar jogadores.", "Masuk terlebih dahulu untuk membuat skuad dan mengundang pemain."),
                 ["Squad service is not connected in this build."] = A("Squad service is not connected in this build.", "خدمة الفرق غير متصلة في هذا الإصدار.", "इस बिल्ड में स्क्वाड सेवा कनेक्ट नहीं है।", "Bu sürümde takım hizmeti bağlı değil.", "O serviço de esquadrão não está conectado nesta versão.", "Layanan skuad tidak terhubung pada build ini."),
                 ["Sending invite to"] = A("Sending invite to", "جارٍ إرسال الدعوة إلى", "आमंत्रण भेजा जा रहा है", "Davet gönderiliyor", "Enviando convite para", "Mengirim undangan ke"),
+                ["YOU   READY"] = A("YOU   READY", "أنت   جاهز", "आप   तैयार", "SEN   HAZIRSIN", "VOCÊ   PRONTO", "KAMU   SIAP"),
+                ["+ INVITE"] = A("+ INVITE", "+ دعوة", "+ आमंत्रित", "+ DAVET", "+ CONVIDAR", "+ UNDANG"),
+                ["BATTLE ROYALE  •  REGION AUTO"] = A("BATTLE ROYALE  •  REGION AUTO", "باتل رويال  •  المنطقة تلقائيًا", "बैटल रॉयल  •  क्षेत्र ऑटो", "BATTLE ROYALE  •  BÖLGE OTOMATİK", "BATTLE ROYALE  •  REGIÃO AUTO", "BATTLE ROYALE  •  REGION OTOMATIS"),
+                ["ONLINE  •  PING --"] = A("ONLINE  •  PING --", "متصل  •  البنغ --", "ऑनलाइन  •  पिंग --", "ÇEVRİMİÇİ  •  PING --", "ONLINE  •  PING --", "ONLINE  •  PING --"),
+                ["ONLINE  •  SOLO READY"] = A("ONLINE  •  SOLO READY", "متصل  •  الفردي جاهز", "ऑनलाइन  •  सोलो तैयार", "ÇEVRİMİÇİ  •  SOLO HAZIR", "ONLINE  •  SOLO PRONTO", "ONLINE  •  SOLO SIAP"),
+                ["ONLINE  •  SQUAD READY"] = A("ONLINE  •  SQUAD READY", "متصل  •  الفريق جاهز", "ऑनलाइन  •  स्क्वाड तैयार", "ÇEVRİMİÇİ  •  TAKIM HAZIR", "ONLINE  •  ESQUADRÃO PRONTO", "ONLINE  •  SKUAD SIAP"),
+                ["Lobby state unavailable"] = A("Lobby state unavailable", "حالة الردهة غير متاحة", "लॉबी स्थिति उपलब्ध नहीं है", "Lobi durumu kullanılamıyor", "Estado do lobby indisponível", "Status lobi tidak tersedia"),
                 ["ALIVE"] = A("ALIVE", "الأحياء", "जीवित", "HAYATTA", "VIVOS", "HIDUP"),
                 ["KILLS"] = A("KILLS", "القتلات", "किल्स", "LEŞ", "ABATES", "KILL"),
                 ["AMMO"] = A("AMMO", "الذخيرة", "गोला-बारूद", "MERMİ", "MUNIÇÃO", "AMUNISI"),
