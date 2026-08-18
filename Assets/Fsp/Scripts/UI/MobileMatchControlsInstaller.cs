@@ -57,13 +57,17 @@ namespace Fsp.UI
 
             CreateLookArea(root);
             CreateJoystick(root);
-            CreateActionButton(root, "Fire", "FIRE", new Vector2(0.865f, 0.12f), new Vector2(150f, 150f), Accent, MobileButtonActionType.Fire, 28);
-            CreateActionButton(root, "Jump", "JUMP", new Vector2(0.76f, 0.20f), new Vector2(118f, 118f), PanelStrong, MobileButtonActionType.Jump, 20);
-            CreateActionButton(root, "Reload", "RELOAD", new Vector2(0.88f, 0.31f), new Vector2(118f, 78f), PanelStrong, MobileButtonActionType.Reload, 17);
-            CreateActionButton(root, "Heal", "HEAL", new Vector2(0.73f, 0.08f), new Vector2(112f, 76f), PanelStrong, MobileButtonActionType.Heal, 18);
-            CreateActionButton(root, "Interact", "USE", new Vector2(0.62f, 0.19f), new Vector2(110f, 78f), PanelStrong, MobileButtonActionType.Interact, 18);
-            CreateActionButton(root, "Switch", "SWAP", new Vector2(0.89f, 0.41f), new Vector2(110f, 70f), PanelStrong, MobileButtonActionType.SwitchWeapon, 16);
-            CreateActionButton(root, "Sprint", "SPRINT", new Vector2(0.18f, 0.10f), new Vector2(118f, 72f), PanelStrong, MobileButtonActionType.Sprint, 16);
+
+            // Right-side combat cluster. Anchors are deliberately separated so 16:9 and wider devices
+            // keep every action reachable without overlapping the camera look area or each other.
+            CreateActionButton(root, "Fire", "FIRE", new Vector2(0.875f, 0.13f), new Vector2(150f, 150f), Accent, MobileButtonActionType.Fire, 28);
+            CreateActionButton(root, "Aim", "AIM", new Vector2(0.765f, 0.34f), new Vector2(118f, 82f), PanelStrong, MobileButtonActionType.Aim, 18);
+            CreateActionButton(root, "Jump", "JUMP", new Vector2(0.755f, 0.20f), new Vector2(112f, 112f), PanelStrong, MobileButtonActionType.Jump, 19);
+            CreateActionButton(root, "Reload", "RELOAD", new Vector2(0.895f, 0.30f), new Vector2(118f, 78f), PanelStrong, MobileButtonActionType.Reload, 17);
+            CreateActionButton(root, "Heal", "HEAL", new Vector2(0.735f, 0.075f), new Vector2(110f, 74f), PanelStrong, MobileButtonActionType.Heal, 17);
+            CreateActionButton(root, "Interact", "USE", new Vector2(0.625f, 0.19f), new Vector2(108f, 76f), PanelStrong, MobileButtonActionType.Interact, 17);
+            CreateActionButton(root, "Switch", "SWAP", new Vector2(0.895f, 0.405f), new Vector2(110f, 68f), PanelStrong, MobileButtonActionType.SwitchWeapon, 16);
+            CreateActionButton(root, "Sprint", "SPRINT", new Vector2(0.185f, 0.095f), new Vector2(118f, 72f), PanelStrong, MobileButtonActionType.Sprint, 16);
 
             CreateTopBadge(root, "FSP // SUNSCAR", new Vector2(0.5f, 0.955f));
         }
