@@ -14,9 +14,11 @@ namespace Fsp.Input
         [SerializeField] private DropPlanePassenger planePassenger;
         [SerializeField] private ParachuteController parachute;
         [SerializeField] private Transform cameraPivot;
-        [SerializeField] private float lookSensitivity = 1f;
+        [SerializeField] private float lookSensitivity = 0.16f;
         [SerializeField] private float minPitch = -35f;
         [SerializeField] private float maxPitch = 65f;
+        [SerializeField] private Vector3 followOffset = new Vector3(0f, 2.6f, -5.2f);
+        [SerializeField] private float cameraFollow = 12f;
         [SerializeField] private float vehicleInteractRadius = 3f;
         [SerializeField] private LayerMask vehicleMask = ~0;
 
@@ -30,11 +32,13 @@ namespace Fsp.Input
             if (inventory == null) inventory = GetComponent<PlayerInventory>();
             if (planePassenger == null) planePassenger = GetComponent<DropPlanePassenger>();
             if (parachute == null) parachute = GetComponent<ParachuteController>();
+            if (cameraPivot == null && Camera.main != null) cameraPivot = Camera.main.transform;
+
             if (cameraPivot != null)
             {
                 Vector3 euler = cameraPivot.eulerAngles;
                 yaw = euler.y;
-                pitch = euler.x > 180f ? euler.x - 360f : euler.x;
+                pitch = 12f;
                 motor?.SetCamera(cameraPivot);
             }
         }
@@ -80,17 +84,36 @@ namespace Fsp.Input
             HitscanWeapon weapon = inventory != null ? inventory.ActiveWeapon : null;
             if (input.FireHeld && weapon != null) weapon.TryFire();
             if (input.SwitchWeaponPressed) inventory?.SwitchWeapon();
+            if (input.ReloadPressed) inventory?.TryReloadActiveWeapon();
+            if (input.HealPressed) inventory?.TryUseMedkit();
 
             if (input.InteractPressed)
                 TryEnterNearestVehicle();
         }
 
+        private void LateUpdate()
+        {
+            if (cameraPivot == null)
+            {
+                if (Camera.main == null) return;
+                cameraPivot = Camera.main.transform;
+                motor?.SetCamera(cameraPivot);
+            }
+
+            Quaternion orbit = Quaternion.Euler(pitch, yaw, 0f);
+            Vector3 desired = transform.position + orbit * followOffset;
+            cameraPivot.position = Vector3.Lerp(cameraPivot.position, desired, 1f - Mathf.Exp(-cameraFollow * Time.deltaTime));
+            Vector3 lookPoint = transform.position + Vector3.up * 1.35f;
+            Vector3 direction = lookPoint - cameraPivot.position;
+            if (direction.sqrMagnitude > 0.01f)
+                cameraPivot.rotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
+        }
+
         private void UpdateLook(Vector2 look)
         {
-            if (cameraPivot == null || look.sqrMagnitude <= 0f) return;
+            if (look.sqrMagnitude <= 0f) return;
             yaw += look.x * lookSensitivity;
             pitch = Mathf.Clamp(pitch - look.y * lookSensitivity, minPitch, maxPitch);
-            cameraPivot.rotation = Quaternion.Euler(pitch, yaw, 0f);
         }
 
         private void DriveVehicle(MobileInputBridge input)
