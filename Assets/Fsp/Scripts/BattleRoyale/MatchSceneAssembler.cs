@@ -268,18 +268,21 @@ namespace Fsp.BattleRoyale
             var canvasObject = new GameObject("FallbackHUD");
             Canvas canvas = canvasObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvasObject.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
             canvasObject.AddComponent<GraphicRaycaster>();
             BattleRoyaleHud hud = canvasObject.AddComponent<BattleRoyaleHud>();
 
-            Text alive = CreateText(canvas.transform, "Alive", "ALIVE 32", new Vector2(18f, -18f), TextAnchor.UpperLeft, 20);
-            Text ammo = CreateText(canvas.transform, "Ammo", "30 / 120", new Vector2(-18f, 70f), TextAnchor.LowerRight, 24);
-            Text medkits = CreateText(canvas.transform, "Medkits", "MED 2", new Vector2(18f, 70f), TextAnchor.LowerLeft, 20);
-            Text warning = CreateText(canvas.transform, "ZoneWarning", "ارجع إلى المنطقة الآمنة", new Vector2(0f, -55f), TextAnchor.UpperCenter, 22);
+            Text alive = CreateText(canvas.transform, "Alive", "32", new Vector2(42f, -28f), TextAnchor.UpperLeft, 20);
+            Text ammo = CreateText(canvas.transform, "Ammo", "30 / 120", new Vector2(-42f, 48f), TextAnchor.LowerRight, 24);
+            Text medkits = CreateText(canvas.transform, "Medkits", "2", new Vector2(42f, 48f), TextAnchor.LowerLeft, 20);
+            Text warning = CreateText(canvas.transform, "ZoneWarning", "RETURN TO THE SAFE ZONE", new Vector2(0f, -72f), TextAnchor.UpperCenter, 22);
 
-            Button reload = CreateButton(canvas.transform, "Reload", "RELOAD", new Vector2(-130f, 18f));
-            Button heal = CreateButton(canvas.transform, "Heal", "HEAL", new Vector2(18f, 18f));
-            hud.ConfigureWidgets(null, null, ammo, alive, medkits, warning, reload, heal);
+            // Action buttons are owned exclusively by MobileCombatHUD. Keeping this fallback status-only
+            // prevents legacy RELOAD/HEAL buttons from overlapping the modern mobile controls.
+            hud.ConfigureWidgets(null, null, ammo, alive, medkits, warning, null, null);
             return hud;
         }
 
@@ -292,7 +295,7 @@ namespace Fsp.BattleRoyale
             rect.anchorMax = rect.anchorMin;
             rect.pivot = alignment == TextAnchor.UpperLeft ? new Vector2(0f, 1f) : alignment == TextAnchor.LowerRight ? new Vector2(1f, 0f) : alignment == TextAnchor.LowerLeft ? Vector2.zero : new Vector2(0.5f, 1f);
             rect.anchoredPosition = anchoredPosition;
-            rect.sizeDelta = new Vector2(320f, 46f);
+            rect.sizeDelta = new Vector2(360f, 52f);
             Text text = go.AddComponent<Text>();
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = size;
@@ -300,32 +303,6 @@ namespace Fsp.BattleRoyale
             text.text = value;
             text.color = new Color(0.94f, 0.92f, 0.86f, 1f);
             return text;
-        }
-
-        private static Button CreateButton(Transform parent, string name, string label, Vector2 anchoredPosition)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            var rect = go.AddComponent<RectTransform>();
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.zero;
-            rect.pivot = Vector2.zero;
-            rect.anchoredPosition = anchoredPosition;
-            rect.sizeDelta = new Vector2(105f, 52f);
-            Image image = go.AddComponent<Image>();
-            image.color = new Color(0.06f, 0.11f, 0.16f, 0.88f);
-            Button button = go.AddComponent<Button>();
-
-            Text text = CreateText(go.transform, "Label", label, Vector2.zero, TextAnchor.MiddleCenter, 16);
-            RectTransform textRect = text.rectTransform;
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = Vector2.zero;
-            textRect.offsetMax = Vector2.zero;
-            textRect.pivot = new Vector2(0.5f, 0.5f);
-            textRect.anchoredPosition = Vector2.zero;
-            text.alignment = TextAnchor.MiddleCenter;
-            return button;
         }
     }
 }
