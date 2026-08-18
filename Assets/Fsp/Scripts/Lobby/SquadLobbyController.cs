@@ -20,24 +20,30 @@ namespace Fsp.Lobby
                 {
                     SquadLobbyState.Instance?.SetSquad(squadId, true);
                     RefreshMembers();
-                    SetStatus("تم إنشاء الفريق");
+                    SetStatus("Squad created");
                 },
                 err => SetStatus(err)));
         }
 
         public void InviteByName()
         {
-            var state = SquadLobbyState.Instance;
-            if (squadClient == null || state == null || !state.HasSquad || !state.IsLeader) return;
             string name = inviteNameInput != null ? inviteNameInput.text : string.Empty;
-            if (string.IsNullOrWhiteSpace(name)) { SetStatus("اكتب اسم اللاعب"); return; }
+            InviteName(name);
+        }
+
+        public void InviteName(string name)
+        {
+            var state = SquadLobbyState.Instance;
+            if (squadClient == null) { SetStatus("Squad service unavailable"); return; }
+            if (state == null || !state.HasSquad || !state.IsLeader) { SetStatus("Create a squad first"); return; }
+            if (string.IsNullOrWhiteSpace(name)) { SetStatus("Enter player name"); return; }
 
             StartCoroutine(squadClient.FindPlayerByName(name,
                 player =>
                 {
-                    if (player == null) { SetStatus("اللاعب غير موجود"); return; }
+                    if (player == null) { SetStatus("Player not found"); return; }
                     StartCoroutine(squadClient.Invite(state.SquadId, player.user_id,
-                        (ok, err) => SetStatus(ok ? "تم إرسال الدعوة" : err)));
+                        (ok, err) => SetStatus(ok ? "Invite sent" : err)));
                 },
                 err => SetStatus(err)));
         }
@@ -50,7 +56,7 @@ namespace Fsp.Lobby
                 (ok, err) =>
                 {
                     if (ok) RefreshMembers();
-                    SetStatus(ok ? (ready ? "جاهز" : "غير جاهز") : err);
+                    SetStatus(ok ? (ready ? "Ready" : "Not ready") : err);
                 }));
         }
 
@@ -67,12 +73,12 @@ namespace Fsp.Lobby
         {
             var state = SquadLobbyState.Instance;
             if (state == null || matchmakingClient == null) return;
-            if (!state.HasSquad) { SetStatus("أنشئ فريقًا أولاً"); return; }
-            if (!state.IsLeader) { SetStatus("قائد الفريق فقط يبدأ البحث"); return; }
-            if (!state.AllReady) { SetStatus("كل أعضاء الفريق يجب أن يكونوا جاهزين"); return; }
+            if (!state.HasSquad) { SetStatus("Create a squad first"); return; }
+            if (!state.IsLeader) { SetStatus("Only the squad leader can start matchmaking"); return; }
+            if (!state.AllReady) { SetStatus("All squad members must be ready"); return; }
             int partySize = state.Members != null ? Mathf.Clamp(state.Members.Length, 1, 4) : 1;
             StartCoroutine(matchmakingClient.JoinSquadQueue(state.SquadId, partySize, region,
-                (ok, err) => SetStatus(ok ? "جاري البحث عن مباراة..." : err)));
+                (ok, err) => SetStatus(ok ? "Searching for a match..." : err)));
         }
 
         public void LeaveSquad()
@@ -84,13 +90,14 @@ namespace Fsp.Lobby
                 (ok, err) =>
                 {
                     if (ok) state.Clear();
-                    SetStatus(ok ? "غادرت الفريق" : err);
+                    SetStatus(ok ? "Left squad" : err);
                 }));
         }
 
         private void SetStatus(string value)
         {
             if (statusText != null) statusText.text = value ?? string.Empty;
+            Debug.Log("FSP Squad: " + (value ?? string.Empty));
         }
     }
 }
