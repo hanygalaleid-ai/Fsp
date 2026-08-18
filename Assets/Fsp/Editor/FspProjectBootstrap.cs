@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System;
 using System.IO;
 using Fsp.BattleRoyale;
 using Fsp.Lobby;
@@ -15,11 +16,24 @@ namespace Fsp.EditorTools
         private const string ScenesFolder = "Assets/Fsp/Scenes";
         private const string LobbyScene = ScenesFolder + "/Lobby.unity";
         private const string MatchScene = ScenesFolder + "/Match.unity";
-        private const string PrefKey = "Fsp.ProjectBootstrap.v2";
+        private const string PrefKey = "Fsp.ProjectBootstrap.v3";
+        private static bool initializing;
 
         static FspProjectBootstrap()
         {
-            EditorApplication.delayCall += EnsureProject;
+            // Cloud Build can ask for the scene list immediately after script compilation.
+            // In batch mode we must prepare scenes synchronously, not wait for delayCall.
+            if (Application.isBatchMode)
+                EnsureProject();
+            else
+                EditorApplication.delayCall += EnsureProject;
+        }
+
+        [InitializeOnLoadMethod]
+        private static void InitializeAfterDomainReload()
+        {
+            if (Application.isBatchMode)
+                EnsureProject();
         }
 
         [MenuItem("Fsp/Project/Rebuild Starter Scenes")]
@@ -29,25 +43,48 @@ namespace Fsp.EditorTools
             CreateLobbyScene(true);
             CreateMatchScene(true);
             ApplyBuildSettings();
+            ApplyPlayerDefaults();
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log("Fsp starter scenes rebuilt.");
+            Debug.Log("Fsp starter scenes rebuilt and added to Build Settings.");
+        }
+
+        public static void EnsureProjectForBuild()
+        {
+            EnsureProject();
         }
 
         private static void EnsureProject()
         {
-            if (EditorApplication.isPlayingOrWillChangePlaymode) return;
-
-            EnsureFolder(ScenesFolder);
-            if (!File.Exists(LobbyScene)) CreateLobbyScene(false);
-            if (!File.Exists(MatchScene)) CreateMatchScene(false);
-            ApplyBuildSettings();
-            ApplyPlayerDefaults();
-
-            if (!EditorPrefs.GetBool(PrefKey, false))
+            if (initializing || EditorApplication.isPlayingOrWillChangePlaymode) return;
+            initializing = true;
+            try
             {
-                EditorPrefs.SetBool(PrefKey, true);
-                Debug.Log("Fsp Unity project initialized for Android, iOS and Windows. Starter Lobby and Match scenes are ready.");
+                EnsureFolder(ScenesFolder);
+                if (!File.Exists(LobbyScene)) CreateLobbyScene(false);
+                if (!File.Exists(MatchScene)) CreateMatchScene(false);
+                ApplyBuildSettings();
+                ApplyPlayerDefaults();
+                AssetDatabase.SaveAssets();
+
+                if (!File.Exists(LobbyScene) || !File.Exists(MatchScene))
+                    throw new InvalidOperationException("Fsp bootstrap could not create the required Lobby/Match scenes.");
+
+                EditorBuildSettingsScene[] scenes = EditorBuildSettings.scenes;
+                if (scenes == null || scenes.Length < 2)
+                    throw new InvalidOperationException("Fsp bootstrap could not populate EditorBuildSettings scenes.");
+
+                Debug.Log($"Fsp build bootstrap ready: {scenes.Length} scene(s) configured; Lobby={File.Exists(LobbyScene)}, Match={File.Exists(MatchScene)}.");
+
+                if (!EditorPrefs.GetBool(PrefKey, false))
+                {
+                    EditorPrefs.SetBool(PrefKey, true);
+                    Debug.Log("Fsp Unity project initialized for Android, iOS and Windows. Starter Lobby and Match scenes are ready.");
+                }
+            }
+            finally
+            {
+                initializing = false;
             }
         }
 
@@ -71,7 +108,8 @@ namespace Fsp.EditorTools
             stage.transform.position = Vector3.zero;
             stage.transform.localScale = new Vector3(1.7f, 0.12f, 1.7f);
 
-            EditorSceneManager.SaveScene(scene, LobbyScene);
+            if (!EditorSceneManager.SaveScene(scene, LobbyScene))
+                throw new IOException("Failed to save Lobby scene at " + LobbyScene);
         }
 
         private static void CreateMatchScene(bool overwrite)
@@ -91,7 +129,8 @@ namespace Fsp.EditorTools
             ground.name = "Ground_Placeholder";
             ground.transform.localScale = new Vector3(20f, 1f, 20f);
 
-            EditorSceneManager.SaveScene(scene, MatchScene);
+            if (!EditorSceneManager.SaveScene(scene, MatchScene))
+                throw new IOException("Failed to save Match scene at " + MatchScene);
         }
 
         private static void CreateCamera(Vector3 position, Vector3 euler)
