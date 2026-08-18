@@ -14,6 +14,8 @@ namespace Fsp.Input
         public bool JumpPressed { get; private set; }
         public bool InteractPressed { get; private set; }
         public bool SwitchWeaponPressed { get; private set; }
+        public bool ReloadPressed { get; private set; }
+        public bool HealPressed { get; private set; }
 
         private void Awake()
         {
@@ -32,6 +34,8 @@ namespace Fsp.Input
             JumpPressed = false;
             InteractPressed = false;
             SwitchWeaponPressed = false;
+            ReloadPressed = false;
+            HealPressed = false;
             Look = Vector2.zero;
         }
 
@@ -43,5 +47,7 @@ namespace Fsp.Input
         public void PressJump() => JumpPressed = true;
         public void PressInteract() => InteractPressed = true;
         public void PressSwitchWeapon() => SwitchWeaponPressed = true;
+        public void PressReload() => ReloadPressed = true;
+        public void PressHeal() => HealPressed = true;
     }
 }
