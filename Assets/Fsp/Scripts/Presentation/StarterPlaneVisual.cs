@@ -7,6 +7,11 @@ namespace Fsp.Presentation
     {
         private void Awake()
         {
+            // The gameplay plane may be a cube fallback. Keep its transform/controller, but never
+            // render that cube once the presentation visual is available.
+            Renderer fallbackRenderer = GetComponent<Renderer>();
+            if (fallbackRenderer != null) fallbackRenderer.enabled = false;
+
             if (transform.Find("VisualRoot") != null) return;
             Transform root = new GameObject("VisualRoot").transform;
             root.SetParent(transform, false);
@@ -43,9 +48,13 @@ namespace Fsp.Presentation
 
         private static Material MakeMaterial(Color color)
         {
-            Shader shader = Shader.Find("Standard");
-            Material mat = new Material(shader != null ? shader : Shader.Find("Sprites/Default"));
-            mat.color = color; return mat;
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) shader = Shader.Find("Standard");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
+            Material mat = new Material(shader);
+            mat.color = color;
+            mat.hideFlags = HideFlags.DontSave;
+            return mat;
         }
     }
 }
