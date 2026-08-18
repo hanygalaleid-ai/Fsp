@@ -13,7 +13,7 @@ namespace Fsp.Bots
         [SerializeField] private Transform[] spawnPoints;
         [SerializeField, Min(1)] private int targetPopulation = 32;
         [SerializeField, Min(0f)] private float spawnRadius = 8f;
-        [SerializeField] private float fallbackRingRadius = 40f;
+        [SerializeField] private float fallbackRingRadius = 900f;
 
         private readonly List<GameObject> spawnedBots = new();
 
@@ -52,8 +52,10 @@ namespace Fsp.Bots
             }
             else
             {
+                // Golden-angle spiral distributes the fallback population over the actual 2400x2400 map
+                // instead of stacking every bot in a 40m circle at Old Crown.
                 float angle = index * 137.508f * Mathf.Deg2Rad;
-                float radius = Mathf.Max(6f, fallbackRingRadius * Mathf.Sqrt((index + 1f) / Mathf.Max(1f, targetPopulation)));
+                float radius = Mathf.Max(150f, fallbackRingRadius * Mathf.Sqrt((index + 1f) / Mathf.Max(1f, targetPopulation)));
                 candidate = transform.position + new Vector3(Mathf.Cos(angle) * radius, 1.05f, Mathf.Sin(angle) * radius);
             }
 
