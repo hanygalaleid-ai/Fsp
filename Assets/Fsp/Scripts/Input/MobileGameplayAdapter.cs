@@ -2,6 +2,7 @@ using Fsp.BattleRoyale;
 using Fsp.Combat;
 using Fsp.Inventory;
 using Fsp.Player;
+using Fsp.Presentation;
 using Fsp.Vehicles;
 using UnityEngine;
 
@@ -33,6 +34,11 @@ namespace Fsp.Input
             if (planePassenger == null) planePassenger = GetComponent<DropPlanePassenger>();
             if (parachute == null) parachute = GetComponent<ParachuteController>();
             if (cameraPivot == null && Camera.main != null) cameraPivot = Camera.main.transform;
+
+            // The runtime-generated Match scene has no serialized ADS component. Ensure the AIM
+            // mobile action always changes gameplay FOV instead of becoming a visual-only button.
+            if (GetComponent<AimDownSightsController>() == null)
+                gameObject.AddComponent<AimDownSightsController>();
 
             if (cameraPivot != null)
             {
