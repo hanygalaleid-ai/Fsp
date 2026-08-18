@@ -18,8 +18,8 @@ namespace Fsp.Localization
 
     /// <summary>
     /// Lightweight runtime localization for generated Lobby/Match UI.
-    /// Uses English source strings as stable keys, detects device language on first launch,
-    /// persists manual choice, and continuously localizes late-created runtime UI.
+    /// English source strings are stable keys. The first launch follows the device language,
+    /// while a manual choice is persisted in PlayerPrefs.
     /// </summary>
     public sealed class FspLocalizationRuntime : MonoBehaviour
     {
@@ -55,6 +55,7 @@ namespace Fsp.Localization
                 Destroy(gameObject);
                 return;
             }
+
             instance = this;
             DontDestroyOnLoad(gameObject);
             Current = LoadLanguage();
@@ -99,11 +100,14 @@ namespace Fsp.Localization
             PlayerPrefs.SetInt(PrefKey, (int)language);
             PlayerPrefs.Save();
             LanguageChanged?.Invoke(language);
-            if (instance != null)
-            {
-                instance.ApplyAllVisibleText();
-                instance.RefreshLanguageButton();
-            }
+            RefreshNow();
+        }
+
+        public static void RefreshNow()
+        {
+            if (instance == null) return;
+            instance.ApplyAllVisibleText();
+            instance.RefreshLanguageButton();
         }
 
         private static FspLanguage LoadLanguage()
@@ -111,15 +115,16 @@ namespace Fsp.Localization
             if (PlayerPrefs.HasKey(PrefKey))
                 return (FspLanguage)Mathf.Clamp(PlayerPrefs.GetInt(PrefKey), 0, 5);
 
-            switch (Application.systemLanguage)
-            {
-                case SystemLanguage.Arabic: return FspLanguage.Arabic;
-                case SystemLanguage.Hindi: return FspLanguage.Hindi;
-                case SystemLanguage.Turkish: return FspLanguage.Turkish;
-                case SystemLanguage.Portuguese: return FspLanguage.PortugueseBrazil;
-                case SystemLanguage.Indonesian: return FspLanguage.Indonesian;
-                default: return FspLanguage.English;
-            }
+            // Some Unity versions do not expose every locale (notably Hindi) as a strongly typed
+            // SystemLanguage enum member. Compare the runtime enum name as text so the code compiles
+            // across Unity versions while still recognizing devices that report "Hindi".
+            string system = Application.systemLanguage.ToString();
+            if (string.Equals(system, "Arabic", StringComparison.OrdinalIgnoreCase)) return FspLanguage.Arabic;
+            if (string.Equals(system, "Hindi", StringComparison.OrdinalIgnoreCase)) return FspLanguage.Hindi;
+            if (string.Equals(system, "Turkish", StringComparison.OrdinalIgnoreCase)) return FspLanguage.Turkish;
+            if (string.Equals(system, "Portuguese", StringComparison.OrdinalIgnoreCase)) return FspLanguage.PortugueseBrazil;
+            if (string.Equals(system, "Indonesian", StringComparison.OrdinalIgnoreCase)) return FspLanguage.Indonesian;
+            return FspLanguage.English;
         }
 
         private void ApplyAllVisibleText()
@@ -158,7 +163,9 @@ namespace Fsp.Localization
             foreach (KeyValuePair<string, string[]> pair in Table)
             {
                 foreach (string value in pair.Value)
+                {
                     if (string.Equals(current, value, StringComparison.Ordinal)) return pair.Key;
+                }
             }
             return current;
         }
@@ -172,8 +179,7 @@ namespace Fsp.Localization
             {
                 if (!source.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
                 string suffix = source.Substring(prefix.Length);
-                string key = prefix.TrimEnd();
-                return T(key) + " " + suffix;
+                return T(prefix.TrimEnd()) + " " + suffix;
             }
 
             if (source.StartsWith("Sending invite to ", StringComparison.OrdinalIgnoreCase))
@@ -210,6 +216,7 @@ namespace Fsp.Localization
             lrt.anchorMax = Vector2.one;
             lrt.offsetMin = Vector2.zero;
             lrt.offsetMax = Vector2.zero;
+
             languageButtonText = labelGo.GetComponent<Text>();
             try { languageButtonText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); } catch { }
             languageButtonText.fontSize = 17;
@@ -224,8 +231,7 @@ namespace Fsp.Localization
 
         private void CycleLanguage()
         {
-            int next = ((int)Current + 1) % 6;
-            SetLanguage((FspLanguage)next);
+            SetLanguage((FspLanguage)(((int)Current + 1) % 6));
         }
 
         private void RefreshLanguageButton()
