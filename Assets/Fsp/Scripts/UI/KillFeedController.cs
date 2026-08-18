@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Fsp.BattleRoyale;
 using UnityEngine;
@@ -72,19 +71,12 @@ namespace Fsp.UI
         {
             public readonly string text;
             public readonly float createdAt;
+
             public Entry(string text, float createdAt)
             {
                 this.text = text;
                 this.createdAt = createdAt;
             }
         }
-    }
-
-    public static class KillFeedBus
-    {
-        public static event Action<MatchParticipant, MatchParticipant> KillReported;
-        public static event Action<string, string> NetworkKillReported;
-        public static void Report(MatchParticipant killer, MatchParticipant victim) => KillReported?.Invoke(killer, victim);
-        public static void ReportNetwork(string killerName, string victimName) => NetworkKillReported?.Invoke(killerName, victimName);
     }
 }
