@@ -24,16 +24,17 @@ namespace Fsp.UI
         private static void InstallAfterSceneLoad()
         {
             if (!string.Equals(SceneManager.GetActiveScene().name, "Match", System.StringComparison.OrdinalIgnoreCase)) return;
-            Install();
+            if (Object.FindFirstObjectByType<MobileControlsInstallRetry>() == null)
+                new GameObject("Fsp_MobileControlsInstallRetry").AddComponent<MobileControlsInstallRetry>();
         }
 
-        public static void Install()
+        public static bool Install()
         {
             EnsureEventSystem();
             EnsureBridge();
 
             MatchParticipant local = FindLocalParticipant();
-            if (local == null) return;
+            if (local == null) return false;
 
             StarterThirdPersonRig desktopRig = local.GetComponent<StarterThirdPersonRig>();
             if (desktopRig != null) desktopRig.enabled = false;
@@ -42,11 +43,12 @@ namespace Fsp.UI
             if (adapter == null) adapter = local.gameObject.AddComponent<MobileGameplayAdapter>();
             adapter.enabled = true;
 
-            if (GameObject.Find("MobileCombatHUD") != null) return;
+            if (GameObject.Find("MobileCombatHUD") != null) return true;
 
             GameObject canvasObject = new GameObject("MobileCombatHUD", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster), typeof(MobileSafeArea));
             Canvas canvas = canvasObject.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.overrideSorting = true;
             canvas.sortingOrder = 100;
 
             CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
@@ -67,10 +69,11 @@ namespace Fsp.UI
             CreateActionButton(root, "Heal", "HEAL", new Vector2(0.735f, 0.075f), new Vector2(110f, 74f), PanelStrong, MobileButtonActionType.Heal, 17, 4);
             CreateActionButton(root, "Interact", "USE", new Vector2(0.625f, 0.19f), new Vector2(108f, 76f), PanelStrong, MobileButtonActionType.Interact, 17, 5);
             CreateActionButton(root, "Switch", "SWAP", new Vector2(0.895f, 0.405f), new Vector2(110f, 68f), PanelStrong, MobileButtonActionType.SwitchWeapon, 16, 6);
-            // Keep sprint above the joystick so pointer events never compete with movement dragging.
             CreateActionButton(root, "Sprint", "SPRINT", new Vector2(0.12f, 0.39f), new Vector2(118f, 72f), PanelStrong, MobileButtonActionType.Sprint, 16, 7);
 
             CreateTopBadge(root, "FSP // SUNSCAR", new Vector2(0.5f, 0.955f));
+            Debug.Log("FSP mobile combat HUD installed successfully.");
+            return true;
         }
 
         private static void EnsureBridge()
@@ -199,6 +202,38 @@ namespace Fsp.UI
             text.resizeTextMinSize = 10;
             text.resizeTextMaxSize = size;
             text.raycastTarget = false;
+        }
+    }
+
+    public sealed class MobileControlsInstallRetry : MonoBehaviour
+    {
+        private float nextTry;
+        private float stopAt;
+
+        private void Awake()
+        {
+            stopAt = Time.unscaledTime + 20f;
+        }
+
+        private void Update()
+        {
+            if (!string.Equals(SceneManager.GetActiveScene().name, "Match", System.StringComparison.OrdinalIgnoreCase))
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            if (Time.unscaledTime > stopAt)
+            {
+                Debug.LogError("FSP mobile HUD failed to install: local participant did not become available in time.");
+                Destroy(gameObject);
+                return;
+            }
+
+            if (Time.unscaledTime < nextTry) return;
+            nextTry = Time.unscaledTime + 0.2f;
+
+            if (MobileMatchControlsInstaller.Install()) Destroy(gameObject);
         }
     }
 }
