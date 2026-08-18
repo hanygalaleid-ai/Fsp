@@ -1,13 +1,14 @@
 using Fsp.BattleRoyale;
 using Fsp.Vehicles;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
 namespace Fsp.Presentation
 {
     /// <summary>
     /// Lightweight visual safety net for cloud-generated Match scenes.
-    /// Replaces bare primitive player/vehicle renderers with the original FSP procedural presentation.
+    /// Keeps presentation helpers alive without fighting FixedWorldArtRuntime lighting/materials.
     /// </summary>
     public sealed class MatchRuntimePolish : MonoBehaviour
     {
@@ -23,7 +24,7 @@ namespace Fsp.Presentation
 
         private void Awake()
         {
-            ApplySceneLighting();
+            ApplySafeCameraAndLighting();
             Scan();
         }
 
@@ -31,25 +32,32 @@ namespace Fsp.Presentation
         {
             if (Time.unscaledTime < nextScan) return;
             nextScan = Time.unscaledTime + 1.25f;
-            ApplySceneLighting();
+            ApplySafeCameraAndLighting();
             Scan();
         }
 
-        private static void ApplySceneLighting()
+        private static void ApplySafeCameraAndLighting()
         {
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.39f, 0.33f, 0.27f);
+            // Keep these values identical to FixedWorldArtRuntime so two runtime safety nets
+            // never alternate between different exposure/fog states on Android.
+            RenderSettings.ambientMode = AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.30f, 0.27f, 0.23f, 1f);
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.58f, 0.53f, 0.46f);
-            RenderSettings.fogDensity = 0.00135f;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogColor = new Color(0.47f, 0.52f, 0.55f, 1f);
+            RenderSettings.fogStartDistance = 450f;
+            RenderSettings.fogEndDistance = 1450f;
 
-            Light sun = null;
-            foreach (Light light in FindObjectsByType<Light>(FindObjectsSortMode.None))
+            Light sun = RenderSettings.sun;
+            if (sun == null)
             {
-                if (light != null && light.type == LightType.Directional)
+                foreach (Light light in FindObjectsByType<Light>(FindObjectsSortMode.None))
                 {
-                    sun = light;
-                    break;
+                    if (light != null && light.type == LightType.Directional)
+                    {
+                        sun = light;
+                        break;
+                    }
                 }
             }
 
@@ -58,22 +66,24 @@ namespace Fsp.Presentation
                 GameObject sunObject = new GameObject("FSP_Sun");
                 sun = sunObject.AddComponent<Light>();
                 sun.type = LightType.Directional;
+                RenderSettings.sun = sun;
             }
 
-            sun.color = new Color(1f, 0.79f, 0.58f);
-            sun.intensity = 1.15f;
+            sun.color = new Color(1f, 0.83f, 0.66f, 1f);
+            sun.intensity = 0.85f;
             sun.shadows = LightShadows.Soft;
-            sun.transform.rotation = Quaternion.Euler(34f, -42f, 0f);
+            sun.transform.rotation = Quaternion.Euler(48f, -32f, 0f);
 
             Camera camera = Camera.main;
             if (camera != null)
             {
                 camera.allowHDR = false;
+                camera.allowMSAA = true;
                 camera.fieldOfView = FspFixedTheme.MatchFieldOfView;
                 camera.nearClipPlane = 0.08f;
                 camera.farClipPlane = 1600f;
                 camera.clearFlags = CameraClearFlags.SolidColor;
-                camera.backgroundColor = new Color(0.46f, 0.63f, 0.74f, 1f);
+                camera.backgroundColor = new Color(0.36f, 0.54f, 0.68f, 1f);
             }
         }
 
