@@ -1,5 +1,4 @@
 #if UNITY_EDITOR
-using System;
 using System.IO;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -22,7 +21,9 @@ namespace Fsp.EditorTools
                 throw new BuildFailedException("Required fixed FSP lobby art is missing: " + LobbyArt);
 
             FileInfo info = new FileInfo(LobbyArt);
-            if (info.Length < 32 * 1024)
+            // The checked-in optimized lobby reference is intentionally compressed. A 4 KB minimum
+            // catches missing/empty files without rejecting the valid shipped artwork.
+            if (info.Length < 4 * 1024)
                 throw new BuildFailedException("FSP lobby art looks invalid/empty: " + LobbyArt);
 
             Debug.Log($"FSP fixed visual asset guard OK: {LobbyArt} ({info.Length / 1024f:0.0} KB)");
