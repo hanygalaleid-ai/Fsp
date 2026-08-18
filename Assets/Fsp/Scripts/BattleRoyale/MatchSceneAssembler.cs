@@ -47,7 +47,12 @@ namespace Fsp.BattleRoyale
         {
             MatchParticipant[] participants = FindObjectsOfType<MatchParticipant>();
             foreach (MatchParticipant existingParticipant in participants)
-                if (existingParticipant != null && existingParticipant.IsLocalPlayer) return existingParticipant;
+            {
+                if (existingParticipant == null || !existingParticipant.IsLocalPlayer) continue;
+                if (existingParticipant.GetComponent<PlayerDamageable>() == null)
+                    existingParticipant.gameObject.AddComponent<PlayerDamageable>();
+                return existingParticipant;
+            }
 
             var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             player.name = "LocalPlayer_Placeholder";
@@ -65,6 +70,7 @@ namespace Fsp.BattleRoyale
             var participant = player.AddComponent<MatchParticipant>();
             string displayName = LobbyState.Instance != null ? LobbyState.Instance.DisplayName : "Player";
             participant.ConfigureAsLocalPlayer(displayName);
+            player.AddComponent<PlayerDamageable>();
             player.AddComponent<ThirdPersonMotor>();
             player.AddComponent<ParachuteController>();
             return participant;
@@ -222,7 +228,18 @@ namespace Fsp.BattleRoyale
             Rigidbody body = car.AddComponent<Rigidbody>();
             body.mass = 950f;
             body.centerOfMass = new Vector3(0f, -0.4f, 0f);
-            car.AddComponent<SimpleVehicleController>();
+            SimpleVehicleController vehicle = car.AddComponent<SimpleVehicleController>();
+
+            Transform seatPoint = new GameObject("DriverSeat").transform;
+            seatPoint.SetParent(car.transform, false);
+            seatPoint.localPosition = new Vector3(0f, 0.9f, 0.2f);
+
+            Transform exitPoint = new GameObject("ExitPoint").transform;
+            exitPoint.SetParent(car.transform, false);
+            exitPoint.localPosition = new Vector3(1.8f, 0.4f, 0f);
+
+            VehicleSeat seat = car.AddComponent<VehicleSeat>();
+            seat.Configure(vehicle, seatPoint, exitPoint);
         }
 
         private static void EnsureHud(GameObject player)
