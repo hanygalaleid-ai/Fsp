@@ -95,7 +95,8 @@ namespace Fsp.Presentation
 
         private static void HideProceduralBackdrop()
         {
-            string[] obsoleteBackdrop = { "FortSilhouette", "CampLeft", "CampRight", "Antenna" };
+            // Names from every previous starter/bootstrap version that must never show over shipped lobby art.
+            string[] obsoleteBackdrop = { "FortSilhouette", "CampLeft", "CampRight", "Antenna", "CharacterStage" };
             foreach (string objectName in obsoleteBackdrop)
             {
                 GameObject go = GameObject.Find(objectName);
