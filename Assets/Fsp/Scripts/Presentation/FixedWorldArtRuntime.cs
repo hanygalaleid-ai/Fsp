@@ -7,9 +7,8 @@ using UnityEngine.SceneManagement;
 namespace Fsp.Presentation
 {
     /// <summary>
-    /// Applies checked-in Sunscar textures to runtime/cloud generated world geometry.
-    /// Android builds must never inherit an arbitrary scene material/shader because that can
-    /// render the entire generated arena white. Materials here are deterministic and mobile-safe.
+    /// Applies checked-in Sunscar textures to appropriate generated world geometry without flattening
+    /// authored POI materials such as water, crops, metal roofs, salt, containers or loot.
     /// </summary>
     public sealed class FixedWorldArtRuntime : MonoBehaviour
     {
@@ -28,7 +27,7 @@ namespace Fsp.Presentation
         private void Awake()
         {
             ConfigureMatchRendering();
-            stopAt = Time.unscaledTime + 30f;
+            stopAt = Time.unscaledTime + 12f;
             ApplyWorldArt();
         }
 
@@ -41,14 +40,13 @@ namespace Fsp.Presentation
             }
 
             if (Time.unscaledTime < nextScan) return;
-            nextScan = Time.unscaledTime + 0.5f;
+            nextScan = Time.unscaledTime + 0.8f;
             ConfigureMatchRendering();
             ApplyWorldArt();
         }
 
         private static void ConfigureMatchRendering()
         {
-            // Keep mobile HDR/exposure surprises out of the fallback world.
             Camera[] cameras = FindObjectsByType<Camera>(FindObjectsSortMode.None);
             foreach (Camera camera in cameras)
             {
@@ -91,16 +89,18 @@ namespace Fsp.Presentation
             Renderer[] renderers = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
             foreach (Renderer renderer in renderers)
             {
-                if (renderer == null || renderer.GetComponentInParent<Fsp.BattleRoyale.MatchParticipant>() != null ||
-                    renderer.GetComponentInParent<Fsp.Vehicles.SimpleVehicleController>() != null) continue;
+                if (renderer == null ||
+                    renderer.GetComponentInParent<Fsp.BattleRoyale.MatchParticipant>() != null ||
+                    renderer.GetComponentInParent<Fsp.Vehicles.SimpleVehicleController>() != null ||
+                    renderer.GetComponentInParent<Fsp.BattleRoyale.SafeZoneController>() != null)
+                    continue;
 
-                string hierarchyKey = BuildHierarchyKey(renderer.transform);
-                string texture = ResolveTexture(hierarchyKey);
+                string leaf = renderer.gameObject.name.ToLowerInvariant();
+                if (PreserveAuthoredMaterial(leaf)) continue;
 
-                // Cloud-generated fallback floors are often simply named Cube/Plane/ArenaFloor.
-                // Detect very large, low world geometry and force the sand material instead of
-                // leaving Unity's default white material visible.
-                if (texture == null && LooksLikeGround(renderer)) texture = "World/sand_ground";
+                string texture = ResolveTexture(renderer.transform, leaf);
+                if (texture == null && LooksLikeGenericFallbackGround(renderer, leaf))
+                    texture = "World/sand_ground";
                 if (texture == null) continue;
 
                 Material material = GetMaterial(texture);
@@ -109,8 +109,42 @@ namespace Fsp.Presentation
             }
         }
 
-        private static bool LooksLikeGround(Renderer renderer)
+        private static bool PreserveAuthoredMaterial(string leaf)
         {
+            // These POI surfaces deliberately carry their own semantic colours/materials.
+            return ContainsAny(leaf,
+                "sea", "water", "ocean", "brine", "canal",
+                "crop", "hay", "salt", "pipe", "container",
+                "roof", "glass", "window", "loot", "mark",
+                "lamp", "lantern", "boat", "pump");
+        }
+
+        private static string ResolveTexture(Transform transform, string leaf)
+        {
+            if (ContainsAny(leaf, "road", "street", "runway", "airstrip", "path", "bridge", "walkway"))
+                return "World/road_dust";
+            if (ContainsAny(leaf, "rock", "cliff", "mountain", "boulder", "ridge", "canyon", "quarry"))
+                return "World/rock_cliff";
+            if (ContainsAny(leaf, "wall", "fort", "ruin", "warehouse", "barrier", "post"))
+                return "World/fortress_wall";
+            if (ContainsAny(leaf, "ground", "terrain", "floor", "arena", "sand", "dune", "desert"))
+                return "World/sand_ground";
+
+            // Generic child names such as Body/Base can inherit only from an architectural parent,
+            // never from a broad POI name like CopperPort/Dryfield/Coast.
+            if (ContainsAny(leaf, "body", "base", "back", "left", "right", "frontl", "frontr"))
+            {
+                string parents = BuildParentKey(transform.parent, 4);
+                if (ContainsAny(parents, "house", "barn", "hangar", "tower", "building", "warehouse", "farmhouse", "pumphouse"))
+                    return "World/fortress_wall";
+            }
+
+            return null;
+        }
+
+        private static bool LooksLikeGenericFallbackGround(Renderer renderer, string leaf)
+        {
+            if (!ContainsAny(leaf, "cube", "plane", "arenafloor", "ground_base")) return false;
             Bounds b = renderer.bounds;
             float horizontal = Mathf.Max(b.size.x, b.size.z);
             bool veryLarge = horizontal >= 80f;
@@ -119,13 +153,13 @@ namespace Fsp.Presentation
             return veryLarge && flat && low;
         }
 
-        private static string BuildHierarchyKey(Transform start)
+        private static string BuildParentKey(Transform start, int maxDepth)
         {
             if (start == null) return string.Empty;
-            System.Text.StringBuilder builder = new System.Text.StringBuilder(128);
+            System.Text.StringBuilder builder = new System.Text.StringBuilder(96);
             Transform current = start;
             int depth = 0;
-            while (current != null && depth < 7)
+            while (current != null && depth < maxDepth)
             {
                 if (builder.Length > 0) builder.Append(' ');
                 builder.Append(current.name.ToLowerInvariant());
@@ -133,15 +167,6 @@ namespace Fsp.Presentation
                 depth++;
             }
             return builder.ToString();
-        }
-
-        private static string ResolveTexture(string name)
-        {
-            if (ContainsAny(name, "road", "street", "runway", "airstrip", "path", "bridge")) return "World/road_dust";
-            if (ContainsAny(name, "rock", "cliff", "mountain", "boulder", "ridge", "canyon")) return "World/rock_cliff";
-            if (ContainsAny(name, "wall", "building", "house", "fort", "tower", "ruin", "warehouse", "port", "oldcrown", "copper")) return "World/fortress_wall";
-            if (ContainsAny(name, "ground", "terrain", "floor", "arena", "sand", "dune", "desert", "dryfield", "sunscar", "coast", "plane")) return "World/sand_ground";
-            return null;
         }
 
         private static bool ContainsAny(string value, params string[] terms)
