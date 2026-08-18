@@ -1,4 +1,5 @@
 using Fsp.BattleRoyale;
+using Fsp.Combat;
 using Fsp.Vehicles;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -95,6 +96,8 @@ namespace Fsp.Presentation
                 if (participant == null) continue;
                 if (participant.GetComponent<StarterProceduralCharacterVisual>() == null)
                     participant.gameObject.AddComponent<StarterProceduralCharacterVisual>();
+                if (participant.GetComponent<ParachuteController>() != null && participant.GetComponent<StarterParachuteVisual>() == null)
+                    participant.gameObject.AddComponent<StarterParachuteVisual>();
             }
 
             SimpleVehicleController[] vehicles = FindObjectsByType<SimpleVehicleController>(FindObjectsSortMode.None);
@@ -103,6 +106,22 @@ namespace Fsp.Presentation
                 if (vehicle == null) continue;
                 if (vehicle.GetComponent<StarterProceduralVehicleVisual>() == null)
                     vehicle.gameObject.AddComponent<StarterProceduralVehicleVisual>();
+            }
+
+            DropPlaneController[] planes = FindObjectsByType<DropPlaneController>(FindObjectsSortMode.None);
+            foreach (DropPlaneController plane in planes)
+            {
+                if (plane == null) continue;
+                if (plane.GetComponent<StarterPlaneVisual>() == null)
+                    plane.gameObject.AddComponent<StarterPlaneVisual>();
+            }
+
+            HitscanWeapon[] weapons = FindObjectsByType<HitscanWeapon>(FindObjectsSortMode.None);
+            foreach (HitscanWeapon weapon in weapons)
+            {
+                if (weapon == null) continue;
+                if (weapon.GetComponent<StarterProceduralWeaponVisual>() == null)
+                    weapon.gameObject.AddComponent<StarterProceduralWeaponVisual>();
             }
         }
     }
