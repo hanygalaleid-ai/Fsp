@@ -16,19 +16,26 @@ namespace Fsp.Presentation
             Renderer baseRenderer = GetComponent<Renderer>();
             if (baseRenderer != null) baseRenderer.enabled = false;
 
-            Material body = MakeMaterial(new Color(0.08f, 0.12f, 0.13f, 1f));
-            Material sand = MakeMaterial(new Color(0.46f, 0.38f, 0.27f, 1f));
-            Material dark = MakeMaterial(new Color(0.035f, 0.04f, 0.045f, 1f));
-            Material bronze = MakeMaterial(new Color(0.50f, 0.28f, 0.11f, 1f));
+            Material body = MakeMaterial(new Color(0.055f, 0.075f, 0.08f, 1f));
+            Material sand = MakeMaterial(new Color(0.39f, 0.31f, 0.20f, 1f));
+            Material dark = MakeMaterial(new Color(0.025f, 0.028f, 0.03f, 1f));
+            Material bronze = MakeMaterial(FspFixedTheme.Bronze);
+            Material glass = MakeMaterial(new Color(0.12f, 0.20f, 0.23f, 1f));
 
             Transform root = new GameObject("Fsp_ScoutVehicleVisual").transform;
             root.SetParent(transform, false);
 
             AddCube(root, "LowerBody", new Vector3(0f, 0.05f, 0f), new Vector3(1.55f, 0.45f, 2.75f), body);
             AddCube(root, "Cabin", new Vector3(0f, 0.52f, -0.15f), new Vector3(1.30f, 0.70f, 1.35f), sand);
+            AddCube(root, "Windshield", new Vector3(0f, 0.72f, 0.50f), new Vector3(1.05f, 0.38f, 0.05f), glass);
             AddCube(root, "Hood", new Vector3(0f, 0.27f, 1.35f), new Vector3(1.35f, 0.32f, 1.10f), sand);
             AddCube(root, "RearDeck", new Vector3(0f, 0.31f, -1.25f), new Vector3(1.35f, 0.30f, 0.85f), body);
             AddCube(root, "FrontBumper", new Vector3(0f, -0.02f, 1.94f), new Vector3(1.58f, 0.18f, 0.18f), bronze);
+            AddCube(root, "RollBarTop", new Vector3(0f, 1.10f, -0.42f), new Vector3(1.25f, 0.08f, 0.08f), dark);
+            AddCube(root, "RollBarL", new Vector3(-0.58f, 0.82f, -0.42f), new Vector3(0.08f, 0.65f, 0.08f), dark);
+            AddCube(root, "RollBarR", new Vector3(0.58f, 0.82f, -0.42f), new Vector3(0.08f, 0.65f, 0.08f), dark);
+            AddCube(root, "HeadlightL", new Vector3(-0.48f, 0.20f, 1.91f), new Vector3(0.22f, 0.16f, 0.06f), bronze);
+            AddCube(root, "HeadlightR", new Vector3(0.48f, 0.20f, 1.91f), new Vector3(0.22f, 0.16f, 0.06f), bronze);
 
             AddWheel(root, new Vector3(-0.92f, -0.18f, 1.18f), dark);
             AddWheel(root, new Vector3(0.92f, -0.18f, 1.18f), dark);
@@ -44,7 +51,10 @@ namespace Fsp.Presentation
             go.transform.localPosition = position;
             go.transform.localScale = scale;
             RemoveCollider(go);
-            go.GetComponent<Renderer>().sharedMaterial = material;
+            Renderer renderer = go.GetComponent<Renderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+            renderer.receiveShadows = true;
         }
 
         private static void AddWheel(Transform parent, Vector3 position, Material material)
@@ -67,8 +77,11 @@ namespace Fsp.Presentation
 
         private static Material MakeMaterial(Color color)
         {
-            Shader shader = Shader.Find("Standard") ?? Shader.Find("Universal Render Pipeline/Lit");
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) shader = Shader.Find("Standard");
+            if (shader == null) shader = Shader.Find("Unlit/Color");
             var material = new Material(shader) { color = color, hideFlags = HideFlags.DontSave };
+            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", 0.22f);
             return material;
         }
     }
