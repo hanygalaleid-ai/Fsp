@@ -29,19 +29,19 @@ namespace Fsp.Vehicles
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.E))
+            if (UnityEngine.Input.GetKeyDown(KeyCode.E))
                 ToggleVehicleInteraction();
 
             if (activeVehicle == null) return;
 
             float throttle = 0f;
             float steering = 0f;
-            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) throttle += 1f;
-            if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) throttle -= 1f;
-            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) steering -= 1f;
-            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) steering += 1f;
+            if (UnityEngine.Input.GetKey(KeyCode.W) || UnityEngine.Input.GetKey(KeyCode.UpArrow)) throttle += 1f;
+            if (UnityEngine.Input.GetKey(KeyCode.S) || UnityEngine.Input.GetKey(KeyCode.DownArrow)) throttle -= 1f;
+            if (UnityEngine.Input.GetKey(KeyCode.A) || UnityEngine.Input.GetKey(KeyCode.LeftArrow)) steering -= 1f;
+            if (UnityEngine.Input.GetKey(KeyCode.D) || UnityEngine.Input.GetKey(KeyCode.RightArrow)) steering += 1f;
 
-            activeVehicle.SetInput(throttle, steering, Input.GetKey(KeyCode.Space));
+            activeVehicle.SetInput(throttle, steering, UnityEngine.Input.GetKey(KeyCode.Space));
         }
 
         public void ToggleVehicleInteraction()
