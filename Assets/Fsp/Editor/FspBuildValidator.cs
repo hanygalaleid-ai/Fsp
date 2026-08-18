@@ -18,6 +18,8 @@ namespace Fsp.EditorTools
 
         public void OnPreprocessBuild(BuildReport report)
         {
+            FspProjectBootstrap.EnsureProjectForBuild();
+
             string[] errors = ValidateProject(report.summary.platform);
             if (errors.Length == 0)
             {
@@ -32,6 +34,7 @@ namespace Fsp.EditorTools
         [MenuItem("Fsp/Project/Validate MVP Build")]
         public static void ValidateFromMenu()
         {
+            FspProjectBootstrap.EnsureProjectForBuild();
             string[] errors = ValidateProject(EditorUserBuildSettings.activeBuildTarget);
             if (errors.Length == 0)
                 Debug.Log("Fsp MVP validation passed.");
@@ -45,8 +48,8 @@ namespace Fsp.EditorTools
             const string lobbyPath = "Assets/Fsp/Scenes/Lobby.unity";
             const string matchPath = "Assets/Fsp/Scenes/Match.unity";
 
-            if (!File.Exists(lobbyPath)) errors.Add("Lobby scene is missing. Use Fsp > Project > Rebuild Starter Scenes.");
-            if (!File.Exists(matchPath)) errors.Add("Match scene is missing. Use Fsp > Project > Rebuild Starter Scenes.");
+            if (!File.Exists(lobbyPath)) errors.Add("Lobby scene is missing after bootstrap.");
+            if (!File.Exists(matchPath)) errors.Add("Match scene is missing after bootstrap.");
 
             var enabledScenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
             if (!enabledScenes.Contains(lobbyPath)) errors.Add("Lobby scene is not enabled in Build Settings.");
