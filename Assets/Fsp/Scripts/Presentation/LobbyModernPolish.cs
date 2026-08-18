@@ -7,6 +7,7 @@ namespace Fsp.Presentation
 {
     /// <summary>
     /// Keeps the generated lobby on the intended modern military presentation even when the scene is rebuilt in CI.
+    /// Checked-in art is the primary background; procedural elements remain as runtime-safe fallbacks.
     /// </summary>
     public static class LobbyModernPolish
     {
@@ -14,6 +15,8 @@ namespace Fsp.Presentation
         private static void Install()
         {
             if (!string.Equals(SceneManager.GetActiveScene().name, "Lobby", System.StringComparison.OrdinalIgnoreCase)) return;
+
+            EnsureFixedBackground();
 
             GameObject hero = GameObject.Find("LobbyHero_Procedural");
             if (hero != null && hero.GetComponent<StarterProceduralCharacterVisual>() == null)
@@ -33,6 +36,47 @@ namespace Fsp.Presentation
             RenderSettings.fog = true;
             RenderSettings.fogColor = new Color(0.18f, 0.19f, 0.20f);
             RenderSettings.fogDensity = 0.0045f;
+        }
+
+        private static void EnsureFixedBackground()
+        {
+            if (GameObject.Find("Fsp_FixedLobbyArt") != null) return;
+            Texture2D texture = Resources.Load<Texture2D>("Lobby/lobby_reference");
+            if (texture == null)
+            {
+                Debug.LogWarning("Fsp fixed lobby art missing; procedural lobby remains active.");
+                return;
+            }
+
+            GameObject canvasObject = new GameObject("Fsp_FixedLobbyArt", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            Canvas canvas = canvasObject.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = -100;
+
+            CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            GameObject background = new GameObject("LobbyArt", typeof(RectTransform), typeof(RawImage));
+            background.transform.SetParent(canvasObject.transform, false);
+            RectTransform rect = background.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            RawImage raw = background.GetComponent<RawImage>();
+            raw.texture = texture;
+            raw.color = Color.white;
+
+            GameObject shade = new GameObject("ReadabilityShade", typeof(RectTransform), typeof(Image));
+            shade.transform.SetParent(canvasObject.transform, false);
+            RectTransform shadeRect = shade.GetComponent<RectTransform>();
+            shadeRect.anchorMin = Vector2.zero;
+            shadeRect.anchorMax = Vector2.one;
+            shadeRect.offsetMin = Vector2.zero;
+            shadeRect.offsetMax = Vector2.zero;
+            shade.GetComponent<Image>().color = new Color(0.015f, 0.025f, 0.04f, 0.22f);
         }
 
         private static void EnsureLobbyLights(Transform hero)
