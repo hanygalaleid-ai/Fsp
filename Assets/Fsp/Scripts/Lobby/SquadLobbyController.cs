@@ -12,9 +12,17 @@ namespace Fsp.Lobby
         [SerializeField] private TMP_Text statusText;
         [SerializeField] private string region = "me";
 
+        public bool HasService => squadClient != null;
+
+        public void ConfigureRuntime(SupabaseSquadClient squad, SupabaseMatchmakingClient matchmaking)
+        {
+            squadClient = squad;
+            matchmakingClient = matchmaking;
+        }
+
         public void CreateSquad()
         {
-            if (squadClient == null) return;
+            if (squadClient == null) { SetStatus("Squad service unavailable"); return; }
             StartCoroutine(squadClient.CreateSquad(
                 squadId =>
                 {
@@ -35,9 +43,34 @@ namespace Fsp.Lobby
         {
             var state = SquadLobbyState.Instance;
             if (squadClient == null) { SetStatus("Squad service unavailable"); return; }
-            if (state == null || !state.HasSquad || !state.IsLeader) { SetStatus("Create a squad first"); return; }
+            if (state == null || !state.HasSquad)
+            {
+                CreateSquadAndInvite(name);
+                return;
+            }
+            if (!state.IsLeader) { SetStatus("Only the squad leader can invite players"); return; }
             if (string.IsNullOrWhiteSpace(name)) { SetStatus("Enter player name"); return; }
+            FindAndInvite(name);
+        }
 
+        private void CreateSquadAndInvite(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) { SetStatus("Enter player name"); return; }
+            if (!SupabaseSession.IsSignedIn) { SetStatus("Sign in to invite players"); return; }
+            StartCoroutine(squadClient.CreateSquad(
+                squadId =>
+                {
+                    SquadLobbyState.Instance?.SetSquad(squadId, true);
+                    RefreshMembers();
+                    FindAndInvite(name);
+                },
+                err => SetStatus(err)));
+        }
+
+        private void FindAndInvite(string name)
+        {
+            var state = SquadLobbyState.Instance;
+            if (state == null || !state.HasSquad) { SetStatus("Create a squad first"); return; }
             StartCoroutine(squadClient.FindPlayerByName(name,
                 player =>
                 {
