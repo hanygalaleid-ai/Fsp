@@ -16,7 +16,7 @@ namespace Fsp.EditorTools
         private const string ScenesFolder = "Assets/Fsp/Scenes";
         private const string LobbyScene = ScenesFolder + "/Lobby.unity";
         private const string MatchScene = ScenesFolder + "/Match.unity";
-        private const string PrefKey = "Fsp.ProjectBootstrap.v5";
+        private const string PrefKey = "Fsp.ProjectBootstrap.v6";
         private static bool initializing;
 
         static FspProjectBootstrap()
@@ -49,8 +49,6 @@ namespace Fsp.EditorTools
 
         public static void EnsureProjectForBuild()
         {
-            // Release invariant: never overwrite a checked-in scene during a player build.
-            // Only create a starter scene when the corresponding file is genuinely missing.
             if (!File.Exists(LobbyScene) || !File.Exists(MatchScene))
             {
                 EnsureProject();
@@ -69,8 +67,7 @@ namespace Fsp.EditorTools
             {
                 EnsureFolder(ScenesFolder);
 
-                // CI/batch mode must preserve the repository scenes exactly as checked in.
-                // The explicit Rebuild Starter Scenes menu command is the only path that overwrites them.
+                // CI/batch mode preserves checked-in scenes. Starter scenes are generated only when missing.
                 if (!File.Exists(LobbyScene)) CreateLobbyScene(false);
                 if (!File.Exists(MatchScene)) CreateMatchScene(false);
 
@@ -91,7 +88,7 @@ namespace Fsp.EditorTools
                 if (!EditorPrefs.GetBool(PrefKey, false))
                 {
                     EditorPrefs.SetBool(PrefKey, true);
-                    Debug.Log("Fsp project initialized; checked-in scenes are now preserved in batch/CI builds.");
+                    Debug.Log("Fsp project initialized; checked-in scenes are preserved and generated Match ground covers the full battle area.");
                 }
             }
             finally
@@ -134,9 +131,11 @@ namespace Fsp.EditorTools
             systems.AddComponent<MatchManager>();
             systems.AddComponent<MatchSceneAssembler>();
 
+            // Unity Plane is 10x10 units at scale 1. A scale of 240 gives a 2400x2400 battle floor,
+            // matching SafeZoneController's +/-1200 playable extent and the drop-plane route.
             var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.name = "Ground_Base";
-            ground.transform.localScale = new Vector3(20f, 1f, 20f);
+            ground.transform.localScale = new Vector3(240f, 1f, 240f);
 
             if (!EditorSceneManager.SaveScene(scene, MatchScene))
                 throw new IOException("Failed to save Match scene at " + MatchScene);
