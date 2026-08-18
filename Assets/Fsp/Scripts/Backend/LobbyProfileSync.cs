@@ -10,6 +10,18 @@ namespace Fsp.Backend
         [SerializeField] private SupabaseProfileStore profileStore;
 
         public PlayerProfile CurrentProfile { get; private set; }
+        public bool IsLoaded => CurrentProfile != null;
+
+        public void ConfigureRuntime(SupabaseProfileStore store)
+        {
+            profileStore = store;
+        }
+
+        public async void LoadRuntimeProfile()
+        {
+            try { await LoadIntoLobbyAsync(); }
+            catch (Exception ex) { Debug.LogWarning("FSP profile load failed: " + ex.Message); }
+        }
 
         public async Task<bool> LoadIntoLobbyAsync()
         {
