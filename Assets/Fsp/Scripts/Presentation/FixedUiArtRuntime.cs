@@ -5,11 +5,6 @@ using UnityEngine.UI;
 
 namespace Fsp.Presentation
 {
-    /// <summary>
-    /// Applies fixed UI art from Resources to runtime-generated Lobby/Match canvases.
-    /// Lobby only needs a short bootstrap scan; Match stays active so late-created/late-enabled
-    /// UI such as the results screen always receives the shipped visual identity.
-    /// </summary>
     public sealed class FixedUiArtRuntime : MonoBehaviour
     {
         private static readonly Dictionary<string, Sprite> Cache = new();
@@ -23,7 +18,6 @@ namespace Fsp.Presentation
             string scene = SceneManager.GetActiveScene().name;
             if (!string.Equals(scene, "Lobby", System.StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(scene, "Match", System.StringComparison.OrdinalIgnoreCase)) return;
-
             if (FindFirstObjectByType<FixedUiArtRuntime>() == null)
                 new GameObject("Fsp_FixedUiArtRuntime").AddComponent<FixedUiArtRuntime>();
         }
@@ -37,12 +31,7 @@ namespace Fsp.Presentation
 
         private void Update()
         {
-            if (!isMatch && Time.unscaledTime > lobbyStopAt)
-            {
-                enabled = false;
-                return;
-            }
-
+            if (!isMatch && Time.unscaledTime > lobbyStopAt) { enabled = false; return; }
             if (Time.unscaledTime < nextApply) return;
             nextApply = Time.unscaledTime + (isMatch ? 1f : 0.35f);
             ApplyAll();
@@ -57,6 +46,7 @@ namespace Fsp.Presentation
 
         private static void ApplyLobby()
         {
+            EnsureLobbyBackground();
             ApplyNamed("Start", "UI/ui_button_primary", Image.Type.Sliced);
             ApplyNamed("Solo", "UI/ui_button_secondary", Image.Type.Sliced);
             ApplyNamed("Squad", "UI/ui_button_secondary", Image.Type.Sliced);
@@ -76,6 +66,41 @@ namespace Fsp.Presentation
                 string n = image.gameObject.name;
                 if (n.Contains("Panel") || n.Contains("Card") || n.Contains("Profile") || n.Contains("Squad") || n.StartsWith("Slot"))
                     SetSprite(image, "UI/ui_panel_dark", Image.Type.Sliced);
+            }
+        }
+
+        private static void EnsureLobbyBackground()
+        {
+            GameObject canvas = GameObject.Find("LobbyCanvas");
+            if (canvas == null) return;
+            Transform existing = canvas.transform.Find("FixedLobbyBackground");
+            if (existing != null) { existing.SetAsFirstSibling(); return; }
+
+            Sprite sprite = LoadSprite("Lobby/lobby_reference");
+            if (sprite == null) return;
+
+            GameObject bg = new GameObject("FixedLobbyBackground", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            bg.transform.SetParent(canvas.transform, false);
+            bg.transform.SetAsFirstSibling();
+            RectTransform rect = (RectTransform)bg.transform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            Image image = bg.GetComponent<Image>();
+            image.sprite = sprite;
+            image.type = Image.Type.Simple;
+            image.preserveAspect = false;
+            image.raycastTarget = false;
+            image.color = Color.white;
+
+            // The shipped art is the visual source of truth. Never let legacy emergency primitives
+            // bleed through it in a device build.
+            string[] legacy = { "FortSilhouette", "CampLeft", "CampRight", "Antenna", "LobbyHero_Procedural" };
+            foreach (string name in legacy)
+            {
+                GameObject go = GameObject.Find(name);
+                if (go != null) go.SetActive(false);
             }
         }
 
