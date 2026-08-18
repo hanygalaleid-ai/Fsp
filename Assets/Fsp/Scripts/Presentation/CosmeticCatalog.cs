@@ -17,6 +17,14 @@ namespace Fsp.Presentation
             return item;
         }
 
+        public IEnumerable<CosmeticItemDefinition> GetBySlot(CosmeticSlot slot)
+        {
+            if (items == null) yield break;
+            foreach (var item in items)
+                if (item != null && item.slot == slot)
+                    yield return item;
+        }
+
         public IEnumerable<CosmeticItemDefinition> All
         {
             get
