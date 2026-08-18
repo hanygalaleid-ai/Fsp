@@ -7,7 +7,7 @@ namespace Fsp.EditorTools
 {
     public static class FspAndroidIconSetup
     {
-        public const string IconPath = "Assets/Fsp/Art/AppIcon/app_icon.png";
+        public const string IconPath = "Assets/Fsp/Art/AppIcon/app_icon.jpg";
 
         public static void Apply()
         {
@@ -16,8 +16,6 @@ namespace Fsp.EditorTools
             if (icon == null)
                 throw new BuildFailedException("Android launcher icon could not be imported: " + IconPath);
 
-            // Legacy/default Android icon. Unity uses this as launcher fallback and for platforms
-            // where adaptive icon layers are not configured.
             var sizes = PlayerSettings.GetIconSizesForTargetGroup(BuildTargetGroup.Android);
             var icons = new Texture2D[sizes.Length];
             for (int i = 0; i < icons.Length; i++) icons[i] = icon;
