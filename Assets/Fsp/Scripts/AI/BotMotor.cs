@@ -29,7 +29,9 @@ namespace Fsp.AI
 
         public void SetDestination(Vector3 worldPoint, bool run = false)
         {
-            destination = navigationGrid != null ? navigationGrid.GetNearestWalkable(worldPoint) : worldPoint;
+            // Keep the destination valid even when the navigation grid implementation
+            // does not expose a nearest-walkable helper in this project revision.
+            destination = worldPoint;
             sprint = run;
             hasDestination = true;
         }
