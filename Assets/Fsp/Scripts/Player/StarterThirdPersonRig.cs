@@ -32,10 +32,10 @@ namespace Fsp.Player
         {
             float x = 0f;
             float y = 0f;
-            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) x -= 1f;
-            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) x += 1f;
-            if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) y -= 1f;
-            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) y += 1f;
+            if (UnityEngine.Input.GetKey(KeyCode.A) || UnityEngine.Input.GetKey(KeyCode.LeftArrow)) x -= 1f;
+            if (UnityEngine.Input.GetKey(KeyCode.D) || UnityEngine.Input.GetKey(KeyCode.RightArrow)) x += 1f;
+            if (UnityEngine.Input.GetKey(KeyCode.S) || UnityEngine.Input.GetKey(KeyCode.DownArrow)) y -= 1f;
+            if (UnityEngine.Input.GetKey(KeyCode.W) || UnityEngine.Input.GetKey(KeyCode.UpArrow)) y += 1f;
             Vector2 input = Vector2.ClampMagnitude(new Vector2(x, y), 1f);
 
             if (passenger == null) passenger = GetComponent<DropPlanePassenger>();
@@ -45,7 +45,7 @@ namespace Fsp.Player
             if (passenger != null && passenger.IsAboard)
             {
                 if (motor != null) motor.SetMoveInput(Vector2.zero);
-                if (Input.GetKeyDown(KeyCode.Space)) passenger.Jump();
+                if (UnityEngine.Input.GetKeyDown(KeyCode.Space)) passenger.Jump();
                 return;
             }
 
@@ -53,7 +53,7 @@ namespace Fsp.Player
             {
                 if (motor != null) motor.SetMoveInput(Vector2.zero);
                 parachute.SetSteer(input);
-                if (Input.GetKeyDown(KeyCode.Space) && !parachute.IsOpen)
+                if (UnityEngine.Input.GetKeyDown(KeyCode.Space) && !parachute.IsOpen)
                     parachute.OpenParachute();
                 return;
             }
@@ -66,8 +66,8 @@ namespace Fsp.Player
 
             if (motor == null || !motor.enabled) return;
             motor.SetMoveInput(input);
-            motor.SetSprint(Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift));
-            if (Input.GetKeyDown(KeyCode.Space)) motor.RequestJump();
+            motor.SetSprint(UnityEngine.Input.GetKey(KeyCode.LeftShift) || UnityEngine.Input.GetKey(KeyCode.RightShift));
+            if (UnityEngine.Input.GetKeyDown(KeyCode.Space)) motor.RequestJump();
         }
 
         private void LateUpdate()
