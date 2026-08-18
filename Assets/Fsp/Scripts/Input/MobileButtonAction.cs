@@ -41,6 +41,18 @@ namespace Fsp.Input
 
         public void OnPointerUp(PointerEventData eventData)
         {
+            ReleaseHeldAction();
+        }
+
+        private void OnDisable()
+        {
+            // MobileInputBridge survives scene loads. If a HUD/button is destroyed while a finger is
+            // held down, PointerUp may never arrive; always release continuous actions here.
+            ReleaseHeldAction();
+        }
+
+        private void ReleaseHeldAction()
+        {
             var input = MobileInputBridge.Instance;
             if (input == null) return;
 
