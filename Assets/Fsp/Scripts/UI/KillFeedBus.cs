@@ -6,6 +6,7 @@ namespace Fsp.UI
     public static class KillFeedBus
     {
         public static event Action<MatchParticipant, MatchParticipant> KillReported;
+        public static event Action<string, string> NetworkKillReported;
 
         public static int LocalPlayerKills { get; private set; }
 
@@ -15,6 +16,11 @@ namespace Fsp.UI
                 LocalPlayerKills++;
 
             KillReported?.Invoke(attacker, victim);
+        }
+
+        public static void ReportNetwork(string killerName, string victimName)
+        {
+            NetworkKillReported?.Invoke(killerName, victimName);
         }
 
         public static void ResetForMatch()
