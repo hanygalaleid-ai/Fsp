@@ -106,7 +106,7 @@ namespace Fsp.UI
             if (vitals != null) OnVitalsChanged(vitals.Health, vitals.Armor);
             RefreshInventory();
             if (matchManager != null) OnAliveChanged(matchManager.AliveCount);
-            if (zoneWarningText != null) zoneWarningText.text = "ارجع إلى المنطقة الآمنة";
+            if (zoneWarningText != null) zoneWarningText.text = "RETURN TO THE SAFE ZONE";
         }
 
         private void OnVitalsChanged(float health, float armor)
