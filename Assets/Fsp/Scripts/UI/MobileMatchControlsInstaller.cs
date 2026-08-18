@@ -67,7 +67,8 @@ namespace Fsp.UI
             CreateActionButton(root, "Heal", "HEAL", new Vector2(0.735f, 0.075f), new Vector2(110f, 74f), PanelStrong, MobileButtonActionType.Heal, 17, 4);
             CreateActionButton(root, "Interact", "USE", new Vector2(0.625f, 0.19f), new Vector2(108f, 76f), PanelStrong, MobileButtonActionType.Interact, 17, 5);
             CreateActionButton(root, "Switch", "SWAP", new Vector2(0.895f, 0.405f), new Vector2(110f, 68f), PanelStrong, MobileButtonActionType.SwitchWeapon, 16, 6);
-            CreateActionButton(root, "Sprint", "SPRINT", new Vector2(0.185f, 0.095f), new Vector2(118f, 72f), PanelStrong, MobileButtonActionType.Sprint, 16, 7);
+            // Keep sprint above the joystick so pointer events never compete with movement dragging.
+            CreateActionButton(root, "Sprint", "SPRINT", new Vector2(0.12f, 0.39f), new Vector2(118f, 72f), PanelStrong, MobileButtonActionType.Sprint, 16, 7);
 
             CreateTopBadge(root, "FSP // SUNSCAR", new Vector2(0.5f, 0.955f));
         }
