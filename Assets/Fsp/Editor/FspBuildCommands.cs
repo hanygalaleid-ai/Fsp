@@ -71,6 +71,7 @@ namespace Fsp.EditorTools
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
             PlayerSettings.Android.bundleVersionCode = 1;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
+            FspAndroidIconSetup.Apply();
 
             if (release)
                 EditorUserBuildSettings.development = false;
