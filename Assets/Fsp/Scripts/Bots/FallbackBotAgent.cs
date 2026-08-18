@@ -16,20 +16,33 @@ namespace Fsp.Bots
 
         private CharacterController controller;
         private PlayerVitals vitals;
+        private MatchManager matchManager;
         private Transform target;
         private float nextShot;
         private float nextScan;
         private float verticalVelocity;
 
+        private static bool localDropReleased;
+        private static float nextDropCheck;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void ResetSceneGate()
+        {
+            localDropReleased = false;
+            nextDropCheck = 0f;
+        }
+
         private void Awake()
         {
             controller = GetComponent<CharacterController>();
             vitals = GetComponent<PlayerVitals>();
+            matchManager = FindFirstObjectByType<MatchManager>();
         }
 
         private void Update()
         {
             if (vitals != null && !vitals.IsAlive) return;
+            if (!CombatMayStart()) return;
 
             if (Time.time >= nextScan)
             {
@@ -76,6 +89,28 @@ namespace Fsp.Bots
             if (controller.isGrounded && verticalVelocity < 0f) verticalVelocity = -2f;
             verticalVelocity -= 22f * Time.deltaTime;
             controller.Move((planar * moveSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
+        }
+
+        private bool CombatMayStart()
+        {
+            if (matchManager == null) matchManager = FindFirstObjectByType<MatchManager>();
+            if (matchManager == null || matchManager.Phase != MatchManager.MatchPhase.Active) return false;
+            if (localDropReleased) return true;
+
+            if (Time.unscaledTime < nextDropCheck) return false;
+            nextDropCheck = Time.unscaledTime + 0.25f;
+
+            MatchParticipant[] participants = FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None);
+            foreach (MatchParticipant participant in participants)
+            {
+                if (participant == null || !participant.IsLocalPlayer) continue;
+                DropPlanePassenger passenger = participant.GetComponent<DropPlanePassenger>();
+                if (passenger != null && passenger.IsAboard) return false;
+                localDropReleased = true;
+                return true;
+            }
+
+            return false;
         }
 
         private void AcquireTarget()
