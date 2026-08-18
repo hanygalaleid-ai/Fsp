@@ -123,6 +123,20 @@ namespace Fsp.Presentation
                 if (weapon.GetComponent<StarterProceduralWeaponVisual>() == null)
                     weapon.gameObject.AddComponent<StarterProceduralWeaponVisual>();
             }
+
+            // The generated safe-zone helper is a huge flat cylinder whose diameter tracks the zone.
+            // It must never render as world geometry; otherwise it can cover the terrain and even be
+            // mistaken for a ground mesh by the runtime material pass. Zone gameplay/minimap data remains intact.
+            SafeZoneController[] zones = FindObjectsByType<SafeZoneController>(FindObjectsSortMode.None);
+            foreach (SafeZoneController zone in zones)
+            {
+                if (zone == null) continue;
+                foreach (Renderer renderer in zone.GetComponentsInChildren<Renderer>(true))
+                {
+                    if (renderer != null && renderer.gameObject.name.Contains("Placeholder"))
+                        renderer.enabled = false;
+                }
+            }
         }
     }
 }
