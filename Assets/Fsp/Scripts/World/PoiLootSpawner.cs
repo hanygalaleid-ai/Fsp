@@ -29,12 +29,16 @@ namespace Fsp.World
                 bool highTier = rng.NextDouble() < poi.highTierLootChance;
                 InventoryItem[] pool = highTier && highTierItems != null && highTierItems.Length > 0 ? highTierItems : lowTierItems;
                 if (pool == null || pool.Length == 0) continue;
-                InventoryItem prefab = pool[rng.Next(pool.Length)];
-                if (prefab == null) continue;
+                InventoryItem item = pool[rng.Next(pool.Length)];
+                if (item == null) continue;
 
-                InventoryItem item = Instantiate(prefab, point.position, point.rotation);
-                var identity = item.GetComponent<NetworkLootIdentity>();
-                if (identity != null) identity.AssignStableId($"{MatchRoomState.MatchId}:{poi.poiId}:loot:{i}");
+                string lootId = $"{MatchRoomState.MatchId}:{poi.poiId}:loot:{i}";
+                GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                go.name = lootId;
+                go.transform.SetPositionAndRotation(point.position, point.rotation);
+                go.transform.localScale = Vector3.one * 0.5f;
+                LootPickup pickup = go.AddComponent<LootPickup>();
+                pickup.Configure(item, lootId, true);
             }
         }
 
