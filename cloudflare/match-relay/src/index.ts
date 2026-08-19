@@ -9,6 +9,7 @@ interface Env {
 type SocketAttachment = { playerId: string };
 type Envelope = { type: "snapshot" | "fire" | "damage" | "vehicle" | "seat" | "loot_claim" | "loot_claimed" | "appearance" | "match_state" | "elimination"; payload: string };
 type PlayerState = { position: Vec3; health: number; armor: number; alive: boolean; updatedAt: number };
+type FireState = { origin: Vec3; direction: Vec3; firedAt: number; consumed: boolean };
 type Vec3 = { x: number; y: number; z: number };
 
 async function authenticate(request: Request, env: Env): Promise<string | null> {
@@ -73,8 +74,8 @@ export class MatchRoom extends DurableObject<Env> {
       if (typeof payload.vehicleId !== "string" || payload.vehicleId.length < 1 || payload.vehicleId.length > 64) return;
       const currentDriver = await this.ctx.storage.get<string>(`seat:${payload.vehicleId}`);
       if (currentDriver !== attachment.playerId) return;
-    } else {
-      if (payload.attackerId !== attachment.playerId) return;
+    } else if (payload.attackerId !== attachment.playerId) {
+      return;
     }
 
     if (envelope.type === "snapshot") {
@@ -88,11 +89,7 @@ export class MatchRoom extends DurableObject<Env> {
     }
 
     if (envelope.type === "fire") {
-      const now = Date.now();
-      const last = await this.ctx.storage.get<number>(`fire:${attachment.playerId}`) ?? 0;
-      if (now - last < 55) return;
-      await this.ctx.storage.put(`fire:${attachment.playerId}`, now);
-      this.broadcast(message, ws);
+      await this.handleFire(ws, attachment.playerId, payload, message);
       return;
     }
 
@@ -141,6 +138,25 @@ export class MatchRoom extends DurableObject<Env> {
     this.broadcast(message, ws);
   }
 
+  private async handleFire(ws: WebSocket, playerId: string, payload: Record<string, unknown>, originalMessage: string): Promise<void> {
+    const origin = readVec3(payload.origin);
+    const directionRaw = readVec3(payload.direction);
+    if (!origin || !directionRaw) return;
+    const direction = normalize(directionRaw);
+    if (!direction) return;
+
+    const player = await this.ctx.storage.get<PlayerState>(`player:${playerId}`);
+    if (!player?.alive) return;
+    if (distance(origin, player.position) > 5.5) return;
+
+    const now = Date.now();
+    const last = await this.ctx.storage.get<FireState>(`fire:${playerId}`);
+    if (last && now - last.firedAt < 55) return;
+
+    await this.ctx.storage.put(`fire:${playerId}`, { origin, direction, firedAt: now, consumed: false } satisfies FireState);
+    this.broadcast(originalMessage, ws);
+  }
+
   private async handleSnapshot(ws: WebSocket, playerId: string, payload: Record<string, unknown>, originalMessage: string): Promise<void> {
     const position = readVec3(payload.position);
     const health = Number(payload.health ?? 100);
@@ -153,8 +169,9 @@ export class MatchRoom extends DurableObject<Env> {
     const previous = await this.ctx.storage.get<PlayerState>(key);
     if (previous) {
       const dt = Math.max(0.05, (now - previous.updatedAt) / 1000);
-      const speed = distance(previous.position, position) / dt;
-      if (speed > 95) return;
+      const moved = distance(previous.position, position);
+      const speed = moved / dt;
+      if (speed > 95 || moved > 140) return;
       if (!previous.alive && alive) return;
       if (health > previous.health + 60) return;
       if (armor > previous.armor + 100) return;
@@ -181,15 +198,18 @@ export class MatchRoom extends DurableObject<Env> {
 
     const attacker = await this.ctx.storage.get<PlayerState>(`player:${attackerId}`);
     const target = await this.ctx.storage.get<PlayerState>(`player:${targetId}`);
-    if (!attacker?.alive || !target?.alive) return;
-    if (distance(attacker.position, target.position) > 350) return;
-    if (distance(hitPoint, target.position) > 4.5) return;
+    const fire = await this.ctx.storage.get<FireState>(`fire:${attackerId}`);
+    if (!attacker?.alive || !target?.alive || !fire || fire.consumed) return;
 
     const now = Date.now();
-    const throttleKey = `damage:${attackerId}:${targetId}`;
-    const lastDamage = await this.ctx.storage.get<number>(throttleKey) ?? 0;
-    if (now - lastDamage < 55) return;
-    await this.ctx.storage.put(throttleKey, now);
+    if (now - fire.firedAt > 350) return;
+    if (distance(attacker.position, target.position) > 350) return;
+    if (distance(hitPoint, target.position) > 4.5) return;
+    if (distancePointToRay(target.position, fire.origin, fire.direction) > 4.5) return;
+    if (dot(subtract(target.position, fire.origin), fire.direction) < -1) return;
+
+    fire.consumed = true;
+    await this.ctx.storage.put(`fire:${attackerId}`, fire);
     await this.ctx.storage.put(`last-attacker:${targetId}`, attackerId);
 
     const sanitized = JSON.stringify({ attackerId, targetId, damage, hitPoint, timestamp: now / 1000 });
@@ -226,6 +246,27 @@ function readVec3(value: unknown): Vec3 | null {
   const v = value as Record<string, unknown>;
   const x = Number(v.x), y = Number(v.y), z = Number(v.z);
   return Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z) ? { x, y, z } : null;
+}
+
+function normalize(v: Vec3): Vec3 | null {
+  const m = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+  if (!Number.isFinite(m) || m < 0.0001) return null;
+  return { x: v.x / m, y: v.y / m, z: v.z / m };
+}
+
+function subtract(a: Vec3, b: Vec3): Vec3 {
+  return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z };
+}
+
+function dot(a: Vec3, b: Vec3): number {
+  return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+function distancePointToRay(point: Vec3, origin: Vec3, direction: Vec3): number {
+  const toPoint = subtract(point, origin);
+  const t = Math.max(0, dot(toPoint, direction));
+  const closest = { x: origin.x + direction.x * t, y: origin.y + direction.y * t, z: origin.z + direction.z * t };
+  return distance(point, closest);
 }
 
 function distance(a: Vec3, b: Vec3): number {
