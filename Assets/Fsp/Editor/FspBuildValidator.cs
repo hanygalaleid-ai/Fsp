@@ -113,6 +113,13 @@ namespace Fsp.EditorTools
                 if (!FindInScene<MatchSceneAssembler>(scene)) errors.Add("Match scene has no authored MatchSceneAssembler.");
                 if (!FindLocalParticipant(scene)) errors.Add("Match scene has no authored local MatchParticipant. Runtime player generation is disabled.");
                 if (!FindInScene<BattleRoyaleHud>(scene)) errors.Add("Match scene has no authored BattleRoyaleHud. Runtime HUD generation is disabled.");
+
+                MatchHudBinding hudBinding = FindComponentInScene<MatchHudBinding>(scene);
+                if (hudBinding == null)
+                    errors.Add("Match scene has no MatchHudBinding for the approved Sunscar HUD layout.");
+                else if (!hudBinding.IsComplete)
+                    errors.Add("MatchHudBinding is incomplete. Assign compass, minimap, joystick, action buttons, weapon panel, bars, labels and buttons in Match.unity.");
+
                 if (CountInScene<Renderer>(scene) == 0) errors.Add("Match scene contains no authored renderers/world art.");
                 if (CountInScene<Collider>(scene) == 0) errors.Add("Match scene contains no authored collision surfaces.");
             }
@@ -141,12 +148,18 @@ namespace Fsp.EditorTools
             return count;
         }
 
-        private static bool FindInScene<T>(Scene scene) where T : Component
+        private static T FindComponentInScene<T>(Scene scene) where T : Component
         {
             foreach (GameObject root in scene.GetRootGameObjects())
-                if (root.GetComponentInChildren<T>(true) != null) return true;
-            return false;
+            {
+                T component = root.GetComponentInChildren<T>(true);
+                if (component != null) return component;
+            }
+            return null;
         }
+
+        private static bool FindInScene<T>(Scene scene) where T : Component
+            => FindComponentInScene<T>(scene) != null;
 
         private static GameObject FindNamedRoot(Scene scene, string name)
         {
