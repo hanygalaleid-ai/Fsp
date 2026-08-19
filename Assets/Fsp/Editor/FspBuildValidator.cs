@@ -8,7 +8,6 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Fsp.BattleRoyale;
-using Fsp.Lobby;
 
 namespace Fsp.EditorTools
 {
@@ -48,8 +47,8 @@ namespace Fsp.EditorTools
             const string lobbyPath = "Assets/Fsp/Scenes/Lobby.unity";
             const string matchPath = "Assets/Fsp/Scenes/Match.unity";
 
-            if (!File.Exists(lobbyPath)) errors.Add("Lobby scene is missing after bootstrap.");
-            if (!File.Exists(matchPath)) errors.Add("Match scene is missing after bootstrap.");
+            if (!File.Exists(lobbyPath)) errors.Add("Lobby scene is missing.");
+            if (!File.Exists(matchPath)) errors.Add("Match scene is missing.");
 
             var enabledScenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
             if (!enabledScenes.Contains(lobbyPath)) errors.Add("Lobby scene is not enabled in Build Settings.");
@@ -83,8 +82,17 @@ namespace Fsp.EditorTools
             Scene scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Additive);
             try
             {
-                if (!FindInScene<LobbyState>(scene)) errors.Add("Lobby scene has no LobbyState.");
                 if (!FindInScene<Camera>(scene)) errors.Add("Lobby scene has no Camera.");
+
+                GameObject art = FindNamedRoot(scene, "FSP_FIXED_LOBBY_ART");
+                if (art == null)
+                    errors.Add("Lobby scene is missing the fixed approved lobby artwork root FSP_FIXED_LOBBY_ART.");
+                else
+                {
+                    SpriteRenderer renderer = art.GetComponent<SpriteRenderer>();
+                    if (renderer == null || renderer.sprite == null)
+                        errors.Add("Fixed lobby artwork root has no valid SpriteRenderer/sprite.");
+                }
             }
             finally
             {
@@ -115,6 +123,13 @@ namespace Fsp.EditorTools
             foreach (GameObject root in scene.GetRootGameObjects())
                 if (root.GetComponentInChildren<T>(true) != null) return true;
             return false;
+        }
+
+        private static GameObject FindNamedRoot(Scene scene, string name)
+        {
+            foreach (GameObject root in scene.GetRootGameObjects())
+                if (root.name == name) return root;
+            return null;
         }
     }
 }
