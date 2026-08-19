@@ -3,6 +3,7 @@ using System.Collections;
 using Fsp.Backend;
 using Fsp.Lobby;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Unity.WebRTC;
 
 namespace Fsp.Voice
@@ -18,6 +19,7 @@ namespace Fsp.Voice
         private string sessionId;
         private bool joining;
         private bool joined;
+        private bool syncing;
         private float nextSync;
 
         private void Awake()
@@ -36,15 +38,14 @@ namespace Fsp.Voice
 
         private IEnumerator Start()
         {
+            if (!IsMatchScene()) yield break;
             if (!SupabaseSession.IsSignedIn) yield break;
             if (SquadLobbyState.Instance == null || !SquadLobbyState.Instance.HasSquad) yield break;
 
             squadId = SquadLobbyState.Instance.SquadId;
             if (SquadVoiceState.Instance == null)
-            {
-                var stateObject = new GameObject("SquadVoiceState");
-                stateObject.AddComponent<SquadVoiceState>();
-            }
+                new GameObject("SquadVoiceState").AddComponent<SquadVoiceState>();
+
             SquadVoiceState.Instance?.BindRuntime(runtime);
 
             bool settingLoaded = false;
@@ -118,35 +119,43 @@ namespace Fsp.Voice
 
         private void Update()
         {
-            if (!joined || Time.unscaledTime < nextSync) return;
+            if (!joined || syncing || Time.unscaledTime < nextSync) return;
             nextSync = Time.unscaledTime + Mathf.Max(0.5f, syncInterval);
             StartCoroutine(SyncRemoteTracks());
         }
 
         private IEnumerator SyncRemoteTracks()
         {
-            if (!joined || string.IsNullOrWhiteSpace(sessionId)) yield break;
+            if (!joined || syncing || string.IsNullOrWhiteSpace(sessionId)) yield break;
+            syncing = true;
 
             CloudflareSfuSignalingClient.SignalResponse sync = null;
             string error = null;
             yield return signaling.Sync(squadId, sessionId, r => sync = r, e => error = e);
             if (sync == null)
             {
+                syncing = false;
                 if (!string.IsNullOrWhiteSpace(error)) SquadVoiceState.Instance?.SetRuntimeStatus("Voice sync retrying");
                 yield break;
             }
-            if (!sync.changed || string.IsNullOrWhiteSpace(sync.sdp)) yield break;
+            if (!sync.changed || string.IsNullOrWhiteSpace(sync.sdp))
+            {
+                syncing = false;
+                yield break;
+            }
 
             string answerSdp = null;
             yield return runtime.ApplyRemoteOfferAndCreateAnswer(sync.sdp, s => answerSdp = s, e => error = e);
             if (string.IsNullOrWhiteSpace(answerSdp))
             {
+                syncing = false;
                 SquadVoiceState.Instance?.MarkRuntimeError(error ?? "Voice renegotiation failed.");
                 yield break;
             }
 
             bool renegotiated = false;
             yield return signaling.Renegotiate(squadId, sessionId, answerSdp, _ => renegotiated = true, e => error = e);
+            syncing = false;
             if (!renegotiated && !string.IsNullOrWhiteSpace(error))
                 SquadVoiceState.Instance?.SetRuntimeStatus("Voice renegotiation retrying");
         }
@@ -157,6 +166,12 @@ namespace Fsp.Voice
             if (joined) SquadVoiceState.Instance?.SetRuntimeStatus("Voice disconnected");
         }
         private void HandleRuntimeStatus(string status) => SquadVoiceState.Instance?.SetRuntimeStatus(status);
+
+        private static bool IsMatchScene()
+        {
+            Scene scene = SceneManager.GetActiveScene();
+            return scene.IsValid() && string.Equals(scene.name, "Match", StringComparison.OrdinalIgnoreCase);
+        }
 
         private void OnDestroy()
         {
@@ -178,6 +193,8 @@ namespace Fsp.Voice
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Install()
         {
+            Scene scene = SceneManager.GetActiveScene();
+            if (!scene.IsValid() || !string.Equals(scene.name, "Match", StringComparison.OrdinalIgnoreCase)) return;
             if (!SupabaseSession.IsSignedIn) return;
             if (SquadLobbyState.Instance == null || !SquadLobbyState.Instance.HasSquad) return;
             if (UnityEngine.Object.FindFirstObjectByType<SquadVoiceCoordinator>() != null) return;
