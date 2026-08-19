@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Fsp.BattleRoyale;
 using Fsp.Lobby;
+using Fsp.Networking;
 using Fsp.UI;
 using UnityEditor;
 using UnityEditor.Build;
@@ -29,6 +30,8 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Scripts/Inventory/PlayerInventory.cs",
             "Assets/Fsp/Scripts/AI/BotBrain.cs",
             "Assets/Fsp/Scripts/Vehicles/SimpleVehicleController.cs",
+            "Assets/Fsp/Scripts/Network/NetworkSessionManager.cs",
+            "Assets/Fsp/Scripts/Network/CloudflareWebSocketTransport.cs",
             "Packages/manifest.json",
             "ProjectSettings/ProjectVersion.txt"
         };
@@ -37,7 +40,7 @@ namespace Fsp.EditorTools
         public static void ValidateFromMenu()
         {
             ValidateOrThrow();
-            Debug.Log("Fsp validation passed: required files and authored scene wiring are ready for build.");
+            Debug.Log("Fsp validation passed: required files, authored scenes and online wiring are ready for build.");
         }
 
         public static void ValidateOrThrow()
@@ -103,9 +106,18 @@ namespace Fsp.EditorTools
 
                 RequireSceneComponent<BattleRoyaleHud>(scene, "BattleRoyaleHud");
                 RequireSceneComponent<SafeZoneController>(scene, "SafeZoneController");
+                RequireSceneComponent<NetworkSessionManager>(scene, "NetworkSessionManager");
+                RequireSceneComponent<CloudflareWebSocketTransport>(scene, "CloudflareWebSocketTransport");
 
                 if (FindSceneComponents<MatchManager>(scene).Length == 0 && FindSceneComponents<MatchSceneAssembler>(scene).Length == 0)
                     throw new BuildFailedException("Fsp Match scene needs an authored MatchManager or MatchSceneAssembler so match state can initialize.");
+
+                CloudflareWebSocketTransport[] transports = FindSceneComponents<CloudflareWebSocketTransport>(scene);
+                foreach (CloudflareWebSocketTransport transport in transports)
+                {
+                    if (transport != null && !transport.IsConfigured)
+                        throw new BuildFailedException("Fsp online build blocked: Cloudflare match relay URL is still missing/placeholder in Match scene.");
+                }
             }
             finally
             {
