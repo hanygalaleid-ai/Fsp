@@ -15,7 +15,9 @@ namespace Fsp.World
 
         private void Awake()
         {
-            if (cells == null || cells.Length == 0) cells = FindObjectsOfType<WorldCell>(true);
+            if (cells == null || cells.Length == 0)
+                cells = FindObjectsByType<WorldCell>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
             foreach (var cell in cells)
                 if (cell != null) lookup[cell.Coordinates] = cell;
         }
