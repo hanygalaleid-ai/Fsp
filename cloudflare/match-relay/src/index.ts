@@ -7,7 +7,7 @@ interface Env {
 }
 
 type SocketAttachment = { playerId: string };
-type Envelope = { type: "snapshot" | "fire" | "damage" | "vehicle" | "seat" | "loot_claim" | "loot_claimed" | "appearance" | "match_state"; payload: string };
+type Envelope = { type: "snapshot" | "fire" | "damage" | "vehicle" | "seat" | "loot_claim" | "loot_claimed" | "appearance" | "match_state" | "elimination"; payload: string };
 type PlayerState = { position: Vec3; health: number; armor: number; alive: boolean; updatedAt: number };
 type Vec3 = { x: number; y: number; z: number };
 
@@ -147,6 +147,7 @@ export class MatchRoom extends DurableObject<Env> {
     const armor = Number(payload.armor ?? 0);
     const alive = payload.alive !== false;
     if (!position || !finiteRange(health, 0, 100) || !finiteRange(armor, 0, 100)) return;
+
     const now = Date.now();
     const key = `player:${playerId}`;
     const previous = await this.ctx.storage.get<PlayerState>(key);
@@ -158,8 +159,17 @@ export class MatchRoom extends DurableObject<Env> {
       if (health > previous.health + 60) return;
       if (armor > previous.armor + 100) return;
     }
+
     await this.ctx.storage.put(key, { position, health, armor, alive, updatedAt: now } satisfies PlayerState);
     this.broadcast(originalMessage, ws);
+
+    if (previous?.alive && !alive) {
+      const killerId = await this.ctx.storage.get<string>(`last-attacker:${playerId}`) ?? "";
+      const eliminationPayload = JSON.stringify({ killerId, victimId: playerId, timestamp: now / 1000 });
+      this.broadcast(JSON.stringify({ type: "elimination", payload: eliminationPayload }));
+      await this.ctx.storage.delete(`last-attacker:${playerId}`);
+    }
+
     await this.broadcastMatchState();
   }
 
@@ -168,16 +178,20 @@ export class MatchRoom extends DurableObject<Env> {
     const damage = Number(payload.damage ?? 0);
     const hitPoint = readVec3(payload.hitPoint);
     if (!targetId || targetId === attackerId || !hitPoint || !finiteRange(damage, 0.1, 90)) return;
+
     const attacker = await this.ctx.storage.get<PlayerState>(`player:${attackerId}`);
     const target = await this.ctx.storage.get<PlayerState>(`player:${targetId}`);
     if (!attacker?.alive || !target?.alive) return;
     if (distance(attacker.position, target.position) > 350) return;
     if (distance(hitPoint, target.position) > 4.5) return;
+
     const now = Date.now();
     const throttleKey = `damage:${attackerId}:${targetId}`;
     const lastDamage = await this.ctx.storage.get<number>(throttleKey) ?? 0;
     if (now - lastDamage < 55) return;
     await this.ctx.storage.put(throttleKey, now);
+    await this.ctx.storage.put(`last-attacker:${targetId}`, attackerId);
+
     const sanitized = JSON.stringify({ attackerId, targetId, damage, hitPoint, timestamp: now / 1000 });
     this.broadcast(JSON.stringify({ type: "damage", payload: sanitized }), ws);
   }
