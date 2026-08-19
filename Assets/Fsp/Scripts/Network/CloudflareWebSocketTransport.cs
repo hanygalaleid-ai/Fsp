@@ -34,6 +34,7 @@ namespace Fsp.Networking
         public event Action<NetworkLootClaimEvent> LootClaimReceived;
         public event Action<NetworkAppearanceEvent> AppearanceReceived;
         public event Action<NetworkMatchState> MatchStateReceived;
+        public event Action<NetworkEliminationEvent> EliminationReceived;
 
         public bool ConfigureRelayBaseUrl(string value)
         {
@@ -151,6 +152,7 @@ namespace Fsp.Networking
                 case "loot_claimed": LootClaimReceived?.Invoke(JsonUtility.FromJson<NetworkLootClaimEvent>(envelope.payload)); break;
                 case "appearance": AppearanceReceived?.Invoke(JsonUtility.FromJson<NetworkAppearanceEvent>(envelope.payload)); break;
                 case "match_state": MatchStateReceived?.Invoke(JsonUtility.FromJson<NetworkMatchState>(envelope.payload)); break;
+                case "elimination": EliminationReceived?.Invoke(JsonUtility.FromJson<NetworkEliminationEvent>(envelope.payload)); break;
             }
         }
 
