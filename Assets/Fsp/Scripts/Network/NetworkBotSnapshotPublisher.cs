@@ -55,6 +55,7 @@ namespace Fsp.Networking
                 if (behaviour is not INetworkTransport candidate) continue;
                 transport = candidate;
                 transport.BotAuthorityReceived += HandleAuthority;
+                transport.DamageReceived += HandleDamage;
                 return;
             }
         }
@@ -63,6 +64,28 @@ namespace Fsp.Networking
         {
             isAuthority = value != null && value.playerId == SupabaseSession.UserId;
             if (!isAuthority) bots.Clear();
+            else RefreshBots();
+        }
+
+        private void HandleDamage(NetworkDamageEvent value)
+        {
+            if (!isAuthority || value == null || string.IsNullOrWhiteSpace(value.targetId) || !value.targetId.StartsWith("bot:", StringComparison.Ordinal)) return;
+            if (!TryResolveBot(value.targetId, out MatchParticipant bot) || bot == null) return;
+            PlayerVitals vitals = bot.GetComponent<PlayerVitals>();
+            if (vitals == null || !vitals.IsAlive) return;
+            vitals.ApplyDamage(Mathf.Clamp(value.damage, 0f, 35f));
+        }
+
+        private bool TryResolveBot(string id, out MatchParticipant bot)
+        {
+            bot = null;
+            if (string.IsNullOrWhiteSpace(id) || id.Length < 5) return false;
+            if (!int.TryParse(id.Substring(4), out int ordinal)) return false;
+            int index = ordinal - 1;
+            RefreshBots();
+            if (index < 0 || index >= bots.Count) return false;
+            bot = bots[index];
+            return bot != null;
         }
 
         private void RefreshBots()
@@ -75,7 +98,11 @@ namespace Fsp.Networking
 
         private void OnDestroy()
         {
-            if (transport != null) transport.BotAuthorityReceived -= HandleAuthority;
+            if (transport != null)
+            {
+                transport.BotAuthorityReceived -= HandleAuthority;
+                transport.DamageReceived -= HandleDamage;
+            }
         }
     }
 
