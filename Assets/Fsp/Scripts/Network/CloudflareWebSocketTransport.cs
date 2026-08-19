@@ -55,6 +55,7 @@ namespace Fsp.Networking
             return;
 #else
             Disconnect();
+            NetworkWorldClockCache.Clear();
             if (!IsConfigured) { Debug.LogWarning("CloudflareWebSocketTransport: relay URL is not configured yet; waiting for runtime config."); return; }
             if (string.IsNullOrWhiteSpace(matchId) || !SupabaseSession.IsSignedIn) return;
             lifetime = new CancellationTokenSource();
@@ -127,7 +128,11 @@ namespace Fsp.Networking
                 case "match_state": MatchStateReceived?.Invoke(JsonUtility.FromJson<NetworkMatchState>(envelope.payload)); break;
                 case "elimination": EliminationReceived?.Invoke(JsonUtility.FromJson<NetworkEliminationEvent>(envelope.payload)); break;
                 case "bot_authority": BotAuthorityReceived?.Invoke(JsonUtility.FromJson<NetworkBotAuthorityEvent>(envelope.payload)); break;
-                case "world_state": WorldStateReceived?.Invoke(JsonUtility.FromJson<NetworkWorldState>(envelope.payload)); break;
+                case "world_state":
+                    NetworkWorldState world = JsonUtility.FromJson<NetworkWorldState>(envelope.payload);
+                    NetworkWorldClockCache.Set(world);
+                    WorldStateReceived?.Invoke(world);
+                    break;
             }
         }
 
