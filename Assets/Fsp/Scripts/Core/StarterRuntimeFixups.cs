@@ -11,7 +11,7 @@ namespace Fsp.Core
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Apply()
         {
-            MatchParticipant[] participants = Object.FindObjectsOfType<MatchParticipant>();
+            MatchParticipant[] participants = Object.FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None);
             foreach (MatchParticipant participant in participants)
             {
                 if (participant == null || !participant.IsLocalPlayer) continue;
@@ -28,7 +28,7 @@ namespace Fsp.Core
                 if (player.GetComponent<StarterInteractInput>() == null)
                     player.AddComponent<StarterInteractInput>();
 
-                MatchManager manager = Object.FindObjectOfType<MatchManager>();
+                MatchManager manager = Object.FindFirstObjectByType<MatchManager>();
                 if (manager != null && manager.GetComponent<MatchProgressReporter>() == null)
                     manager.gameObject.AddComponent<MatchProgressReporter>();
                 break;
