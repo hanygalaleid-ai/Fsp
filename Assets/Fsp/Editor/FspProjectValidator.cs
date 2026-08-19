@@ -83,13 +83,14 @@ namespace Fsp.EditorTools
         {
             string version = File.ReadAllText("ProjectSettings/ProjectVersion.txt");
             if (!version.Contains("6000.3.17f1"))
-                Debug.LogWarning("Fsp was prepared for Unity 6000.3.17f1. Current ProjectVersion.txt differs.");
+                throw new BuildFailedException("Fsp release pipeline requires Unity 6000.3.17f1. ProjectVersion.txt does not match.");
 
             string manifest = File.ReadAllText("Packages/manifest.json");
             if (!manifest.Contains("com.unity.webrtc"))
                 throw new BuildFailedException("Fsp voice build requires com.unity.webrtc in Packages/manifest.json.");
+
             if (!manifest.Contains("com.unity.inputsystem"))
-                Debug.LogWarning("Unity Input System package is not declared; legacy/mobile controls must remain enabled in Player Settings.");
+                Debug.Log("Fsp input validation: Unity Input System package is not declared; project is intentionally using legacy/mobile input paths.");
         }
 
         private static void ValidateLobbyScene()
