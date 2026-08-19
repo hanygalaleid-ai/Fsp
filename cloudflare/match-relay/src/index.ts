@@ -69,6 +69,8 @@ export class MatchRoom extends DurableObject<Env> {
     } else if (envelope.type === "vehicle") {
       if (payload.driverId !== attachment.playerId) return;
       if (typeof payload.vehicleId !== "string" || payload.vehicleId.length < 1 || payload.vehicleId.length > 64) return;
+      const currentDriver = await this.ctx.storage.get<string>(`seat:${payload.vehicleId}`);
+      if (currentDriver !== attachment.playerId) return;
     } else {
       if (payload.attackerId !== attachment.playerId) return;
       const damage = Number(payload.damage ?? 0);
@@ -87,8 +89,29 @@ export class MatchRoom extends DurableObject<Env> {
     }
 
     if (envelope.type === "seat") {
-      if (typeof payload.vehicleId !== "string" || payload.vehicleId.length < 1 || payload.vehicleId.length > 64) return;
-      this.broadcast(message, ws);
+      const vehicleId = typeof payload.vehicleId === "string" ? payload.vehicleId.trim() : "";
+      if (!vehicleId || vehicleId.length > 64) return;
+      const seated = payload.seated === true;
+      const key = `seat:${vehicleId}`;
+      const existing = await this.ctx.storage.get<string>(key);
+      let accepted = false;
+
+      if (seated) {
+        accepted = existing == null || existing === attachment.playerId;
+        if (accepted) await this.ctx.storage.put(key, attachment.playerId);
+      } else {
+        accepted = existing == null || existing === attachment.playerId;
+        if (existing === attachment.playerId) await this.ctx.storage.delete(key);
+      }
+
+      const resultPayload = JSON.stringify({
+        playerId: attachment.playerId,
+        vehicleId,
+        seated,
+        accepted,
+        timestamp: Date.now() / 1000
+      });
+      this.broadcast(JSON.stringify({ type: "seat", payload: resultPayload }));
       return;
     }
 
@@ -111,6 +134,16 @@ export class MatchRoom extends DurableObject<Env> {
     for (const peer of this.ctx.getWebSockets()) if (peer !== except && peer.readyState === WebSocket.OPEN) peer.send(message);
   }
 
-  async webSocketClose(ws: WebSocket, code: number, reason: string): Promise<void> { ws.close(code, reason); }
+  async webSocketClose(ws: WebSocket, code: number, reason: string): Promise<void> {
+    const attachment = ws.deserializeAttachment() as SocketAttachment | null;
+    if (attachment?.playerId) {
+      const seats = await this.ctx.storage.list<string>({ prefix: "seat:" });
+      for (const [key, owner] of seats) {
+        if (owner === attachment.playerId) await this.ctx.storage.delete(key);
+      }
+    }
+    ws.close(code, reason);
+  }
+
   async webSocketError(_ws: WebSocket, error: unknown): Promise<void> { console.error("match relay websocket error", error); }
 }
