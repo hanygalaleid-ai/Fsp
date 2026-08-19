@@ -10,6 +10,8 @@ namespace Fsp.EditorTools
 {
     public static class FspBuildCommands
     {
+        private const string AndroidApplicationId = "com.hanygalaleid.fsp";
+
         private static readonly string[] Scenes =
         {
             "Assets/Fsp/Scenes/Lobby.unity",
@@ -62,7 +64,7 @@ namespace Fsp.EditorTools
         {
             PlayerSettings.companyName = "Fsp Studio";
             PlayerSettings.productName = "Fsp";
-            PlayerSettings.bundleVersion = "0.1.0";
+            PlayerSettings.bundleVersion = "1.0.0";
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;
             PlayerSettings.fullScreenMode = FullScreenMode.FullScreenWindow;
             PlayerSettings.runInBackground = false;
@@ -70,6 +72,7 @@ namespace Fsp.EditorTools
 
         private static void PrepareAndroidSettings(bool release)
         {
+            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, AndroidApplicationId);
             PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
             PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevelAuto;
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
@@ -77,8 +80,33 @@ namespace Fsp.EditorTools
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
             FspAndroidIconSetup.Apply();
 
-            if (release)
-                EditorUserBuildSettings.development = false;
+            if (!release) return;
+
+            EditorUserBuildSettings.development = false;
+            ConfigureReleaseSigning();
+        }
+
+        private static void ConfigureReleaseSigning()
+        {
+            string keystorePath = Environment.GetEnvironmentVariable("FSP_ANDROID_KEYSTORE_PATH");
+            string keystorePassword = Environment.GetEnvironmentVariable("FSP_ANDROID_KEYSTORE_PASSWORD");
+            string aliasName = Environment.GetEnvironmentVariable("FSP_ANDROID_KEYALIAS_NAME");
+            string aliasPassword = Environment.GetEnvironmentVariable("FSP_ANDROID_KEYALIAS_PASSWORD");
+
+            if (string.IsNullOrWhiteSpace(keystorePath) || !File.Exists(keystorePath))
+                throw new BuildFailedException("FSP release signing is not configured: FSP_ANDROID_KEYSTORE_PATH is missing or invalid.");
+            if (string.IsNullOrWhiteSpace(keystorePassword))
+                throw new BuildFailedException("FSP release signing is not configured: FSP_ANDROID_KEYSTORE_PASSWORD is missing.");
+            if (string.IsNullOrWhiteSpace(aliasName))
+                throw new BuildFailedException("FSP release signing is not configured: FSP_ANDROID_KEYALIAS_NAME is missing.");
+            if (string.IsNullOrWhiteSpace(aliasPassword))
+                throw new BuildFailedException("FSP release signing is not configured: FSP_ANDROID_KEYALIAS_PASSWORD is missing.");
+
+            PlayerSettings.Android.useCustomKeystore = true;
+            PlayerSettings.Android.keystoreName = Path.GetFullPath(keystorePath);
+            PlayerSettings.Android.keystorePass = keystorePassword;
+            PlayerSettings.Android.keyaliasName = aliasName;
+            PlayerSettings.Android.keyaliasPass = aliasPassword;
         }
 
         private static void Build(BuildTarget target, string outputPath, bool requireZeroWarnings)
