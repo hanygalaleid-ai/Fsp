@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Fsp.Backend;
+using Fsp.Inventory;
 using UnityEngine;
 
 namespace Fsp.BattleRoyale
@@ -78,6 +79,8 @@ namespace Fsp.BattleRoyale
 
             GameObject crate = Instantiate(cratePrefab, point.position + Vector3.up * spawnHeight, point.rotation);
             crate.name = $"Airdrop_{dropIndex:000}";
+            SharedLootChest shared = crate.GetComponentInChildren<SharedLootChest>(true);
+            if (shared != null) shared.SetChestId($"airdrop:{MatchRoomState.MatchId}:{dropIndex:000}");
             spawnedDrops.Add(dropIndex);
         }
 
