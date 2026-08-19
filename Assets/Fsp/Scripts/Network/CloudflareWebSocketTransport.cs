@@ -33,6 +33,7 @@ namespace Fsp.Networking
         public event Action<NetworkSeatEvent> SeatReceived;
         public event Action<NetworkLootClaimEvent> LootClaimReceived;
         public event Action<NetworkAppearanceEvent> AppearanceReceived;
+        public event Action<NetworkMatchState> MatchStateReceived;
 
         public bool ConfigureRelayBaseUrl(string value)
         {
@@ -41,16 +42,13 @@ namespace Fsp.Networking
                 normalized = "wss://" + normalized.Substring("https://".Length);
             else if (normalized.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
                 normalized = "ws://" + normalized.Substring("http://".Length);
-
             if (!normalized.EndsWith("/ws", StringComparison.OrdinalIgnoreCase))
                 normalized = normalized.TrimEnd('/') + "/ws";
-
             if (!normalized.StartsWith("wss://", StringComparison.OrdinalIgnoreCase))
             {
                 Debug.LogError("FSP Network: match relay URL must use secure wss://.");
                 return false;
             }
-
             relayBaseUrl = normalized;
             return IsConfigured;
         }
@@ -152,6 +150,7 @@ namespace Fsp.Networking
                 case "seat": SeatReceived?.Invoke(JsonUtility.FromJson<NetworkSeatEvent>(envelope.payload)); break;
                 case "loot_claimed": LootClaimReceived?.Invoke(JsonUtility.FromJson<NetworkLootClaimEvent>(envelope.payload)); break;
                 case "appearance": AppearanceReceived?.Invoke(JsonUtility.FromJson<NetworkAppearanceEvent>(envelope.payload)); break;
+                case "match_state": MatchStateReceived?.Invoke(JsonUtility.FromJson<NetworkMatchState>(envelope.payload)); break;
             }
         }
 
