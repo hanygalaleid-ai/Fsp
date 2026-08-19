@@ -14,7 +14,6 @@ namespace Fsp.UI
         {
             if (attacker != null && attacker.IsLocalPlayer && victim != null && victim != attacker)
                 LocalPlayerKills++;
-
             KillReported?.Invoke(attacker, victim);
         }
 
@@ -23,9 +22,19 @@ namespace Fsp.UI
             NetworkKillReported?.Invoke(killerName, victimName);
         }
 
-        public static void ResetForMatch()
+        public static void ReportNetworkElimination(string killerId, string victimId, string localPlayerId)
         {
-            LocalPlayerKills = 0;
+            if (!string.IsNullOrWhiteSpace(killerId) && killerId == localPlayerId && killerId != victimId)
+                LocalPlayerKills++;
+            NetworkKillReported?.Invoke(ShortName(killerId), ShortName(victimId));
+        }
+
+        public static void ResetForMatch() => LocalPlayerKills = 0;
+
+        private static string ShortName(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id)) return "Player";
+            return id.Length <= 8 ? id : id.Substring(0, 8);
         }
     }
 }
