@@ -13,6 +13,7 @@ namespace Fsp.Voice
         private Text statusText;
         private Text buttonText;
         private Button talkButton;
+        private SquadVoiceState boundState;
 
         private void Awake()
         {
@@ -21,26 +22,34 @@ namespace Fsp.Voice
 
         private void OnEnable()
         {
-            if (SquadVoiceState.Instance != null)
-                SquadVoiceState.Instance.Changed += Refresh;
+            EnsureStateBinding();
             Refresh();
         }
 
         private void OnDisable()
         {
-            if (SquadVoiceState.Instance != null)
-                SquadVoiceState.Instance.Changed -= Refresh;
+            if (boundState != null) boundState.Changed -= Refresh;
+            boundState = null;
             SquadVoiceState.Instance?.EndTalking();
         }
 
         private void Update()
         {
+            EnsureStateBinding();
 #if ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKeyDown(KeyCode.V)) SquadVoiceState.Instance?.BeginTalking();
             if (Input.GetKeyUp(KeyCode.V)) SquadVoiceState.Instance?.EndTalking();
 #endif
-            if (SquadVoiceState.Instance != null && SquadVoiceState.Instance.Connected && talkButton != null && !talkButton.interactable)
-                Refresh();
+        }
+
+        private void EnsureStateBinding()
+        {
+            SquadVoiceState current = SquadVoiceState.Instance;
+            if (boundState == current) return;
+            if (boundState != null) boundState.Changed -= Refresh;
+            boundState = current;
+            if (boundState != null) boundState.Changed += Refresh;
+            Refresh();
         }
 
         private void BuildUi()
