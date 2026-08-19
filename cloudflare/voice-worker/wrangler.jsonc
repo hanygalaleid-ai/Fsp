@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "fsp-voice-token",
   "main": "src/index.ts",
-  "compatibility_date": "2026-08-17",
+  "compatibility_date": "2026-08-19",
   "durable_objects": {
     "bindings": [
       {
@@ -19,7 +19,6 @@
   ],
   "vars": {
     "SUPABASE_URL": "https://izjdvlkwuqgtawwbksun.supabase.co",
-    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_08NCQibhlj6aDJPsAHZSfw_Xa4y8Vb8",
-    "REALTIMEKIT_PRESET_NAME": "group_call_host"
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_08NCQibhlj6aDJPsAHZSfw_Xa4y8Vb8"
   }
 }
