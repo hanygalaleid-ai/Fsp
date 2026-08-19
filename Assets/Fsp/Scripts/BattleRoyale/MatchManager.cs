@@ -15,12 +15,14 @@ namespace Fsp.BattleRoyale
         [SerializeField] private bool autoStart = true;
         [SerializeField, Min(0f)] private float preMatchCountdown = 8f;
 
+        public static MatchManager Instance => instance;
         public bool MatchStarted => Phase == MatchPhase.Active || Phase == MatchPhase.Finished;
         public bool MatchEnded => Phase == MatchPhase.Finished;
         public int AliveCount { get; private set; }
         public int TotalParticipants { get; private set; }
         public MatchPhase Phase { get; private set; } = MatchPhase.Waiting;
         public float CountdownRemaining { get; private set; }
+        public string AuthoritativeWinnerId { get; private set; } = string.Empty;
 
         public event Action<int> AliveCountChanged;
         public event Action<int> ParticipantCountChanged;
@@ -28,12 +30,12 @@ namespace Fsp.BattleRoyale
         public event Action<MatchPhase> PhaseChanged;
         public event Action<MatchParticipant, int> ParticipantEliminated;
         public event Action<MatchParticipant> MatchWon;
+        public event Action<string> NetworkWinnerDeclared;
 
         private void Awake()
         {
             if (instance != null && instance != this)
                 Debug.LogWarning("Multiple MatchManager instances detected. The newest instance will become active.");
-
             instance = this;
             PruneParticipants();
             RecountAlive();
@@ -83,6 +85,39 @@ namespace Fsp.BattleRoyale
             EvaluateEndCondition();
         }
 
+        public void ApplyAuthoritativeState(int aliveCount, int totalCount, string winnerId, bool finished)
+        {
+            AliveCount = Mathf.Max(0, aliveCount);
+            TotalParticipants = Mathf.Max(AliveCount, totalCount);
+            AliveCountChanged?.Invoke(AliveCount);
+            ParticipantCountChanged?.Invoke(TotalParticipants);
+
+            if (Phase == MatchPhase.Waiting || Phase == MatchPhase.Countdown)
+            {
+                Phase = MatchPhase.Active;
+                CountdownRemaining = 0f;
+                PhaseChanged?.Invoke(Phase);
+            }
+
+            if (!finished || Phase == MatchPhase.Finished) return;
+            AuthoritativeWinnerId = winnerId ?? string.Empty;
+            Phase = MatchPhase.Finished;
+            PhaseChanged?.Invoke(Phase);
+            NetworkWinnerDeclared?.Invoke(AuthoritativeWinnerId);
+
+            MatchParticipant localWinner = null;
+            foreach (MatchParticipant p in participants)
+            {
+                if (p != null && p.IsAlive)
+                {
+                    localWinner = p;
+                    break;
+                }
+            }
+            if (localWinner != null) localWinner.SetPlacement(1);
+            MatchWon?.Invoke(localWinner);
+        }
+
         public static void Register(MatchParticipant participant)
         {
             if (participant == null) return;
@@ -101,10 +136,7 @@ namespace Fsp.BattleRoyale
             instance.EvaluateEndCondition();
         }
 
-        public static void NotifyDeath(MatchParticipant participant)
-        {
-            instance?.HandleDeath(participant);
-        }
+        public static void NotifyDeath(MatchParticipant participant) => instance?.HandleDeath(participant);
 
         private void HandleDeath(MatchParticipant participant)
         {
@@ -119,7 +151,6 @@ namespace Fsp.BattleRoyale
         private void EvaluateEndCondition()
         {
             if (Phase != MatchPhase.Active || AliveCount > 1) return;
-
             Phase = MatchPhase.Finished;
             MatchParticipant winner = null;
             foreach (MatchParticipant p in participants)
@@ -146,16 +177,12 @@ namespace Fsp.BattleRoyale
                 total++;
                 if (p.IsAlive) alive++;
             }
-
             AliveCount = alive;
             TotalParticipants = total;
             AliveCountChanged?.Invoke(AliveCount);
             ParticipantCountChanged?.Invoke(TotalParticipants);
         }
 
-        private static void PruneParticipants()
-        {
-            participants.RemoveWhere(p => p == null);
-        }
+        private static void PruneParticipants() => participants.RemoveWhere(p => p == null);
     }
 }
