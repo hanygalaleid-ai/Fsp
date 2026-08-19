@@ -2,14 +2,12 @@ using System;
 using System.Collections;
 using Unity.WebRTC;
 using UnityEngine;
+#if UNITY_ANDROID && !UNITY_EDITOR
+using UnityEngine.Android;
+#endif
 
 namespace Fsp.Voice
 {
-    /// <summary>
-    /// Cross-platform Unity WebRTC audio engine used by the Cloudflare Realtime SFU path.
-    /// Signaling is intentionally separated: this class owns microphone capture, the peer
-    /// connection, SDP application, mute state, and remote audio rendering.
-    /// </summary>
     public sealed class CloudflareSfuVoiceRuntime : MonoBehaviour
     {
         [SerializeField] private AudioSource microphoneSource;
@@ -33,10 +31,7 @@ namespace Fsp.Voice
         public event Action Connected;
         public event Action Disconnected;
 
-        private void Awake()
-        {
-            EnsureAudioSources();
-        }
+        private void Awake() => EnsureAudioSources();
 
         public IEnumerator InitializeAudio(Action success, Action<string> failed)
         {
@@ -46,8 +41,8 @@ namespace Fsp.Voice
                 yield break;
             }
 
-            yield return Application.RequestUserAuthorization(UserAuthorization.Microphone);
-            if (!Application.HasUserAuthorization(UserAuthorization.Microphone))
+            yield return EnsureMicrophonePermission();
+            if (!HasMicrophonePermission())
             {
                 failed?.Invoke("Microphone permission denied.");
                 yield break;
@@ -60,10 +55,7 @@ namespace Fsp.Voice
                 yield break;
             }
 
-            microphoneDevice = Microphone.devices != null && Microphone.devices.Length > 0
-                ? Microphone.devices[0]
-                : null;
-
+            microphoneDevice = Microphone.devices != null && Microphone.devices.Length > 0 ? Microphone.devices[0] : null;
             microphoneClip = Microphone.Start(microphoneDevice, true, 1, Mathf.Max(16000, sampleRate));
             if (microphoneClip == null)
             {
@@ -72,9 +64,7 @@ namespace Fsp.Voice
             }
 
             float deadline = Time.realtimeSinceStartup + 3f;
-            while (Microphone.GetPosition(microphoneDevice) <= 0 && Time.realtimeSinceStartup < deadline)
-                yield return null;
-
+            while (Microphone.GetPosition(microphoneDevice) <= 0 && Time.realtimeSinceStartup < deadline) yield return null;
             if (Microphone.GetPosition(microphoneDevice) <= 0)
             {
                 Microphone.End(microphoneDevice);
@@ -89,7 +79,6 @@ namespace Fsp.Voice
             microphoneSource.Play();
 
             webRtcUpdate = StartCoroutine(WebRTC.Update());
-
             RTCConfiguration configuration = default;
             peer = new RTCPeerConnection(ref configuration);
             peer.OnConnectionStateChange = HandleConnectionState;
@@ -106,88 +95,74 @@ namespace Fsp.Voice
             success?.Invoke();
         }
 
+        private IEnumerator EnsureMicrophonePermission()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            if (!Permission.HasUserAuthorizedPermission(Permission.Microphone))
+            {
+                Permission.RequestUserPermission(Permission.Microphone);
+                float deadline = Time.realtimeSinceStartup + 8f;
+                while (!Permission.HasUserAuthorizedPermission(Permission.Microphone) && Time.realtimeSinceStartup < deadline)
+                    yield return null;
+            }
+#elif UNITY_IOS && !UNITY_EDITOR
+            if (!Application.HasUserAuthorization(UserAuthorization.Microphone))
+                yield return Application.RequestUserAuthorization(UserAuthorization.Microphone);
+#else
+            if (!Application.HasUserAuthorization(UserAuthorization.Microphone))
+                yield return Application.RequestUserAuthorization(UserAuthorization.Microphone);
+#endif
+        }
+
+        private static bool HasMicrophonePermission()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            return Permission.HasUserAuthorizedPermission(Permission.Microphone);
+#else
+            return Application.HasUserAuthorization(UserAuthorization.Microphone);
+#endif
+        }
+
         public IEnumerator CreateLocalOffer(Action<string> success, Action<string> failed)
         {
-            if (!IsInitialized)
-            {
-                failed?.Invoke("Voice runtime is not initialized.");
-                yield break;
-            }
-
+            if (!IsInitialized) { failed?.Invoke("Voice runtime is not initialized."); yield break; }
             RTCOfferOptions options = default;
             var offer = peer.CreateOffer(ref options);
             yield return offer;
-            if (offer.IsError)
-            {
-                failed?.Invoke(offer.Error.message);
-                yield break;
-            }
-
+            if (offer.IsError) { failed?.Invoke(offer.Error.message); yield break; }
             RTCSessionDescription description = offer.Desc;
             var local = peer.SetLocalDescription(ref description);
             yield return local;
-            if (local.IsError)
-            {
-                failed?.Invoke(local.Error.message);
-                yield break;
-            }
-
+            if (local.IsError) { failed?.Invoke(local.Error.message); yield break; }
             success?.Invoke(description.sdp);
         }
 
-        public IEnumerator ApplyRemoteAnswer(string sdp, Action success, Action<string> failed)
-        {
-            yield return ApplyRemoteDescription(sdp, RTCSdpType.Answer, success, failed);
-        }
+        public IEnumerator ApplyRemoteAnswer(string sdp, Action success, Action<string> failed) => ApplyRemoteDescription(sdp, RTCSdpType.Answer, success, failed);
 
         public IEnumerator ApplyRemoteOfferAndCreateAnswer(string sdp, Action<string> success, Action<string> failed)
         {
             bool remoteApplied = false;
             string remoteError = null;
             yield return ApplyRemoteDescription(sdp, RTCSdpType.Offer, () => remoteApplied = true, e => remoteError = e);
-            if (!remoteApplied)
-            {
-                failed?.Invoke(remoteError ?? "Remote offer failed.");
-                yield break;
-            }
-
+            if (!remoteApplied) { failed?.Invoke(remoteError ?? "Remote offer failed."); yield break; }
             RTCAnswerOptions options = default;
             var answer = peer.CreateAnswer(ref options);
             yield return answer;
-            if (answer.IsError)
-            {
-                failed?.Invoke(answer.Error.message);
-                yield break;
-            }
-
+            if (answer.IsError) { failed?.Invoke(answer.Error.message); yield break; }
             RTCSessionDescription description = answer.Desc;
             var local = peer.SetLocalDescription(ref description);
             yield return local;
-            if (local.IsError)
-            {
-                failed?.Invoke(local.Error.message);
-                yield break;
-            }
-
+            if (local.IsError) { failed?.Invoke(local.Error.message); yield break; }
             success?.Invoke(description.sdp);
         }
 
         private IEnumerator ApplyRemoteDescription(string sdp, RTCSdpType type, Action success, Action<string> failed)
         {
-            if (!IsInitialized || string.IsNullOrWhiteSpace(sdp))
-            {
-                failed?.Invoke("Invalid remote SDP.");
-                yield break;
-            }
-
+            if (!IsInitialized || string.IsNullOrWhiteSpace(sdp)) { failed?.Invoke("Invalid remote SDP."); yield break; }
             var description = new RTCSessionDescription { type = type, sdp = sdp };
             var operation = peer.SetRemoteDescription(ref description);
             yield return operation;
-            if (operation.IsError)
-            {
-                failed?.Invoke(operation.Error.message);
-                yield break;
-            }
+            if (operation.IsError) { failed?.Invoke(operation.Error.message); yield break; }
             success?.Invoke();
         }
 
@@ -223,7 +198,6 @@ namespace Fsp.Voice
                 microphoneSource = input.AddComponent<AudioSource>();
                 microphoneSource.spatialBlend = 0f;
             }
-
             if (remoteAudioSource == null)
             {
                 var output = new GameObject("VoiceRemoteAudioSource");
@@ -237,38 +211,18 @@ namespace Fsp.Voice
         {
             initialized = false;
             muted = true;
-
-            if (microphoneTrack != null)
-            {
-                microphoneTrack.Enabled = false;
-                microphoneTrack.Dispose();
-                microphoneTrack = null;
-            }
-
-            sendStream?.Dispose();
-            sendStream = null;
-            peer?.Close();
-            peer?.Dispose();
-            peer = null;
-
+            if (microphoneTrack != null) { microphoneTrack.Enabled = false; microphoneTrack.Dispose(); microphoneTrack = null; }
+            sendStream?.Dispose(); sendStream = null;
+            peer?.Close(); peer?.Dispose(); peer = null;
             if (microphoneSource != null) microphoneSource.Stop();
             if (remoteAudioSource != null) remoteAudioSource.Stop();
             if (Microphone.IsRecording(microphoneDevice)) Microphone.End(microphoneDevice);
             microphoneClip = null;
-
-            if (webRtcUpdate != null)
-            {
-                StopCoroutine(webRtcUpdate);
-                webRtcUpdate = null;
-            }
-
+            if (webRtcUpdate != null) { StopCoroutine(webRtcUpdate); webRtcUpdate = null; }
             StatusChanged?.Invoke("Voice stopped");
             Disconnected?.Invoke();
         }
 
-        private void OnDestroy()
-        {
-            Shutdown();
-        }
+        private void OnDestroy() => Shutdown();
     }
 }
