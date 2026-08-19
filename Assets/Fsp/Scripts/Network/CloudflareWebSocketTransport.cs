@@ -20,10 +20,7 @@ namespace Fsp.Networking
         private CancellationTokenSource lifetime;
 
         public bool IsConnected => socket != null && socket.State == WebSocketState.Open;
-        public bool IsConfigured =>
-            !string.IsNullOrWhiteSpace(relayBaseUrl) &&
-            relayBaseUrl.StartsWith("wss://", StringComparison.OrdinalIgnoreCase) &&
-            !relayBaseUrl.Contains("YOUR_MATCH_RELAY", StringComparison.OrdinalIgnoreCase);
+        public bool IsConfigured => !string.IsNullOrWhiteSpace(relayBaseUrl) && relayBaseUrl.StartsWith("wss://", StringComparison.OrdinalIgnoreCase) && !relayBaseUrl.Contains("YOUR_MATCH_RELAY", StringComparison.OrdinalIgnoreCase);
         public string RelayBaseUrl => relayBaseUrl;
 
         public event Action<NetworkPlayerSnapshot> SnapshotReceived;
@@ -35,21 +32,15 @@ namespace Fsp.Networking
         public event Action<NetworkAppearanceEvent> AppearanceReceived;
         public event Action<NetworkMatchState> MatchStateReceived;
         public event Action<NetworkEliminationEvent> EliminationReceived;
+        public event Action<NetworkBotAuthorityEvent> BotAuthorityReceived;
 
         public bool ConfigureRelayBaseUrl(string value)
         {
             string normalized = (value ?? string.Empty).Trim();
-            if (normalized.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-                normalized = "wss://" + normalized.Substring("https://".Length);
-            else if (normalized.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
-                normalized = "ws://" + normalized.Substring("http://".Length);
-            if (!normalized.EndsWith("/ws", StringComparison.OrdinalIgnoreCase))
-                normalized = normalized.TrimEnd('/') + "/ws";
-            if (!normalized.StartsWith("wss://", StringComparison.OrdinalIgnoreCase))
-            {
-                Debug.LogError("FSP Network: match relay URL must use secure wss://.");
-                return false;
-            }
+            if (normalized.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) normalized = "wss://" + normalized.Substring("https://".Length);
+            else if (normalized.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) normalized = "ws://" + normalized.Substring("http://".Length);
+            if (!normalized.EndsWith("/ws", StringComparison.OrdinalIgnoreCase)) normalized = normalized.TrimEnd('/') + "/ws";
+            if (!normalized.StartsWith("wss://", StringComparison.OrdinalIgnoreCase)) { Debug.LogError("FSP Network: match relay URL must use secure wss://."); return false; }
             relayBaseUrl = normalized;
             return IsConfigured;
         }
@@ -63,11 +54,7 @@ namespace Fsp.Networking
             return;
 #else
             Disconnect();
-            if (!IsConfigured)
-            {
-                Debug.LogWarning("CloudflareWebSocketTransport: relay URL is not configured yet; waiting for runtime config.");
-                return;
-            }
+            if (!IsConfigured) { Debug.LogWarning("CloudflareWebSocketTransport: relay URL is not configured yet; waiting for runtime config."); return; }
             if (string.IsNullOrWhiteSpace(matchId) || !SupabaseSession.IsSignedIn) return;
             lifetime = new CancellationTokenSource();
             socket = new ClientWebSocket();
@@ -80,18 +67,9 @@ namespace Fsp.Networking
 
         public async void Disconnect()
         {
-            try
-            {
-                lifetime?.Cancel();
-                if (socket != null && socket.State == WebSocketState.Open)
-                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "leave", CancellationToken.None);
-            }
+            try { lifetime?.Cancel(); if (socket != null && socket.State == WebSocketState.Open) await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "leave", CancellationToken.None); }
             catch { }
-            finally
-            {
-                socket?.Dispose(); socket = null;
-                lifetime?.Dispose(); lifetime = null;
-            }
+            finally { socket?.Dispose(); socket = null; lifetime?.Dispose(); lifetime = null; }
         }
 
         public void SendSnapshot(NetworkPlayerSnapshot v) => Send("snapshot", JsonUtility.ToJson(v));
@@ -121,17 +99,9 @@ namespace Fsp.Networking
             {
                 while (!token.IsCancellationRequested && socket != null && socket.State == WebSocketState.Open)
                 {
-                    builder.Clear();
-                    WebSocketReceiveResult result;
-                    do
-                    {
-                        result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), token);
-                        if (result.MessageType == WebSocketMessageType.Close) return;
-                        builder.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
-                        if (builder.Length > 16 * 1024) return;
-                    } while (!result.EndOfMessage);
-                    string json = builder.ToString();
-                    mainThread.Enqueue(() => Dispatch(json));
+                    builder.Clear(); WebSocketReceiveResult result;
+                    do { result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), token); if (result.MessageType == WebSocketMessageType.Close) return; builder.Append(Encoding.UTF8.GetString(buffer, 0, result.Count)); if (builder.Length > 16 * 1024) return; } while (!result.EndOfMessage);
+                    string json = builder.ToString(); mainThread.Enqueue(() => Dispatch(json));
                 }
             }
             catch (OperationCanceledException) { }
@@ -153,6 +123,7 @@ namespace Fsp.Networking
                 case "appearance": AppearanceReceived?.Invoke(JsonUtility.FromJson<NetworkAppearanceEvent>(envelope.payload)); break;
                 case "match_state": MatchStateReceived?.Invoke(JsonUtility.FromJson<NetworkMatchState>(envelope.payload)); break;
                 case "elimination": EliminationReceived?.Invoke(JsonUtility.FromJson<NetworkEliminationEvent>(envelope.payload)); break;
+                case "bot_authority": BotAuthorityReceived?.Invoke(JsonUtility.FromJson<NetworkBotAuthorityEvent>(envelope.payload)); break;
             }
         }
 
