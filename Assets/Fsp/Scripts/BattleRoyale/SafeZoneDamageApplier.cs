@@ -1,3 +1,5 @@
+using Fsp.Backend;
+using Fsp.Networking;
 using Fsp.Player;
 using UnityEngine;
 
@@ -10,6 +12,8 @@ namespace Fsp.BattleRoyale
         [SerializeField] private MatchManager matchManager;
         [SerializeField] private DropPlanePassenger planePassenger;
         [SerializeField] private float tickSeconds = 0.5f;
+
+        private INetworkTransport transport;
         private float nextTick;
 
         private void Awake()
@@ -18,6 +22,7 @@ namespace Fsp.BattleRoyale
             if (vitals == null) vitals = GetComponent<PlayerVitals>();
             if (matchManager == null) matchManager = FindFirstObjectByType<MatchManager>();
             if (planePassenger == null) planePassenger = GetComponent<DropPlanePassenger>();
+            TryResolveTransport();
         }
 
         private void Update()
@@ -30,8 +35,34 @@ namespace Fsp.BattleRoyale
             if (Time.time < nextTick) return;
 
             nextTick = Time.time + Mathf.Max(0.1f, tickSeconds);
+            bool online = SupabaseSession.IsSignedIn && MatchRoomState.HasMatch;
+            if (online)
+            {
+                TryResolveTransport();
+                if (transport == null || !transport.IsConnected) return;
+                transport.SendZoneProbe(new NetworkZoneProbe
+                {
+                    playerId = SupabaseSession.UserId,
+                    timestamp = Time.realtimeSinceStartupAsDouble
+                });
+                return;
+            }
+
             float dps = zone.OutsideDamagePerSecond(transform.position);
             if (dps > 0f) vitals.ApplyDamage(dps * tickSeconds);
+        }
+
+        private void TryResolveTransport()
+        {
+            if (transport != null) return;
+            foreach (MonoBehaviour behaviour in FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
+            {
+                if (behaviour is INetworkTransport candidate)
+                {
+                    transport = candidate;
+                    return;
+                }
+            }
         }
     }
 }
