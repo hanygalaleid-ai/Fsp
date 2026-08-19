@@ -1,1 +1,1 @@
-Android art integration in progress. Do not build until fixed lobby art and UI assets are fully attached and reviewed.
+FSP Android release-candidate build requested after warning cleanup, release validation hardening, API 36 targeting, signing gate, and corrected in-game lobby art validation.
