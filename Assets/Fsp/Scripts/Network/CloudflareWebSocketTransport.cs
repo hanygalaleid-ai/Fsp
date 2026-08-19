@@ -33,6 +33,7 @@ namespace Fsp.Networking
         public event Action<NetworkMatchState> MatchStateReceived;
         public event Action<NetworkEliminationEvent> EliminationReceived;
         public event Action<NetworkBotAuthorityEvent> BotAuthorityReceived;
+        public event Action<NetworkWorldState> WorldStateReceived;
 
         public bool ConfigureRelayBaseUrl(string value)
         {
@@ -126,6 +127,7 @@ namespace Fsp.Networking
                 case "match_state": MatchStateReceived?.Invoke(JsonUtility.FromJson<NetworkMatchState>(envelope.payload)); break;
                 case "elimination": EliminationReceived?.Invoke(JsonUtility.FromJson<NetworkEliminationEvent>(envelope.payload)); break;
                 case "bot_authority": BotAuthorityReceived?.Invoke(JsonUtility.FromJson<NetworkBotAuthorityEvent>(envelope.payload)); break;
+                case "world_state": WorldStateReceived?.Invoke(JsonUtility.FromJson<NetworkWorldState>(envelope.payload)); break;
             }
         }
 
