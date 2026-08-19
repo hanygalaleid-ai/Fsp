@@ -79,6 +79,7 @@ namespace Fsp.Networking
         public void SendFire(NetworkFireEvent v) => Send("fire", JsonUtility.ToJson(v));
         public void SendDamage(NetworkDamageEvent v) => Send("damage", JsonUtility.ToJson(v));
         public void SendBotDamage(NetworkDamageEvent v) => Send("bot_damage", JsonUtility.ToJson(v));
+        public void SendZoneProbe(NetworkZoneProbe v) => Send("zone_probe", JsonUtility.ToJson(v));
         public void SendVehicle(NetworkVehicleSnapshot v) => Send("vehicle", JsonUtility.ToJson(v));
         public void SendSeat(NetworkSeatEvent v) => Send("seat", JsonUtility.ToJson(v));
         public void SendLootClaim(NetworkLootClaimEvent v) => Send("loot_claim", JsonUtility.ToJson(v));
