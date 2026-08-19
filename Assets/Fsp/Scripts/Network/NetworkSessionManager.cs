@@ -35,6 +35,12 @@ namespace Fsp.Networking
             TryStartOnlineSession();
         }
 
+        public void RetryStartOnlineSession()
+        {
+            AutoWireRuntimeDependencies();
+            TryStartOnlineSession();
+        }
+
         private void AutoWireRuntimeDependencies()
         {
             transport = transportBehaviour as INetworkTransport;
@@ -98,6 +104,11 @@ namespace Fsp.Networking
             if (!MatchRoomState.HasMatch)
             {
                 Debug.LogWarning("FSP Network: no active MatchRoomState; online session will not start.");
+                return;
+            }
+            if (transport is CloudflareWebSocketTransport cloudflare && !cloudflare.IsConfigured)
+            {
+                Debug.Log("FSP Network: waiting for Cloudflare relay runtime configuration.");
                 return;
             }
             if (remotePlayerPrefab == null)
