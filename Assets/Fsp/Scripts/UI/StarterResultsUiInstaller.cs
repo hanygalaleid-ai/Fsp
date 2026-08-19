@@ -12,10 +12,10 @@ namespace Fsp.UI
         private static void Install()
         {
             bool isMatchScene = SceneManager.GetActiveScene().name == "Match";
-            if (!isMatchScene && Object.FindObjectOfType<MatchManager>() == null) return;
-            if (Object.FindObjectOfType<MatchResultsController>() != null) return;
+            if (!isMatchScene && Object.FindFirstObjectByType<MatchManager>() == null) return;
+            if (Object.FindFirstObjectByType<MatchResultsController>() != null) return;
 
-            Canvas canvas = Object.FindObjectOfType<Canvas>();
+            Canvas canvas = Object.FindFirstObjectByType<Canvas>();
             if (canvas == null)
             {
                 var canvasObject = new GameObject("ResultsCanvas");
