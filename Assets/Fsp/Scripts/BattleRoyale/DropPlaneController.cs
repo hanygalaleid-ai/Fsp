@@ -15,9 +15,11 @@ namespace Fsp.BattleRoyale
         public event Action RouteStarted;
         public event Action RouteFinished;
 
+        private bool authoritativeClock;
+
         private void OnEnable()
         {
-            if (startOnEnable) BeginRoute();
+            if (startOnEnable && !authoritativeClock) BeginRoute();
         }
 
         public void ConfigureRoute(Transform start, Transform end, float routeSpeed = 65f, bool beginImmediately = true)
@@ -25,7 +27,7 @@ namespace Fsp.BattleRoyale
             routeStart = start;
             routeEnd = end;
             speed = Mathf.Max(1f, routeSpeed);
-            if (beginImmediately && isActiveAndEnabled) BeginRoute();
+            if (beginImmediately && isActiveAndEnabled && !authoritativeClock) BeginRoute();
         }
 
         public void BeginRoute()
@@ -37,8 +39,26 @@ namespace Fsp.BattleRoyale
             RouteStarted?.Invoke();
         }
 
+        public void ApplyAuthoritativeElapsed(float elapsedSeconds)
+        {
+            authoritativeClock = true;
+            if (routeStart == null || routeEnd == null) return;
+            float totalDistance = Vector3.Distance(routeStart.position, routeEnd.position);
+            float duration = totalDistance / Mathf.Max(1f, speed);
+            float progress = duration <= 0.001f ? 1f : Mathf.Clamp01(Mathf.Max(0f, elapsedSeconds) / duration);
+            bool wasFlying = IsFlying;
+            RouteProgress = progress;
+            IsFlying = progress < 1f;
+            transform.position = Vector3.Lerp(routeStart.position, routeEnd.position, progress);
+            Vector3 forward = routeEnd.position - routeStart.position;
+            if (forward.sqrMagnitude > 0.001f) transform.rotation = Quaternion.LookRotation(forward.normalized, Vector3.up);
+            if (!wasFlying && IsFlying) RouteStarted?.Invoke();
+            if (wasFlying && !IsFlying) RouteFinished?.Invoke();
+        }
+
         private void Update()
         {
+            if (authoritativeClock) return;
             if (!IsFlying || routeStart == null || routeEnd == null) return;
 
             Vector3 toEnd = routeEnd.position - transform.position;
