@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.IO;
 using System.Text;
 using UnityEngine;
@@ -15,6 +16,7 @@ namespace Fsp.Diagnostics
         private float nextProbe;
         private float sceneEnteredAt;
         private string lastScene;
+        private bool visualCheckQueued;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Boot()
@@ -35,6 +37,11 @@ namespace Fsp.Diagnostics
             sceneEnteredAt = Time.realtimeSinceStartup;
         }
 
+        private void Start()
+        {
+            EnsureAlwaysAvailableLogButton();
+        }
+
         private void OnDestroy()
         {
             Application.logMessageReceivedThreaded -= OnLog;
@@ -46,8 +53,10 @@ namespace Fsp.Diagnostics
         {
             lastScene = scene.name;
             sceneEnteredAt = Time.realtimeSinceStartup;
+            visualCheckQueued = false;
             Write("SCENE", "Loaded=" + scene.name + " mode=" + mode);
             ProbeScene(scene.name, true);
+            EnsureAlwaysAvailableLogButton();
         }
 
         private void Update()
@@ -59,22 +68,58 @@ namespace Fsp.Diagnostics
             {
                 lastScene = scene;
                 sceneEnteredAt = Time.realtimeSinceStartup;
+                visualCheckQueued = false;
             }
             ProbeScene(scene, false);
+
+            if (!visualCheckQueued && Time.realtimeSinceStartup - sceneEnteredAt > 4f)
+            {
+                visualCheckQueued = true;
+                StartCoroutine(CheckRenderedFrame(scene));
+            }
         }
 
         private void ProbeScene(string scene, bool immediate)
         {
             Camera main = Camera.main;
-            int canvases = FindObjectsByType<Canvas>(FindObjectsSortMode.None).Length;
+            Canvas[] canvasList = FindObjectsByType<Canvas>(FindObjectsSortMode.None);
+            int canvases = canvasList.Length;
             Texture2D lobbyArt = Resources.Load<Texture2D>("Lobby/lobby_reference");
-            Write("PROBE", "scene=" + scene + " mainCamera=" + (main != null) + " canvases=" + canvases + " lobbyArt=" + (lobbyArt != null));
+
+            int primitiveLike = 0;
+            Renderer[] renderers = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+            foreach (Renderer r in renderers)
+            {
+                if (r == null || !r.enabled) continue;
+                string n = r.gameObject.name.ToLowerInvariant();
+                if (n.Contains("cube") || n.Contains("capsule") || n.Contains("placeholder") || n.Contains("prototype")) primitiveLike++;
+            }
+
+            Write("PROBE", "scene=" + scene + " mainCamera=" + (main != null) + " canvases=" + canvases + " lobbyArt=" + (lobbyArt != null) + " primitiveLike=" + primitiveLike + " renderers=" + renderers.Length);
 
             if (scene.Equals("Lobby", StringComparison.OrdinalIgnoreCase))
             {
-                bool lobbyVisible = GameObject.Find("LobbyCanvas") != null || GameObject.Find("FSP_DiagnosticRecovery") != null;
+                GameObject lobbyCanvas = GameObject.Find("LobbyCanvas");
+                bool lobbyVisible = lobbyCanvas != null || GameObject.Find("FSP_DiagnosticRecovery") != null;
+                RawImage backdrop = null;
+                if (lobbyCanvas != null)
+                {
+                    RawImage[] raws = lobbyCanvas.GetComponentsInChildren<RawImage>(true);
+                    foreach (RawImage raw in raws)
+                    {
+                        if (raw != null && raw.gameObject.name == "SunscarBackdrop") { backdrop = raw; break; }
+                    }
+                }
+
+                bool artBound = backdrop != null && backdrop.texture != null;
+                Write("LOBBY_VISUAL", "canvas=" + (lobbyCanvas != null) + " artBound=" + artBound + " primitiveLike=" + primitiveLike);
+
                 if (!lobbyVisible && Time.realtimeSinceStartup - sceneEnteredAt > 3.5f)
                     BuildRecovery("Lobby UI did not appear", "LobbyArt=" + (lobbyArt != null) + " Camera=" + (main != null) + " CanvasCount=" + canvases);
+                else if (lobbyCanvas != null && !artBound && Time.realtimeSinceStartup - sceneEnteredAt > 3.5f)
+                    BuildRecovery("Lobby background is not bound", "ResourceArt=" + (lobbyArt != null) + " RawImage=" + (backdrop != null) + " primitiveLike=" + primitiveLike);
+                else if (primitiveLike >= 3 && Time.realtimeSinceStartup - sceneEnteredAt > 4f)
+                    BuildRecovery("Prototype geometry is visible in Lobby", "primitiveLike=" + primitiveLike + " ResourceArt=" + (lobbyArt != null));
             }
             else if (scene.Equals("Match", StringComparison.OrdinalIgnoreCase))
             {
@@ -92,7 +137,101 @@ namespace Fsp.Diagnostics
 
                 if (canvases == 0 && Time.realtimeSinceStartup - sceneEnteredAt > 5f)
                     BuildRecovery("Match HUD did not appear", "Camera=" + (Camera.main != null));
+
+                if (primitiveLike >= 8 && Time.realtimeSinceStartup - sceneEnteredAt > 5f)
+                    Write("MATCH_VISUAL_WARNING", "High prototype geometry count=" + primitiveLike);
             }
+        }
+
+        private IEnumerator CheckRenderedFrame(string scene)
+        {
+            yield return new WaitForEndOfFrame();
+            Texture2D sample = null;
+            try
+            {
+                int w = Mathf.Max(32, Mathf.Min(160, Screen.width / 8));
+                int h = Mathf.Max(18, Mathf.Min(90, Screen.height / 8));
+                sample = new Texture2D(w, h, TextureFormat.RGB24, false);
+                float sx = Screen.width / (float)w;
+                float sy = Screen.height / (float)h;
+                int nearWhite = 0;
+                int dark = 0;
+                int total = 0;
+
+                // Sample the rendered screen sparsely without storing a full screenshot.
+                Texture2D full = ScreenCapture.CaptureScreenshotAsTexture();
+                if (full == null) { Write("VISUAL", "Screen capture returned null"); yield break; }
+
+                for (int y = 0; y < h; y++)
+                {
+                    for (int x = 0; x < w; x++)
+                    {
+                        Color c = full.GetPixel(Mathf.Clamp((int)(x * sx), 0, full.width - 1), Mathf.Clamp((int)(y * sy), 0, full.height - 1));
+                        float lum = (c.r + c.g + c.b) / 3f;
+                        if (lum > 0.93f && Mathf.Abs(c.r - c.g) < 0.06f && Mathf.Abs(c.g - c.b) < 0.06f) nearWhite++;
+                        if (lum < 0.04f) dark++;
+                        total++;
+                    }
+                }
+                Destroy(full);
+
+                float whiteRatio = total > 0 ? nearWhite / (float)total : 0f;
+                float darkRatio = total > 0 ? dark / (float)total : 0f;
+                Write("VISUAL", "scene=" + scene + " whiteRatio=" + whiteRatio.ToString("0.000") + " darkRatio=" + darkRatio.ToString("0.000") + " samples=" + total);
+
+                if (scene.Equals("Match", StringComparison.OrdinalIgnoreCase) && whiteRatio > 0.72f)
+                    BuildRecovery("Match render is washed out / nearly white", "whiteRatio=" + whiteRatio.ToString("0.000") + " Camera=" + (Camera.main != null));
+                else if (darkRatio > 0.92f)
+                    BuildRecovery("Rendered frame is almost completely black", "darkRatio=" + darkRatio.ToString("0.000") + " scene=" + scene);
+            }
+            catch (Exception ex)
+            {
+                Write("VISUAL_CHECK_ERROR", ex.ToString());
+            }
+            finally
+            {
+                if (sample != null) Destroy(sample);
+            }
+        }
+
+        private static void EnsureAlwaysAvailableLogButton()
+        {
+            if (GameObject.Find("FSP_DiagnosticLogButton") != null) return;
+
+            GameObject canvasGo = new GameObject("FSP_DiagnosticLogButton", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            DontDestroyOnLoad(canvasGo);
+            Canvas canvas = canvasGo.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 32761;
+
+            CanvasScaler scaler = canvasGo.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+
+            GameObject buttonGo = new GameObject("LOG", typeof(RectTransform), typeof(Image), typeof(Button));
+            buttonGo.transform.SetParent(canvasGo.transform, false);
+            RectTransform rt = buttonGo.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.005f, 0.005f);
+            rt.anchorMax = new Vector2(0.075f, 0.065f);
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            buttonGo.GetComponent<Image>().color = new Color(0.05f, 0.07f, 0.10f, 0.82f);
+
+            Font font = null;
+            try { font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); } catch { }
+            Text label = CreateText(buttonGo.transform, font, "LOG", 18, Vector2.zero, Vector2.one);
+            label.color = new Color(1f, 0.55f, 0.12f, 1f);
+            buttonGo.GetComponent<Button>().onClick.AddListener(CopyLogToClipboard);
+        }
+
+        private static void CopyLogToClipboard()
+        {
+            try
+            {
+                GUIUtility.systemCopyBuffer = File.Exists(logPath) ? File.ReadAllText(logPath) : "Diagnostic log not found";
+                Write("USER", "Diagnostic log copied to clipboard");
+            }
+            catch (Exception ex) { Write("COPY_ERROR", ex.ToString()); }
         }
 
         private static void BuildRecovery(string reason, string details)
@@ -131,15 +270,7 @@ namespace Fsp.Diagnostics
             cr.anchorMin = new Vector2(0.35f, 0.12f); cr.anchorMax = new Vector2(0.65f, 0.22f); cr.offsetMin = Vector2.zero; cr.offsetMax = Vector2.zero;
             copy.GetComponent<Image>().color = new Color(0.92f, 0.36f, 0.04f, 1f);
             CreateText(copy.transform, font, "COPY DIAGNOSTIC LOG", 24, Vector2.zero, Vector2.one);
-            copy.GetComponent<Button>().onClick.AddListener(() =>
-            {
-                try
-                {
-                    GUIUtility.systemCopyBuffer = File.Exists(logPath) ? File.ReadAllText(logPath) : "Diagnostic log not found";
-                    Write("USER", "Diagnostic log copied to clipboard");
-                }
-                catch (Exception ex) { Write("COPY_ERROR", ex.ToString()); }
-            });
+            copy.GetComponent<Button>().onClick.AddListener(CopyLogToClipboard);
         }
 
         private static Text CreateText(Transform parent, Font font, string value, int size, Vector2 min, Vector2 max)
@@ -161,7 +292,7 @@ namespace Fsp.Diagnostics
 
         private static void OnLog(string condition, string stackTrace, LogType type)
         {
-            if (type == LogType.Exception || type == LogType.Error || type == LogType.Assert)
+            if (type == LogType.Exception || type == LogType.Error || type == LogType.Assert || type == LogType.Warning)
                 Write(type.ToString().ToUpperInvariant(), condition + "\n" + stackTrace);
         }
 
