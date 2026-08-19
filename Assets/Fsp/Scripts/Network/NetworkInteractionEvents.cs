@@ -8,6 +8,7 @@ namespace Fsp.Networking
         public string playerId;
         public string vehicleId;
         public bool seated;
+        public bool accepted;
         public double timestamp;
     }
 
