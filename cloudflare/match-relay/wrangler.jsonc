@@ -18,6 +18,7 @@
     }
   ],
   "vars": {
-    "SUPABASE_URL": "https://izjdvlkwuqgtawwbksun.supabase.co"
+    "SUPABASE_URL": "https://izjdvlkwuqgtawwbksun.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_08NCQibhlj6aDJPsAHZSfw_Xa4y8Vb8"
   }
 }
