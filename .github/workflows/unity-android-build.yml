@@ -127,6 +127,50 @@ jobs:
           buildsPath: Builds/Android
           allowDirtyBuild: true
 
+      - name: Set up Java for bundle verification
+        if: github.event_name == 'workflow_dispatch' && inputs.build_type == 'aab'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Verify Google Play AAB
+        if: github.event_name == 'workflow_dispatch' && inputs.build_type == 'aab'
+        shell: bash
+        run: |
+          set -euo pipefail
+          AAB="Builds/Android/Fsp-release.aab"
+          if [ ! -f "$AAB" ]; then
+            AAB="$(find Builds/Android -type f -name '*.aab' -print -quit)"
+          fi
+          if [ -z "${AAB:-}" ] || [ ! -f "$AAB" ]; then
+            echo "::error::Release AAB was not produced."
+            exit 1
+          fi
+
+          echo "Verifying AAB: $AAB"
+          jarsigner -verify -strict "$AAB"
+
+          mkdir -p .ci
+          curl -fsSL \
+            https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar \
+            -o .ci/bundletool.jar
+          java -jar .ci/bundletool.jar validate --bundle="$AAB"
+
+          ALIGNMENT="$(java -jar .ci/bundletool.jar dump config --bundle="$AAB" | grep -Eo 'PAGE_ALIGNMENT_(4K|16K)' | head -n1 || true)"
+          echo "Bundle page alignment: ${ALIGNMENT:-UNKNOWN}"
+          if [ "$ALIGNMENT" != "PAGE_ALIGNMENT_16K" ]; then
+            echo "::error::Google Play release rejected: expected PAGE_ALIGNMENT_16K, got ${ALIGNMENT:-UNKNOWN}."
+            exit 1
+          fi
+
+          echo "AAB verification passed: signed, bundletool-valid, PAGE_ALIGNMENT_16K."
+
+      - name: Remove temporary signing material
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.build_type == 'aab'
+        shell: bash
+        run: rm -rf .ci
+
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
