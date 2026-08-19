@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'Assets/**'
+      - 'Packages/**'
+      - 'ProjectSettings/**'
+      - '.github/workflows/unity-android-build.yml'
   workflow_dispatch:
     inputs:
       build_type:
@@ -15,10 +20,15 @@ on:
           - apk
           - aab
 
+concurrency:
+  group: unity-android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   android:
     name: Unity 6.3 Android
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       contents: read
     env:
