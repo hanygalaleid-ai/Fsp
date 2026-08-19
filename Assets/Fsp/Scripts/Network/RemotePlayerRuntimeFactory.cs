@@ -45,9 +45,17 @@ namespace Fsp.Networking
                 body.detectCollisions = false;
             }
 
-            // Keep Animator/Renderers enabled so the authored character remains visible.
             foreach (Renderer renderer in visual.GetComponentsInChildren<Renderer>(true))
                 renderer.enabled = true;
+
+            // The visual clone stays non-physical, but the remote root gets one stable hit volume
+            // so local hitscan weapons can resolve NetworkPlayerIdentity and report network damage.
+            CapsuleCollider hitCapsule = holder.AddComponent<CapsuleCollider>();
+            hitCapsule.center = new Vector3(0f, 0.9f, 0f);
+            hitCapsule.height = 1.8f;
+            hitCapsule.radius = 0.38f;
+            hitCapsule.direction = 1;
+            hitCapsule.isTrigger = false;
 
             var proxy = holder.AddComponent<RemotePlayerProxy>();
             holder.SetActive(true);
