@@ -20,6 +20,12 @@ namespace Fsp.Networking
         private CancellationTokenSource lifetime;
 
         public bool IsConnected => socket != null && socket.State == WebSocketState.Open;
+        public bool IsConfigured =>
+            !string.IsNullOrWhiteSpace(relayBaseUrl) &&
+            relayBaseUrl.StartsWith("wss://", StringComparison.OrdinalIgnoreCase) &&
+            !relayBaseUrl.Contains("YOUR_MATCH_RELAY", StringComparison.OrdinalIgnoreCase);
+        public string RelayBaseUrl => relayBaseUrl;
+
         public event Action<NetworkPlayerSnapshot> SnapshotReceived;
         public event Action<NetworkFireEvent> FireReceived;
         public event Action<NetworkDamageEvent> DamageReceived;
@@ -37,6 +43,11 @@ namespace Fsp.Networking
             return;
 #else
             Disconnect();
+            if (!IsConfigured)
+            {
+                Debug.LogError("CloudflareWebSocketTransport: relay URL is not configured. Set the deployed fsp-match-relay wss:// URL before online testing.");
+                return;
+            }
             if (string.IsNullOrWhiteSpace(matchId) || !SupabaseSession.IsSignedIn) return;
             lifetime = new CancellationTokenSource();
             socket = new ClientWebSocket();
