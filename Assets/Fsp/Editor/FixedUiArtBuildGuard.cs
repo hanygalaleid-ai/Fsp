@@ -13,12 +13,9 @@ namespace Fsp.EditorTools
 
         private static readonly string[] RequiredArt =
         {
-            "Assets/Fsp/Art/Resources/Lobby/lobby_reference.jpg",
-            "Assets/Fsp/Art/Resources/UI/joystick_base.png",
+            "Assets/Fsp/Art/Resources/Lobby/fsp_lobby_final.jpg",
             "Assets/Fsp/Art/Resources/UI/ui_panel_dark.png",
             "Assets/Fsp/Art/Resources/UI/ui_button_primary.png",
-            "Assets/Fsp/Art/Resources/UI/ui_button_secondary.png",
-            "Assets/Fsp/Art/Resources/UI/action_icons.png",
             "Assets/Fsp/Art/Resources/World/sand_ground.png",
             "Assets/Fsp/Art/Resources/World/rock_cliff.png",
             "Assets/Fsp/Art/Resources/World/road_dust.png",
@@ -27,9 +24,8 @@ namespace Fsp.EditorTools
 
         public void OnPreprocessBuild(BuildReport report)
         {
-            // IMPORTANT: Never regenerate or overwrite production art during Cloud Build.
-            // The previous implementation called FspGeneratedBuildArt.EnsureAll(), which
-            // replaced approved lobby/UI art with placeholder graphics on every build.
+            // Release builds must use checked-in production art only.
+            // No placeholder/procedural art generation is allowed here.
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
 
             foreach (string path in RequiredArt)
@@ -53,7 +49,7 @@ namespace Fsp.EditorTools
                 FspAndroidIconSetup.Apply();
 
             AssetDatabase.SaveAssets();
-            Debug.Log("FSP PRODUCTION ART GATE PASSED: approved art preserved without regeneration.");
+            Debug.Log("FSP PRODUCTION ART GATE PASSED: fixed checked-in art preserved; no art generation executed.");
         }
     }
 }
