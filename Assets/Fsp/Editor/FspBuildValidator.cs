@@ -14,6 +14,7 @@ namespace Fsp.EditorTools
 {
     public sealed class FspBuildValidator : IPreprocessBuildWithReport
     {
+        private const string ReleaseApplicationId = "com.hanygalaleid.fsp";
         public int callbackOrder => -1000;
 
         public void OnPreprocessBuild(BuildReport report)
@@ -61,14 +62,29 @@ namespace Fsp.EditorTools
             if (target == BuildTarget.Android && EditorUserBuildSettings.buildAppBundle)
             {
                 string id = PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Android);
-                if (string.IsNullOrWhiteSpace(id) || id.Contains("DefaultCompany") || id == "com.FspStudio.Fsp")
-                    errors.Add("Set a unique Android Application Identifier before Google Play AAB release.");
+                if (id != ReleaseApplicationId)
+                    errors.Add($"Google Play AAB application identifier must be {ReleaseApplicationId}; current value is '{id}'.");
+
+                if (PlayerSettings.Android.targetSdkVersion != AndroidSdkVersions.AndroidApiLevel36)
+                    errors.Add("Google Play AAB must target Android 16 / API level 36 in the Fsp release pipeline.");
+
+                if (PlayerSettings.Android.bundleVersionCode < 1)
+                    errors.Add("Google Play AAB must use a positive Android versionCode.");
 
                 if ((PlayerSettings.Android.targetArchitectures & AndroidArchitecture.ARM64) == 0)
                     errors.Add("Google Play AAB must include ARM64.");
 
                 if (PlayerSettings.GetScriptingBackend(NamedBuildTarget.Android) != ScriptingImplementation.IL2CPP)
                     errors.Add("Google Play AAB must use IL2CPP in the Fsp release pipeline.");
+
+                if (!PlayerSettings.Android.useCustomKeystore)
+                    errors.Add("Google Play AAB must use the configured custom upload keystore.");
+
+                if (string.IsNullOrWhiteSpace(PlayerSettings.Android.keystoreName) || !File.Exists(PlayerSettings.Android.keystoreName))
+                    errors.Add("Google Play AAB upload keystore file is missing or invalid.");
+
+                if (string.IsNullOrWhiteSpace(PlayerSettings.Android.keyaliasName))
+                    errors.Add("Google Play AAB upload-key alias is missing.");
 
                 if (EditorUserBuildSettings.development)
                     errors.Add("Google Play AAB cannot be a Development Build.");
