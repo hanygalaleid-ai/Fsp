@@ -19,10 +19,20 @@ namespace Fsp.Networking
         private INetworkTransport transport;
         private readonly Dictionary<string, RemotePlayerProxy> remotes = new();
         private float nextSnapshotTime;
+        private bool started;
 
         private void Awake()
         {
             AutoWireRuntimeDependencies();
+        }
+
+        public void ConfigureRuntime(MonoBehaviour transportSource, Transform player, GameObject remotePrefab)
+        {
+            if (transportSource != null) transportBehaviour = transportSource;
+            if (player != null) localPlayer = player;
+            if (remotePrefab != null) remotePlayerPrefab = remotePrefab;
+            AutoWireRuntimeDependencies();
+            TryStartOnlineSession();
         }
 
         private void AutoWireRuntimeDependencies()
@@ -64,6 +74,12 @@ namespace Fsp.Networking
 
         private void Start()
         {
+            TryStartOnlineSession();
+        }
+
+        private void TryStartOnlineSession()
+        {
+            if (started) return;
             if (transport == null)
             {
                 Debug.LogError("FSP Network: no INetworkTransport found in Match scene.");
@@ -87,6 +103,7 @@ namespace Fsp.Networking
             if (remotePlayerPrefab == null)
                 Debug.LogWarning("FSP Network: remotePlayerPrefab is missing; snapshots will connect but remote players cannot be rendered.");
 
+            started = true;
             transport.SnapshotReceived += HandleSnapshot;
             transport.Connect(MatchRoomState.MatchId, SupabaseSession.UserId);
         }
