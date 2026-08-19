@@ -58,7 +58,6 @@ jobs:
 
   validate-voice-worker:
     runs-on: ubuntu-latest
-    continue-on-error: true
     defaults:
       run:
         working-directory: cloudflare/voice-worker
@@ -68,14 +67,7 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - name: Check voice configuration placeholders
-        shell: bash
-        run: |
-          if grep -q 'REPLACE_WITH_KV_NAMESPACE_ID\|REPLACE_IN_DEPLOYMENT' wrangler.jsonc; then
-            echo "::warning::Voice worker still needs Cloudflare KV/RealtimeKit identifiers; skipping deploy readiness."
-            exit 0
-          fi
-          npx wrangler check
+      - run: npx wrangler check
 
   deploy-voice-worker:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy }}
@@ -89,24 +81,36 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Block placeholder voice deployment
-        shell: bash
-        run: |
-          if grep -q 'REPLACE_WITH_KV_NAMESPACE_ID\|REPLACE_IN_DEPLOYMENT' wrangler.jsonc; then
-            echo "::error::Voice worker configuration is incomplete. Configure KV namespace, Cloudflare account, and RealtimeKit app before deployment."
-            exit 1
-          fi
-      - name: Require Cloudflare secrets
+      - name: Require voice deployment secrets
         shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_REALTIME_API_TOKEN: ${{ secrets.CLOUDFLARE_REALTIME_API_TOKEN }}
+          REALTIMEKIT_APP_ID: ${{ secrets.REALTIMEKIT_APP_ID }}
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is not configured"; exit 1; }
           test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::CLOUDFLARE_ACCOUNT_ID is not configured"; exit 1; }
+          test -n "$CLOUDFLARE_REALTIME_API_TOKEN" || { echo "::error::CLOUDFLARE_REALTIME_API_TOKEN is not configured"; exit 1; }
+          test -n "$REALTIMEKIT_APP_ID" || { echo "::error::REALTIMEKIT_APP_ID is not configured"; exit 1; }
       - run: npm install
-      - name: Deploy voice worker
-        run: npx wrangler deploy
+      - name: Configure RealtimeKit API secret
+        shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_REALTIME_API_TOKEN: ${{ secrets.CLOUDFLARE_REALTIME_API_TOKEN }}
+        run: printf '%s' "$CLOUDFLARE_REALTIME_API_TOKEN" | npx wrangler secret put CLOUDFLARE_REALTIME_API_TOKEN
+      - name: Deploy voice worker
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          REALTIMEKIT_APP_ID: ${{ secrets.REALTIMEKIT_APP_ID }}
+        run: |
+          npx wrangler deploy \
+            --var "SUPABASE_URL:https://izjdvlkwuqgtawwbksun.supabase.co" \
+            --var "SUPABASE_PUBLISHABLE_KEY:sb_publishable_08NCQibhlj6aDJPsAHZSfw_Xa4y8Vb8" \
+            --var "REALTIMEKIT_PRESET_NAME:group_call_host" \
+            --var "CLOUDFLARE_ACCOUNT_ID:${CLOUDFLARE_ACCOUNT_ID}" \
+            --var "REALTIMEKIT_APP_ID:${REALTIMEKIT_APP_ID}"
