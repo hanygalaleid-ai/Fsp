@@ -57,6 +57,36 @@ jobs:
             exit 1
           fi
 
+      - name: Prepare Google Play signing
+        if: github.event_name == 'workflow_dispatch' && inputs.build_type == 'aab'
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.FSP_ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.FSP_ANDROID_KEYSTORE_PASSWORD }}
+          KEYALIAS_NAME: ${{ secrets.FSP_ANDROID_KEYALIAS_NAME }}
+          KEYALIAS_PASSWORD: ${{ secrets.FSP_ANDROID_KEYALIAS_PASSWORD }}
+        run: |
+          missing=0
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEYALIAS_NAME KEYALIAS_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name signing value is not configured in repository Actions secrets."
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "See Docs/UNITY_CI_SETUP.md for Google Play upload-key setup."
+            exit 1
+          fi
+
+          mkdir -p .ci
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > .ci/fsp-upload.keystore
+          test -s .ci/fsp-upload.keystore
+
+          echo "FSP_ANDROID_KEYSTORE_PATH=$GITHUB_WORKSPACE/.ci/fsp-upload.keystore" >> "$GITHUB_ENV"
+          echo "FSP_ANDROID_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "FSP_ANDROID_KEYALIAS_NAME=$KEYALIAS_NAME" >> "$GITHUB_ENV"
+          echo "FSP_ANDROID_KEYALIAS_PASSWORD=$KEYALIAS_PASSWORD" >> "$GITHUB_ENV"
+
       - name: Cache Unity Library
         uses: actions/cache@v4
         with:
@@ -86,6 +116,10 @@ jobs:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          FSP_ANDROID_KEYSTORE_PATH: ${{ env.FSP_ANDROID_KEYSTORE_PATH }}
+          FSP_ANDROID_KEYSTORE_PASSWORD: ${{ env.FSP_ANDROID_KEYSTORE_PASSWORD }}
+          FSP_ANDROID_KEYALIAS_NAME: ${{ env.FSP_ANDROID_KEYALIAS_NAME }}
+          FSP_ANDROID_KEYALIAS_PASSWORD: ${{ env.FSP_ANDROID_KEYALIAS_PASSWORD }}
         with:
           unityVersion: 6000.3.17f1
           targetPlatform: Android
