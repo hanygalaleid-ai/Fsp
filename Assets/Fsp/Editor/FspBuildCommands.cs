@@ -25,7 +25,7 @@ namespace Fsp.EditorTools
             PrepareAndroidSettings(false);
             EditorUserBuildSettings.buildAppBundle = false;
             EditorUserBuildSettings.development = false;
-            Build(BuildTarget.Android, "Builds/Android/Fsp-test.apk");
+            Build(BuildTarget.Android, "Builds/Android/Fsp-test.apk", requireZeroWarnings: false);
         }
 
         [MenuItem("Fsp/Build/Android/Build AAB (Google Play)")]
@@ -37,7 +37,7 @@ namespace Fsp.EditorTools
             PrepareAndroidSettings(true);
             EditorUserBuildSettings.buildAppBundle = true;
             EditorUserBuildSettings.development = false;
-            Build(BuildTarget.Android, "Builds/Android/Fsp-release.aab");
+            Build(BuildTarget.Android, "Builds/Android/Fsp-release.aab", requireZeroWarnings: true);
         }
 
         [MenuItem("Fsp/Build/Windows/Build x64")]
@@ -46,7 +46,7 @@ namespace Fsp.EditorTools
             FspProjectBootstrap.EnsureProjectForBuild();
             FspProjectValidator.ValidateOrThrow();
             PrepareCommonPlayerSettings();
-            Build(BuildTarget.StandaloneWindows64, "Builds/Windows/Fsp/Fsp.exe");
+            Build(BuildTarget.StandaloneWindows64, "Builds/Windows/Fsp/Fsp.exe", requireZeroWarnings: false);
         }
 
         [MenuItem("Fsp/Build/iOS/Export Xcode Project")]
@@ -55,7 +55,7 @@ namespace Fsp.EditorTools
             FspProjectBootstrap.EnsureProjectForBuild();
             FspProjectValidator.ValidateOrThrow();
             PrepareCommonPlayerSettings();
-            Build(BuildTarget.iOS, "Builds/iOS");
+            Build(BuildTarget.iOS, "Builds/iOS", requireZeroWarnings: false);
         }
 
         private static void PrepareCommonPlayerSettings()
@@ -81,7 +81,7 @@ namespace Fsp.EditorTools
                 EditorUserBuildSettings.development = false;
         }
 
-        private static void Build(BuildTarget target, string outputPath)
+        private static void Build(BuildTarget target, string outputPath, bool requireZeroWarnings)
         {
             foreach (string scene in Scenes)
             {
@@ -105,7 +105,10 @@ namespace Fsp.EditorTools
             if (report.summary.result != BuildResult.Succeeded)
                 throw new BuildFailedException($"Fsp build failed: {report.summary.result} ({report.summary.totalErrors} errors, {report.summary.totalWarnings} warnings)");
 
-            Debug.Log($"Fsp build succeeded: {outputPath} | {report.summary.totalSize / (1024f * 1024f):0.0} MB");
+            if (requireZeroWarnings && report.summary.totalWarnings > 0)
+                throw new BuildFailedException($"Fsp release build rejected: {report.summary.totalWarnings} warning(s) remain. Google Play AAB release requires 0 warnings.");
+
+            Debug.Log($"Fsp build succeeded: {outputPath} | {report.summary.totalSize / (1024f * 1024f):0.0} MB | {report.summary.totalWarnings} warning(s)");
         }
 
         private static void EnsureOutputDirectory(string outputPath, bool pathIsDirectory)
