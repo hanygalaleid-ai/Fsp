@@ -24,10 +24,10 @@ namespace Fsp.UI
 
         private void Awake()
         {
-            if (matchManager == null) matchManager = FindObjectOfType<MatchManager>();
+            if (matchManager == null) matchManager = FindFirstObjectByType<MatchManager>();
             if (localPlayer == null)
             {
-                foreach (var participant in FindObjectsOfType<MatchParticipant>())
+                foreach (var participant in FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None))
                 {
                     if (participant != null && participant.IsLocalPlayer)
                     {
