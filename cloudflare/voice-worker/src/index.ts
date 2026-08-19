@@ -2,66 +2,154 @@ import { DurableObject } from "cloudflare:workers";
 
 interface Env {
   VOICE_ROOM_STATE: DurableObjectNamespace<VoiceRoomState>;
-  CLOUDFLARE_REALTIME_API_TOKEN: string;
-  CLOUDFLARE_ACCOUNT_ID: string;
-  REALTIMEKIT_APP_ID: string;
-  REALTIMEKIT_PRESET_NAME: string;
+  REALTIME_SFU_APP_ID: string;
+  REALTIME_SFU_APP_SECRET: string;
   SUPABASE_URL: string;
   SUPABASE_PUBLISHABLE_KEY: string;
 }
 
-type TokenRequest = { squadId?: string; displayName?: string };
+type JoinRequest = { squadId?: string; sdp?: string };
+type SyncRequest = { squadId?: string; sessionId?: string };
+type RenegotiateRequest = { squadId?: string; sessionId?: string; sdp?: string };
+type LeaveRequest = { squadId?: string; sessionId?: string };
+type RoomPeer = { userId: string; sessionId: string; trackName: string };
+
+type SfuDescription = { type?: string; sdp?: string };
+
+type SfuResponse = {
+  sessionId?: string;
+  sessionDescription?: SfuDescription;
+  tracks?: Array<{ trackName?: string; sessionId?: string; location?: string; kind?: string }>;
+};
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
     if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
     const auth = request.headers.get("Authorization") ?? "";
     if (!auth.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
     const accessToken = auth.slice(7);
-
-    let body: TokenRequest;
-    try { body = await request.json<TokenRequest>(); }
-    catch { return json({ error: "Invalid JSON" }, 400); }
-
-    const squadId = (body.squadId ?? "").trim();
-    if (!squadId) return json({ error: "squadId required" }, 400);
-
     const user = await getSupabaseUser(env, accessToken);
     if (!user?.id) return json({ error: "Invalid session" }, 401);
 
-    const isMember = await verifySquadMembership(env, accessToken, squadId, user.id);
-    if (!isMember) return json({ error: "Not a squad member" }, 403);
-
     try {
-      const meetingId = await getOrCreateMeeting(env, squadId);
-      const participant = await addParticipant(
-        env,
-        meetingId,
-        user.id,
-        sanitizeName(body.displayName) || "Player"
-      );
-
-      if (!participant?.token) return json({ error: "Could not issue voice token" }, 502);
-
-      return json({
-        meetingId,
-        participantId: participant.id,
-        token: participant.token
-      });
+      if (url.pathname === "/join") return handleJoin(request, env, accessToken, user.id);
+      if (url.pathname === "/sync") return handleSync(request, env, accessToken, user.id);
+      if (url.pathname === "/renegotiate") return handleRenegotiate(request, env, accessToken, user.id);
+      if (url.pathname === "/leave") return handleLeave(request, env, accessToken, user.id);
+      return json({ error: "Not found" }, 404);
     } catch (error) {
-      console.error("voice token issue failed", error);
+      console.error("voice SFU signaling failed", error);
       return json({ error: "Voice service unavailable" }, 502);
     }
   }
 };
 
+async function handleJoin(request: Request, env: Env, accessToken: string, userId: string): Promise<Response> {
+  const body = await readJson<JoinRequest>(request);
+  const squadId = clean(body.squadId, 80);
+  const sdp = body.sdp?.trim() ?? "";
+  if (!squadId || !sdp) return json({ error: "squadId and sdp required" }, 400);
+  if (!(await verifySquadMembership(env, accessToken, squadId, userId))) return json({ error: "Not a squad member" }, 403);
+
+  const created = await sfu(env, "/sessions/new", "POST", {});
+  const sessionId = created.sessionId;
+  if (!sessionId) throw new Error("SFU session ID missing");
+
+  const trackName = `mic-${userId}`;
+  const published = await sfu(env, `/sessions/${encodeURIComponent(sessionId)}/tracks/new`, "POST", {
+    sessionDescription: { type: "offer", sdp },
+    tracks: [{ location: "local", trackName, kind: "audio" }]
+  });
+
+  const resolvedTrackName = published.tracks?.find(t => t.location === "local")?.trackName ?? trackName;
+  await roomCall(env, squadId, "/join", { userId, sessionId, trackName: resolvedTrackName });
+
+  return json({
+    sessionId,
+    sdp: published.sessionDescription?.sdp ?? "",
+    sdpType: published.sessionDescription?.type ?? "answer",
+    publishedTrackName: resolvedTrackName
+  });
+}
+
+async function handleSync(request: Request, env: Env, accessToken: string, userId: string): Promise<Response> {
+  const body = await readJson<SyncRequest>(request);
+  const squadId = clean(body.squadId, 80);
+  const sessionId = clean(body.sessionId, 128);
+  if (!squadId || !sessionId) return json({ error: "squadId and sessionId required" }, 400);
+  if (!(await verifySquadMembership(env, accessToken, squadId, userId))) return json({ error: "Not a squad member" }, 403);
+
+  const room = await roomCall<{ peers: RoomPeer[] }>(env, squadId, "/peers", { userId });
+  const remotes = (room.peers ?? []).filter(p => p.userId !== userId && p.sessionId && p.trackName);
+  if (remotes.length === 0) return json({ changed: false, sdp: "", sdpType: "" });
+
+  const pulled = await sfu(env, `/sessions/${encodeURIComponent(sessionId)}/tracks/new`, "POST", {
+    tracks: remotes.map(p => ({ location: "remote", sessionId: p.sessionId, trackName: p.trackName }))
+  });
+
+  return json({
+    changed: !!pulled.sessionDescription?.sdp,
+    sdp: pulled.sessionDescription?.sdp ?? "",
+    sdpType: pulled.sessionDescription?.type ?? "offer"
+  });
+}
+
+async function handleRenegotiate(request: Request, env: Env, accessToken: string, userId: string): Promise<Response> {
+  const body = await readJson<RenegotiateRequest>(request);
+  const squadId = clean(body.squadId, 80);
+  const sessionId = clean(body.sessionId, 128);
+  const sdp = body.sdp?.trim() ?? "";
+  if (!squadId || !sessionId || !sdp) return json({ error: "squadId, sessionId and sdp required" }, 400);
+  if (!(await verifySquadMembership(env, accessToken, squadId, userId))) return json({ error: "Not a squad member" }, 403);
+
+  await sfu(env, `/sessions/${encodeURIComponent(sessionId)}/renegotiate`, "PUT", {
+    sessionDescription: { type: "answer", sdp }
+  });
+  return json({ ok: true });
+}
+
+async function handleLeave(request: Request, env: Env, accessToken: string, userId: string): Promise<Response> {
+  const body = await readJson<LeaveRequest>(request);
+  const squadId = clean(body.squadId, 80);
+  const sessionId = clean(body.sessionId, 128);
+  if (!squadId) return json({ error: "squadId required" }, 400);
+  if (!(await verifySquadMembership(env, accessToken, squadId, userId))) return json({ error: "Not a squad member" }, 403);
+  await roomCall(env, squadId, "/leave", { userId, sessionId });
+  return json({ ok: true });
+}
+
+async function sfu(env: Env, path: string, method: "POST" | "PUT", body: unknown): Promise<SfuResponse> {
+  if (!env.REALTIME_SFU_APP_ID || !env.REALTIME_SFU_APP_SECRET) throw new Error("Realtime SFU secrets missing");
+  const endpoint = `https://rtc.live.cloudflare.com/v1/apps/${encodeURIComponent(env.REALTIME_SFU_APP_ID)}${path}`;
+  const res = await fetch(endpoint, {
+    method,
+    headers: {
+      Authorization: `Bearer ${env.REALTIME_SFU_APP_SECRET}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`SFU ${method} ${path} failed (${res.status}): ${text.slice(0, 500)}`);
+  return text ? JSON.parse(text) as SfuResponse : {};
+}
+
+async function roomCall<T = Record<string, unknown>>(env: Env, squadId: string, path: string, payload: unknown): Promise<T> {
+  const stub = env.VOICE_ROOM_STATE.getByName(squadId);
+  const res = await stub.fetch(`https://voice-room.internal${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(`Voice room state failed: ${await res.text()}`);
+  return await res.json<T>();
+}
+
 async function getSupabaseUser(env: Env, token: string): Promise<{ id: string } | null> {
   const res = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
-    headers: {
-      apikey: env.SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${token}`
-    }
+    headers: { apikey: env.SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${token}` }
   });
   if (!res.ok) return null;
   return await res.json<{ id: string }>();
@@ -74,78 +162,59 @@ async function verifySquadMembership(env: Env, token: string, squadId: string, u
   url.searchParams.set("select", "user_id");
   url.searchParams.set("limit", "1");
   const res = await fetch(url, {
-    headers: {
-      apikey: env.SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${token}`
-    }
+    headers: { apikey: env.SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${token}` }
   });
   if (!res.ok) return false;
   const rows = await res.json<unknown[]>();
   return rows.length === 1;
 }
 
-async function getOrCreateMeeting(env: Env, squadId: string): Promise<string> {
-  const stub = env.VOICE_ROOM_STATE.getByName(squadId);
-  const res = await stub.fetch("https://voice-room.internal/meeting", {
-    method: "POST",
-    headers: { "x-fsp-squad-id": squadId }
-  });
-  if (!res.ok) throw new Error(`Voice room state failed: ${await res.text()}`);
-  const payload = await res.json<{ meetingId?: string }>();
-  if (!payload.meetingId) throw new Error("Meeting ID missing");
-  return payload.meetingId;
-}
-
-async function addParticipant(env: Env, meetingId: string, userId: string, name: string): Promise<any> {
-  const endpoint = `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/realtime/kit/${env.REALTIMEKIT_APP_ID}/meetings/${meetingId}/participants`;
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: cloudflareHeaders(env),
-    body: JSON.stringify({
-      name,
-      preset_name: env.REALTIMEKIT_PRESET_NAME,
-      custom_participant_id: userId
-    })
-  });
-  if (!res.ok) throw new Error(`Participant create failed: ${await res.text()}`);
-  const payload: any = await res.json();
-  return payload?.data ?? payload?.result;
-}
-
 export class VoiceRoomState extends DurableObject<Env> {
   async fetch(request: Request): Promise<Response> {
-    if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
-    const squadId = (request.headers.get("x-fsp-squad-id") ?? "").trim();
-    if (!squadId) return new Response("Squad ID missing", { status: 400 });
+    if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
+    const url = new URL(request.url);
+    const body = await readJson<any>(request);
 
-    let meetingId = await this.ctx.storage.get<string>("meetingId");
-    if (!meetingId) {
-      const endpoint = `https://api.cloudflare.com/client/v4/accounts/${this.env.CLOUDFLARE_ACCOUNT_ID}/realtime/kit/${this.env.REALTIMEKIT_APP_ID}/meetings`;
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: cloudflareHeaders(this.env),
-        body: JSON.stringify({ title: `Fsp squad ${squadId}` })
-      });
-      if (!res.ok) return new Response(`Meeting create failed: ${await res.text()}`, { status: 502 });
-      const payload: any = await res.json();
-      meetingId = payload?.data?.id ?? payload?.result?.id;
-      if (!meetingId) return new Response("Meeting ID missing", { status: 502 });
-      await this.ctx.storage.put("meetingId", meetingId);
+    if (url.pathname === "/join") {
+      const userId = clean(body.userId, 128);
+      const sessionId = clean(body.sessionId, 128);
+      const trackName = clean(body.trackName, 160);
+      if (!userId || !sessionId || !trackName) return json({ error: "Invalid peer" }, 400);
+      await this.ctx.storage.put(`peer:${userId}`, { userId, sessionId, trackName, touchedAt: Date.now() });
+      return json({ ok: true });
     }
 
-    return json({ meetingId });
+    if (url.pathname === "/peers") {
+      const stored = await this.ctx.storage.list<RoomPeer & { touchedAt?: number }>({ prefix: "peer:" });
+      const now = Date.now();
+      const peers: RoomPeer[] = [];
+      for (const [key, value] of stored) {
+        if (value.touchedAt && now - value.touchedAt > 6 * 60 * 60 * 1000) {
+          await this.ctx.storage.delete(key);
+          continue;
+        }
+        peers.push({ userId: value.userId, sessionId: value.sessionId, trackName: value.trackName });
+      }
+      return json({ peers });
+    }
+
+    if (url.pathname === "/leave") {
+      const userId = clean(body.userId, 128);
+      if (userId) await this.ctx.storage.delete(`peer:${userId}`);
+      return json({ ok: true });
+    }
+
+    return json({ error: "Not found" }, 404);
   }
 }
 
-function cloudflareHeaders(env: Env): HeadersInit {
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${env.CLOUDFLARE_REALTIME_API_TOKEN}`
-  };
+async function readJson<T>(request: Request): Promise<T> {
+  try { return await request.json<T>(); }
+  catch { throw new Error("Invalid JSON"); }
 }
 
-function sanitizeName(value?: string): string {
-  return (value ?? "").replace(/[\r\n\t]/g, " ").trim().slice(0, 32);
+function clean(value: unknown, max: number): string {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
 function json(value: unknown, status = 200): Response {
