@@ -15,13 +15,13 @@ namespace Fsp.Backend
 
         private void Awake()
         {
-            if (matchManager == null) matchManager = FindObjectOfType<MatchManager>();
-            if (profileStore == null) profileStore = FindObjectOfType<SupabaseProfileStore>();
+            if (matchManager == null) matchManager = FindFirstObjectByType<MatchManager>();
+            if (profileStore == null) profileStore = FindFirstObjectByType<SupabaseProfileStore>();
             if (profileStore == null) profileStore = gameObject.AddComponent<SupabaseProfileStore>();
 
             if (localParticipant == null)
             {
-                foreach (var participant in FindObjectsOfType<MatchParticipant>())
+                foreach (var participant in FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None))
                 {
                     if (participant != null && participant.IsLocalPlayer)
                     {
