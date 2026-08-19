@@ -11,7 +11,7 @@ type Envelope = { type: "snapshot" | "fire" | "damage" | "vehicle" | "seat" | "l
 type PlayerState = { position: Vec3; health: number; armor: number; alive: boolean; updatedAt: number };
 type Vec3 = { x: number; y: number; z: number };
 
-aSync function authenticate(request: Request, env: Env): Promise<string | null> {
+async function authenticate(request: Request, env: Env): Promise<string | null> {
   const auth = request.headers.get("Authorization") ?? "";
   if (!auth.startsWith("Bearer ")) return null;
   const res = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, { headers: { Authorization: auth, apikey: env.SUPABASE_PUBLISHABLE_KEY } });
@@ -114,7 +114,6 @@ export class MatchRoom extends DurableObject<Env> {
       const key = `seat:${vehicleId}`;
       const existing = await this.ctx.storage.get<string>(key);
       let accepted = false;
-
       if (seated) {
         accepted = existing == null || existing === attachment.playerId;
         if (accepted) await this.ctx.storage.put(key, attachment.playerId);
@@ -122,7 +121,6 @@ export class MatchRoom extends DurableObject<Env> {
         accepted = existing == null || existing === attachment.playerId;
         if (existing === attachment.playerId) await this.ctx.storage.delete(key);
       }
-
       const resultPayload = JSON.stringify({ playerId: attachment.playerId, vehicleId, seated, accepted, timestamp: Date.now() / 1000 });
       this.broadcast(JSON.stringify({ type: "seat", payload: resultPayload }));
       return;
@@ -149,7 +147,6 @@ export class MatchRoom extends DurableObject<Env> {
     const armor = Number(payload.armor ?? 0);
     const alive = payload.alive !== false;
     if (!position || !finiteRange(health, 0, 100) || !finiteRange(armor, 0, 100)) return;
-
     const now = Date.now();
     const key = `player:${playerId}`;
     const previous = await this.ctx.storage.get<PlayerState>(key);
@@ -161,7 +158,6 @@ export class MatchRoom extends DurableObject<Env> {
       if (health > previous.health + 60) return;
       if (armor > previous.armor + 100) return;
     }
-
     await this.ctx.storage.put(key, { position, health, armor, alive, updatedAt: now } satisfies PlayerState);
     this.broadcast(originalMessage, ws);
     await this.broadcastMatchState();
@@ -172,35 +168,24 @@ export class MatchRoom extends DurableObject<Env> {
     const damage = Number(payload.damage ?? 0);
     const hitPoint = readVec3(payload.hitPoint);
     if (!targetId || targetId === attackerId || !hitPoint || !finiteRange(damage, 0.1, 90)) return;
-
     const attacker = await this.ctx.storage.get<PlayerState>(`player:${attackerId}`);
     const target = await this.ctx.storage.get<PlayerState>(`player:${targetId}`);
     if (!attacker?.alive || !target?.alive) return;
     if (distance(attacker.position, target.position) > 350) return;
     if (distance(hitPoint, target.position) > 4.5) return;
-
     const now = Date.now();
     const throttleKey = `damage:${attackerId}:${targetId}`;
     const lastDamage = await this.ctx.storage.get<number>(throttleKey) ?? 0;
     if (now - lastDamage < 55) return;
     await this.ctx.storage.put(throttleKey, now);
-
-    const sanitized = JSON.stringify({
-      attackerId,
-      targetId,
-      damage,
-      hitPoint,
-      timestamp: now / 1000
-    });
+    const sanitized = JSON.stringify({ attackerId, targetId, damage, hitPoint, timestamp: now / 1000 });
     this.broadcast(JSON.stringify({ type: "damage", payload: sanitized }), ws);
   }
 
   private async broadcastMatchState(): Promise<void> {
     const states = await this.ctx.storage.list<PlayerState>({ prefix: "player:" });
     const aliveIds: string[] = [];
-    for (const [key, value] of states) {
-      if (value.alive) aliveIds.push(key.slice("player:".length));
-    }
+    for (const [key, value] of states) if (value.alive) aliveIds.push(key.slice("player:".length));
     const winnerId = aliveIds.length === 1 && states.size > 1 ? aliveIds[0] : "";
     const payload = JSON.stringify({ aliveCount: aliveIds.length, totalCount: states.size, winnerId, finished: !!winnerId, timestamp: Date.now() / 1000 });
     this.broadcast(JSON.stringify({ type: "match_state", payload }));
