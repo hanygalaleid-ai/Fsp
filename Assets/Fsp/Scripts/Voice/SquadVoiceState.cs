@@ -7,9 +7,11 @@ namespace Fsp.Voice
     {
         public static SquadVoiceState Instance { get; private set; }
 
+        public bool TokenReady => CurrentToken != null && !string.IsNullOrWhiteSpace(CurrentToken.token);
         public bool Connected { get; private set; }
         public bool MicrophoneMuted { get; private set; } = true;
         public bool PushToTalk { get; private set; } = true;
+        public string RuntimeStatus { get; private set; } = "Voice runtime not connected";
         public CloudflareVoiceTokenClient.VoiceToken CurrentToken { get; private set; }
 
         public event Action Changed;
@@ -25,11 +27,33 @@ namespace Fsp.Voice
             DontDestroyOnLoad(gameObject);
         }
 
+        /// <summary>
+        /// Stores a server-issued RealtimeKit token. This does NOT mean audio is connected.
+        /// A platform voice runtime must successfully join the meeting before Connected becomes true.
+        /// </summary>
         public void SetToken(CloudflareVoiceTokenClient.VoiceToken token)
         {
             CurrentToken = token;
-            Connected = token != null && !string.IsNullOrWhiteSpace(token.token);
+            Connected = false;
             MicrophoneMuted = true;
+            RuntimeStatus = TokenReady ? "Voice token ready; runtime connection required" : "Voice token unavailable";
+            Changed?.Invoke();
+        }
+
+        public void MarkRuntimeConnected()
+        {
+            if (!TokenReady) return;
+            Connected = true;
+            MicrophoneMuted = true;
+            RuntimeStatus = "Voice connected";
+            Changed?.Invoke();
+        }
+
+        public void MarkRuntimeError(string message)
+        {
+            Connected = false;
+            MicrophoneMuted = true;
+            RuntimeStatus = string.IsNullOrWhiteSpace(message) ? "Voice connection failed" : message.Trim();
             Changed?.Invoke();
         }
 
@@ -42,6 +66,7 @@ namespace Fsp.Voice
 
         public void SetMuted(bool muted)
         {
+            if (!Connected) return;
             MicrophoneMuted = muted;
             Changed?.Invoke();
         }
@@ -65,6 +90,7 @@ namespace Fsp.Voice
             Connected = false;
             CurrentToken = null;
             MicrophoneMuted = true;
+            RuntimeStatus = "Voice disconnected";
             Changed?.Invoke();
         }
     }
