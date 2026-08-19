@@ -27,7 +27,8 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - run: npx wrangler check
+      - name: Bundle and validate match relay
+        run: npm run check
 
   deploy-match-relay:
     if: ${{ github.event_name == 'push' || inputs.deploy }}
@@ -67,7 +68,8 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - run: npx wrangler check
+      - name: Bundle and validate voice worker
+        run: npm run check
 
   deploy-voice-worker:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy }}
