@@ -23,6 +23,12 @@ namespace Fsp.EditorTools
             MatchScenePath,
             "Assets/Fsp/Scripts/BattleRoyale/MatchManager.cs",
             "Assets/Fsp/Scripts/BattleRoyale/SafeZoneController.cs",
+            "Assets/Fsp/Scripts/BattleRoyale/SafeZoneDamageApplier.cs",
+            "Assets/Fsp/Scripts/BattleRoyale/DropPlaneController.cs",
+            "Assets/Fsp/Scripts/BattleRoyale/DropPlanePassenger.cs",
+            "Assets/Fsp/Scripts/BattleRoyale/ParachuteController.cs",
+            "Assets/Fsp/Scripts/BattleRoyale/AirdropController.cs",
+            "Assets/Fsp/Scripts/BattleRoyale/MatchPopulationBootstrap.cs",
             "Assets/Fsp/Scripts/Player/PlayerVitals.cs",
             "Assets/Fsp/Scripts/Player/ThirdPersonMotor.cs",
             "Assets/Fsp/Scripts/Combat/HitscanWeapon.cs",
@@ -36,6 +42,10 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Scripts/Network/MatchNetworkRuntimeConfigBootstrap.cs",
             "Assets/Fsp/Scripts/Network/NetworkCombatRuntimeBridge.cs",
             "Assets/Fsp/Scripts/Network/NetworkVehicleSync.cs",
+            "Assets/Fsp/Scripts/Network/NetworkBotSnapshotPublisher.cs",
+            "Assets/Fsp/Scripts/Network/AuthoritativeWorldClockSync.cs",
+            "Assets/Fsp/Scripts/Network/NetworkWorldState.cs",
+            "Assets/Fsp/Scripts/Network/NetworkZoneProbe.cs",
             "Assets/Fsp/Scripts/Voice/CloudflareSfuVoiceRuntime.cs",
             "Assets/Fsp/Scripts/Voice/CloudflareSfuSignalingClient.cs",
             "Assets/Fsp/Scripts/Voice/SquadVoiceCoordinator.cs",
@@ -48,7 +58,7 @@ namespace Fsp.EditorTools
         public static void ValidateFromMenu()
         {
             ValidateOrThrow();
-            Debug.Log("Fsp validation passed: required files, authored gameplay scenes and runtime online wiring are ready for build.");
+            Debug.Log("Fsp validation passed: required files, authored gameplay scenes and authoritative runtime online wiring are ready for build.");
         }
 
         public static void ValidateOrThrow()
@@ -64,10 +74,7 @@ namespace Fsp.EditorTools
         {
             var missing = new List<string>();
             foreach (string path in RequiredFiles)
-            {
                 if (!File.Exists(path)) missing.Add(path);
-            }
-
             if (missing.Count > 0)
                 throw new BuildFailedException("Fsp project validation failed. Missing required files:\n- " + string.Join("\n- ", missing));
         }
@@ -81,7 +88,6 @@ namespace Fsp.EditorTools
             string manifest = File.ReadAllText("Packages/manifest.json");
             if (!manifest.Contains("com.unity.webrtc"))
                 throw new BuildFailedException("Fsp voice build requires com.unity.webrtc in Packages/manifest.json.");
-
             if (!manifest.Contains("com.unity.inputsystem"))
                 Debug.LogWarning("Unity Input System package is not declared; legacy/mobile controls must remain enabled in Player Settings.");
         }
@@ -94,10 +100,7 @@ namespace Fsp.EditorTools
                 RequireSceneComponent<LobbyController>(scene, "LobbyController");
                 RequireSceneComponent<LobbyMatchLauncher>(scene, "LobbyMatchLauncher");
             }
-            finally
-            {
-                EditorSceneManager.CloseScene(scene, true);
-            }
+            finally { EditorSceneManager.CloseScene(scene, true); }
         }
 
         private static void ValidateMatchScene()
@@ -108,9 +111,7 @@ namespace Fsp.EditorTools
                 MatchParticipant[] participants = FindSceneComponents<MatchParticipant>(scene);
                 int localPlayers = 0;
                 foreach (MatchParticipant participant in participants)
-                {
                     if (participant != null && participant.IsLocalPlayer) localPlayers++;
-                }
 
                 if (localPlayers != 1)
                     throw new BuildFailedException($"Fsp Match scene must contain exactly one authored local MatchParticipant; found {localPlayers}.");
@@ -120,15 +121,8 @@ namespace Fsp.EditorTools
 
                 if (FindSceneComponents<MatchManager>(scene).Length == 0 && FindSceneComponents<MatchSceneAssembler>(scene).Length == 0)
                     throw new BuildFailedException("Fsp Match scene needs an authored MatchManager or MatchSceneAssembler so match state can initialize.");
-
-                // Online transport, combat bridge, vehicle sync and squad voice are intentionally
-                // installed at runtime after Supabase auth/match state exists. Do not require them
-                // as authored scene components or a hard-coded workers.dev URL.
             }
-            finally
-            {
-                EditorSceneManager.CloseScene(scene, true);
-            }
+            finally { EditorSceneManager.CloseScene(scene, true); }
         }
 
         private static void RequireSceneComponent<T>(Scene scene, string label) where T : Component
