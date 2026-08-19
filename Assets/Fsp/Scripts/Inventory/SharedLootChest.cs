@@ -19,6 +19,11 @@ namespace Fsp.Inventory
         private bool claimPending;
         private bool subscribed;
 
+        public void SetChestId(string value)
+        {
+            if (!string.IsNullOrWhiteSpace(value)) chestId = value.Trim();
+        }
+
         private void Awake()
         {
             TryResolveTransport();
