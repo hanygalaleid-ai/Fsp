@@ -1,3 +1,4 @@
+using Fsp.Backend;
 using Fsp.Player;
 using UnityEngine;
 
@@ -23,10 +24,7 @@ namespace Fsp.BattleRoyale
             if (motor == null) motor = GetComponent<ThirdPersonMotor>();
         }
 
-        private void OnDisable()
-        {
-            UnsubscribePlane();
-        }
+        private void OnDisable() => UnsubscribePlane();
 
         public void Configure(DropPlaneController value, Transform cabin)
         {
@@ -36,9 +34,7 @@ namespace Fsp.BattleRoyale
             if (parachute == null) parachute = GetComponent<ParachuteController>();
             if (motor == null) motor = GetComponent<ThirdPersonMotor>();
             SubscribePlane();
-
-            if (plane != null && plane.IsFlying && !aboard && !jumped)
-                Board();
+            if (plane != null && plane.IsFlying && !aboard && !jumped) Board();
         }
 
         public void Board()
@@ -55,6 +51,12 @@ namespace Fsp.BattleRoyale
         public void Jump()
         {
             if (!aboard || jumped) return;
+            if (SupabaseSession.IsSignedIn && MatchRoomState.HasMatch)
+            {
+                MatchManager manager = MatchManager.Instance;
+                if (manager == null || manager.Phase != MatchManager.MatchPhase.Active) return;
+            }
+
             transform.SetParent(originalParent, true);
             aboard = false;
             jumped = true;
