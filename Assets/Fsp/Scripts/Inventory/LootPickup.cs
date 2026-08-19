@@ -15,6 +15,7 @@ namespace Fsp.Inventory
         private INetworkTransport transport;
         private PlayerInventory pendingInventory;
         private bool claimPending;
+        private bool subscribed;
 
         public string LootId => lootId;
         public InventoryItem Item => item;
@@ -35,18 +36,47 @@ namespace Fsp.Inventory
 
         private void Awake()
         {
-            transport = transportBehaviour as INetworkTransport;
+            TryResolveTransport();
             if (string.IsNullOrWhiteSpace(lootId)) lootId = gameObject.name;
         }
 
         private void OnEnable()
         {
-            if (transport != null) transport.LootClaimReceived += HandleLootClaim;
+            TryResolveTransport();
+            TrySubscribe();
+        }
+
+        private void Update()
+        {
+            if (subscribed) return;
+            TryResolveTransport();
+            TrySubscribe();
         }
 
         private void OnDisable()
         {
-            if (transport != null) transport.LootClaimReceived -= HandleLootClaim;
+            if (subscribed && transport != null) transport.LootClaimReceived -= HandleLootClaim;
+            subscribed = false;
+        }
+
+        private void TryResolveTransport()
+        {
+            transport = transportBehaviour as INetworkTransport;
+            if (transport != null) return;
+            foreach (MonoBehaviour behaviour in FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
+            {
+                if (behaviour is not INetworkTransport candidate) continue;
+                transportBehaviour = behaviour;
+                transport = candidate;
+                return;
+            }
+        }
+
+        private void TrySubscribe()
+        {
+            if (subscribed || transport == null) return;
+            transport.LootClaimReceived += HandleLootClaim;
+            subscribed = true;
         }
 
         private void Reset()
@@ -67,12 +97,17 @@ namespace Fsp.Inventory
             PlayerInventory inventory = target.GetComponentInParent<PlayerInventory>();
             if (inventory == null || !inventory.CanPickup(item)) return false;
 
-            if (transport == null || !transport.IsConnected || !SupabaseSession.IsSignedIn)
+            bool onlineMatch = SupabaseSession.IsSignedIn && MatchRoomState.HasMatch;
+            if (!onlineMatch)
             {
                 if (!inventory.TryPickup(item)) return false;
                 Destroy(gameObject);
                 return true;
             }
+
+            TryResolveTransport();
+            TrySubscribe();
+            if (transport == null || !transport.IsConnected) return false;
 
             pendingInventory = inventory;
             claimPending = true;
