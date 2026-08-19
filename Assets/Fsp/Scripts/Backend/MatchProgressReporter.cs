@@ -34,20 +34,18 @@ namespace Fsp.Backend
 
         private void OnEnable()
         {
-            if (matchManager != null)
-            {
-                matchManager.ParticipantEliminated += HandleParticipantEliminated;
-                matchManager.MatchWon += HandleMatchWon;
-            }
+            if (matchManager == null) return;
+            matchManager.ParticipantEliminated += HandleParticipantEliminated;
+            matchManager.MatchWon += HandleMatchWon;
+            matchManager.NetworkWinnerDeclared += HandleNetworkWinner;
         }
 
         private void OnDisable()
         {
-            if (matchManager != null)
-            {
-                matchManager.ParticipantEliminated -= HandleParticipantEliminated;
-                matchManager.MatchWon -= HandleMatchWon;
-            }
+            if (matchManager == null) return;
+            matchManager.ParticipantEliminated -= HandleParticipantEliminated;
+            matchManager.MatchWon -= HandleMatchWon;
+            matchManager.NetworkWinnerDeclared -= HandleNetworkWinner;
         }
 
         private void HandleParticipantEliminated(MatchParticipant participant, int placement)
@@ -58,8 +56,17 @@ namespace Fsp.Backend
 
         private void HandleMatchWon(MatchParticipant winner)
         {
+            if (matchManager != null && matchManager.NetworkAuthoritative) return;
             if (winner != null && winner.IsLocalPlayer)
                 SaveResult(true, 1);
+        }
+
+        private void HandleNetworkWinner(string winnerId)
+        {
+            if (!SupabaseSession.IsSignedIn) return;
+            bool won = !string.IsNullOrWhiteSpace(winnerId) && winnerId == SupabaseSession.UserId;
+            int placement = won ? 1 : Mathf.Max(2, localParticipant != null ? localParticipant.Placement : 2);
+            SaveResult(won, placement);
         }
 
         private async void SaveResult(bool won, int placement)
