@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 namespace Fsp.Lobby
 {
     /// <summary>
-    /// Logic-only release bootstrap for the fixed lobby scene.
+    /// Logic-only release bootstrap for the fixed, checked-in lobby artwork.
     /// It never creates, replaces, recolors, or restyles lobby visuals.
     /// </summary>
     public static class LobbyRuntimeGuard
@@ -31,8 +31,9 @@ namespace Fsp.Lobby
         }
 
         /// <summary>
-        /// Makes the START area of the baked lobby artwork functional without generating UI.
-        /// Coordinates are normalized screen coordinates, origin at bottom-left.
+        /// Makes only the baked START button area functional. No UI objects are generated.
+        /// Coordinates are normalized screen coordinates, origin at bottom-left, matched to
+        /// Assets/Fsp/Art/Resources/Lobby/fsp_lobby_final.jpg.
         /// </summary>
         private sealed class FixedLobbyStartHitRegion : MonoBehaviour
         {
@@ -58,8 +59,8 @@ namespace Fsp.Lobby
                 float x = pixelPosition.x / Screen.width;
                 float y = pixelPosition.y / Screen.height;
 
-                // The gold START button in the checked-in lobby artwork.
-                if (x < 0.79f || x > 0.985f || y < 0.055f || y > 0.205f) return;
+                // Gold START button baked into the approved lobby artwork.
+                if (x < 0.805f || x > 0.995f || y < 0.025f || y > 0.135f) return;
 
                 loading = true;
                 LobbyState state = LobbyState.Instance;
