@@ -17,22 +17,52 @@ namespace Fsp.Inventory
         private INetworkTransport transport;
         private bool opened;
         private bool claimPending;
+        private bool subscribed;
 
         private void Awake()
         {
-            transport = transportBehaviour as INetworkTransport;
+            TryResolveTransport();
             GetComponent<Collider>().isTrigger = true;
             if (string.IsNullOrWhiteSpace(chestId)) chestId = gameObject.name;
         }
 
         private void OnEnable()
         {
-            if (transport != null) transport.LootClaimReceived += HandleClaim;
+            TryResolveTransport();
+            TrySubscribe();
+        }
+
+        private void Update()
+        {
+            if (subscribed) return;
+            TryResolveTransport();
+            TrySubscribe();
         }
 
         private void OnDisable()
         {
-            if (transport != null) transport.LootClaimReceived -= HandleClaim;
+            if (subscribed && transport != null) transport.LootClaimReceived -= HandleClaim;
+            subscribed = false;
+        }
+
+        private void TryResolveTransport()
+        {
+            transport = transportBehaviour as INetworkTransport;
+            if (transport != null) return;
+            foreach (MonoBehaviour behaviour in FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
+            {
+                if (behaviour is not INetworkTransport candidate) continue;
+                transportBehaviour = behaviour;
+                transport = candidate;
+                return;
+            }
+        }
+
+        private void TrySubscribe()
+        {
+            if (subscribed || transport == null) return;
+            transport.LootClaimReceived += HandleClaim;
+            subscribed = true;
         }
 
         private void OnTriggerEnter(Collider other)
@@ -44,11 +74,16 @@ namespace Fsp.Inventory
         {
             if (opened || claimPending) return;
 
-            if (transport == null || !transport.IsConnected || !SupabaseSession.IsSignedIn)
+            bool onlineMatch = SupabaseSession.IsSignedIn && MatchRoomState.HasMatch;
+            if (!onlineMatch)
             {
                 OpenForEveryone();
                 return;
             }
+
+            TryResolveTransport();
+            TrySubscribe();
+            if (transport == null || !transport.IsConnected) return;
 
             claimPending = true;
             transport.SendLootClaim(new NetworkLootClaimEvent
