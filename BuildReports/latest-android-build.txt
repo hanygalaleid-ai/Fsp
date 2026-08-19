@@ -1,0 +1,8 @@
+FSP Android CI latest outcome
+status=failure
+build_type=apk
+run_number=281
+run_id=32294060051
+source_commit=e4e2ccf6242b93ff2956f18902d222cb05eeb54a
+event=push
+utc=2026-08-19T19:37:44Z
