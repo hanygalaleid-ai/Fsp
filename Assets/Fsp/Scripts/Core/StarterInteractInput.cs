@@ -62,7 +62,7 @@ namespace Fsp.Core
 
         private LightweightDoor FindNearestDoor()
         {
-            LightweightDoor[] doors = Object.FindObjectsOfType<LightweightDoor>();
+            LightweightDoor[] doors = Object.FindObjectsByType<LightweightDoor>(FindObjectsSortMode.None);
             LightweightDoor nearest = null;
             float bestSqr = doorInteractDistance * doorInteractDistance;
             foreach (LightweightDoor door in doors)
