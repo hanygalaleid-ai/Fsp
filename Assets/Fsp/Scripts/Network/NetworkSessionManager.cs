@@ -101,7 +101,7 @@ namespace Fsp.Networking
                 return;
             }
             if (remotePlayerPrefab == null)
-                Debug.LogWarning("FSP Network: remotePlayerPrefab is missing; snapshots will connect but remote players cannot be rendered.");
+                Debug.Log("FSP Network: dedicated remote prefab missing; authored local character visuals will be reused for remote players.");
 
             started = true;
             transport.SnapshotReceived += HandleSnapshot;
@@ -140,10 +140,23 @@ namespace Fsp.Networking
             if (string.IsNullOrWhiteSpace(snapshot.playerId) || snapshot.playerId == SupabaseSession.UserId) return;
             if (!remotes.TryGetValue(snapshot.playerId, out var proxy) || proxy == null)
             {
-                if (remotePlayerPrefab == null) return;
-                var go = Instantiate(remotePlayerPrefab, snapshot.position, snapshot.rotation);
-                proxy = go.GetComponent<RemotePlayerProxy>();
-                if (proxy == null) proxy = go.AddComponent<RemotePlayerProxy>();
+                if (remotePlayerPrefab != null)
+                {
+                    var go = Instantiate(remotePlayerPrefab, snapshot.position, snapshot.rotation);
+                    proxy = go.GetComponent<RemotePlayerProxy>();
+                    if (proxy == null) proxy = go.AddComponent<RemotePlayerProxy>();
+                }
+                else
+                {
+                    proxy = RemotePlayerRuntimeFactory.CreateFromLocalVisual(localPlayer, snapshot.position, snapshot.rotation);
+                }
+
+                if (proxy == null)
+                {
+                    Debug.LogError("FSP Network: failed to create remote player visual for " + snapshot.playerId);
+                    return;
+                }
+
                 proxy.Initialize(snapshot.playerId);
                 remotes[snapshot.playerId] = proxy;
             }
