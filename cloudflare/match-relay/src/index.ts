@@ -8,7 +8,7 @@ interface Env {
 
 type SocketAttachment = { playerId: string };
 type Vec3 = { x: number; y: number; z: number };
-type PlayerState = { position: Vec3; health: number; armor: number; alive: boolean; updatedAt: number };
+type PlayerState = { position: Vec3; health: number; armor: number; alive: boolean; dropState: number; updatedAt: number };
 type FireState = { origin: Vec3; direction: Vec3; firedAt: number; consumed: boolean };
 type Envelope = { type: string; payload: string };
 type ZonePhase = { wait: number; shrink: number; factor: number; shift: number; dps: number };
@@ -17,6 +17,10 @@ const STARTER_DAMAGE_CAP = 35;
 const COUNTDOWN_SECONDS = 8;
 const INITIAL_ZONE_RADIUS = 1100;
 const PLAYABLE_HALF_EXTENT = 1200;
+const DROP_GROUNDED = 0;
+const DROP_ABOARD = 1;
+const DROP_FREEFALL = 2;
+const DROP_PARACHUTE = 3;
 const ZONE_PHASES: ZonePhase[] = [
   { wait: 90, shrink: 70, factor: 0.72, shift: 0.35, dps: 1 },
   { wait: 65, shrink: 55, factor: 0.55, shift: 0.45, dps: 2 },
@@ -124,7 +128,7 @@ export class MatchRoom extends DurableObject<Env> {
   private async handleZoneProbe(playerId: string, payload: Record<string, unknown>): Promise<void> {
     if (payload.playerId !== playerId) return;
     const player = await this.ctx.storage.get<PlayerState>(`player:${playerId}`);
-    if (!player?.alive) return;
+    if (!player?.alive || player.dropState === DROP_ABOARD) return;
     const nowMs = Date.now();
     const last = await this.ctx.storage.get<number>(`zone-probe:${playerId}`) ?? 0;
     if (nowMs - last < 400) return;
@@ -149,7 +153,8 @@ export class MatchRoom extends DurableObject<Env> {
     if (authority !== senderId) return;
     const botId = cleanString(payload.playerId, 48);
     if (!botId || !botId.startsWith("bot:")) return;
-    const canonical = JSON.stringify({ ...payload, playerId: botId });
+    payload.dropState = DROP_GROUNDED;
+    const canonical = JSON.stringify({ ...payload, playerId: botId, dropState: DROP_GROUNDED });
     await this.handleSnapshot(ws, botId, payload, JSON.stringify({ type: "snapshot", payload: canonical }));
   }
 
@@ -180,16 +185,27 @@ export class MatchRoom extends DurableObject<Env> {
     const health = Number(payload.health ?? 100);
     const armor = Number(payload.armor ?? 0);
     const alive = payload.alive !== false;
-    if (!position || !finiteRange(health, 0, 100) || !finiteRange(armor, 0, 100)) return;
+    const dropState = Number(payload.dropState ?? DROP_GROUNDED);
+    if (!position || !finiteRange(health, 0, 100) || !finiteRange(armor, 0, 100) || !Number.isInteger(dropState) || dropState < DROP_GROUNDED || dropState > DROP_PARACHUTE) return;
+
     const now = Date.now();
+    const startedAt = await this.ctx.storage.get<number>("world-started-at");
+    const gameplayStarted = !!startedAt && now / 1000 >= startedAt + COUNTDOWN_SECONDS;
     const key = `player:${playerId}`;
     const previous = await this.ctx.storage.get<PlayerState>(key);
+
+    if (playerId.startsWith("bot:") && dropState !== DROP_GROUNDED) return;
+    if (!playerId.startsWith("bot:") && !isValidDropTransition(previous?.dropState, dropState, gameplayStarted)) return;
+
     if (previous) {
       const dt = Math.max(0.05, (now - previous.updatedAt) / 1000);
       const moved = distance(previous.position, position);
-      if (moved / dt > 95 || moved > 140 || (!previous.alive && alive) || health > previous.health + 60 || armor > previous.armor + 100) return;
+      const airborne = dropState === DROP_FREEFALL || dropState === DROP_PARACHUTE;
+      const maxSpeed = airborne ? 125 : 95;
+      if (moved / dt > maxSpeed || moved > 160 || (!previous.alive && alive) || health > previous.health + 60 || armor > previous.armor + 100) return;
     }
-    await this.ctx.storage.put(key, { position, health, armor, alive, updatedAt: now } satisfies PlayerState);
+
+    await this.ctx.storage.put(key, { position, health, armor, alive, dropState, updatedAt: now } satisfies PlayerState);
     this.broadcast(originalMessage, ws);
     if (previous?.alive && !alive) {
       const killerId = await this.ctx.storage.get<string>(`last-attacker:${playerId}`) ?? "";
@@ -205,7 +221,7 @@ export class MatchRoom extends DurableObject<Env> {
     const direction = rawDirection ? normalize(rawDirection) : null;
     if (!origin || !direction) return;
     const player = await this.ctx.storage.get<PlayerState>(`player:${playerId}`);
-    if (!player?.alive || distance(origin, player.position) > 5.5) return;
+    if (!player?.alive || player.dropState === DROP_ABOARD || distance(origin, player.position) > 5.5) return;
     const now = Date.now();
     const last = await this.ctx.storage.get<FireState>(`fire:${playerId}`);
     if (last && now - last.firedAt < 55) return;
@@ -221,7 +237,7 @@ export class MatchRoom extends DurableObject<Env> {
     const attacker = await this.ctx.storage.get<PlayerState>(`player:${attackerId}`);
     const target = await this.ctx.storage.get<PlayerState>(`player:${targetId}`);
     const fire = await this.ctx.storage.get<FireState>(`fire:${attackerId}`);
-    if (!attacker?.alive || !target?.alive || !fire || fire.consumed) return;
+    if (!attacker?.alive || !target?.alive || !fire || fire.consumed || attacker.dropState === DROP_ABOARD) return;
     const now = Date.now();
     if (now - fire.firedAt > 350 || distance(attacker.position, target.position) > 350 || distance(hitPoint, target.position) > 4.5 || distancePointToRay(target.position, fire.origin, fire.direction) > 4.5 || dot(subtract(target.position, fire.origin), fire.direction) < -1) return;
     fire.consumed = true;
@@ -301,6 +317,19 @@ export class MatchRoom extends DurableObject<Env> {
   }
 
   async webSocketError(_ws: WebSocket, error: unknown): Promise<void> { console.error("match relay websocket error", error); }
+}
+
+function isValidDropTransition(previous: number | undefined, next: number, gameplayStarted: boolean): boolean {
+  if (previous == null) {
+    if (!gameplayStarted) return next === DROP_GROUNDED || next === DROP_ABOARD;
+    return next === DROP_GROUNDED || next === DROP_ABOARD || next === DROP_FREEFALL;
+  }
+  if (previous === next) return true;
+  if (previous === DROP_GROUNDED) return !gameplayStarted && next === DROP_ABOARD;
+  if (previous === DROP_ABOARD) return gameplayStarted && next === DROP_FREEFALL;
+  if (previous === DROP_FREEFALL) return next === DROP_PARACHUTE || next === DROP_GROUNDED;
+  if (previous === DROP_PARACHUTE) return next === DROP_GROUNDED;
+  return false;
 }
 
 function zoneAt(elapsed: number, matchId: string): { center: Vec3; radius: number; dps: number } {
