@@ -37,8 +37,13 @@ namespace Fsp.Networking
             GameObject remotePrefab = Resources.Load<GameObject>("Network/RemotePlayer");
             session.ConfigureRuntime(transport, local.transform, remotePrefab);
 
+            MatchNetworkRuntimeConfigBootstrap bootstrap = UnityEngine.Object.FindFirstObjectByType<MatchNetworkRuntimeConfigBootstrap>();
+            if (bootstrap == null)
+                bootstrap = new GameObject("MatchNetworkRuntimeConfig").AddComponent<MatchNetworkRuntimeConfigBootstrap>();
+            bootstrap.Configure(transport, session);
+
             if (remotePrefab == null)
-                Debug.LogWarning("FSP Network installer: Resources/Network/RemotePlayer prefab is not present yet. Connection can start, but remote avatars will not render.");
+                Debug.Log("FSP Network installer: dedicated RemotePlayer prefab not found; runtime visual clone fallback is enabled.");
         }
 
         private static MatchParticipant FindLocalParticipant()
