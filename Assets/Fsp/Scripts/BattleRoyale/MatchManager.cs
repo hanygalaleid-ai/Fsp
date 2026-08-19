@@ -16,6 +16,7 @@ namespace Fsp.BattleRoyale
         [SerializeField, Min(0f)] private float preMatchCountdown = 8f;
 
         private bool networkAuthoritative;
+        private bool authoritativeClockSeen;
 
         public static MatchManager Instance => instance;
         public bool MatchStarted => Phase == MatchPhase.Active || Phase == MatchPhase.Finished;
@@ -61,6 +62,7 @@ namespace Fsp.BattleRoyale
 
         private void Update()
         {
+            if (networkAuthoritative) return;
             if (Phase != MatchPhase.Countdown) return;
             CountdownRemaining = Mathf.Max(0f, CountdownRemaining - Time.deltaTime);
             CountdownChanged?.Invoke(CountdownRemaining);
@@ -78,10 +80,37 @@ namespace Fsp.BattleRoyale
             }
         }
 
+        public void ApplyAuthoritativeClock(float worldElapsed, float countdownSeconds)
+        {
+            networkAuthoritative = true;
+            authoritativeClockSeen = true;
+            float remaining = Mathf.Max(0f, countdownSeconds - Mathf.Max(0f, worldElapsed));
+
+            if (remaining > 0f)
+            {
+                CountdownRemaining = remaining;
+                if (Phase != MatchPhase.Countdown)
+                {
+                    Phase = MatchPhase.Countdown;
+                    PhaseChanged?.Invoke(Phase);
+                }
+                CountdownChanged?.Invoke(CountdownRemaining);
+                return;
+            }
+
+            CountdownRemaining = 0f;
+            CountdownChanged?.Invoke(0f);
+            if (Phase != MatchPhase.Active && Phase != MatchPhase.Finished)
+            {
+                Phase = MatchPhase.Active;
+                PhaseChanged?.Invoke(Phase);
+            }
+        }
+
         public void BeginCountdown()
         {
             PruneParticipants();
-            if (Phase != MatchPhase.Waiting || participants.Count < minimumParticipantsToStart) return;
+            if (networkAuthoritative || Phase != MatchPhase.Waiting || participants.Count < minimumParticipantsToStart) return;
             Phase = MatchPhase.Countdown;
             CountdownRemaining = preMatchCountdown;
             PhaseChanged?.Invoke(Phase);
@@ -109,7 +138,7 @@ namespace Fsp.BattleRoyale
 
             if (!finished)
             {
-                if (Phase != MatchPhase.Active)
+                if (!authoritativeClockSeen && Phase != MatchPhase.Active)
                 {
                     Phase = MatchPhase.Active;
                     CountdownRemaining = 0f;
@@ -131,7 +160,7 @@ namespace Fsp.BattleRoyale
             if (participant == null) return;
             participants.Add(participant);
             instance?.RecountAlive();
-            if (instance != null && instance.autoStart && instance.Phase == MatchPhase.Waiting && participants.Count >= instance.minimumParticipantsToStart)
+            if (instance != null && instance.autoStart && !instance.networkAuthoritative && instance.Phase == MatchPhase.Waiting && participants.Count >= instance.minimumParticipantsToStart)
                 instance.BeginCountdown();
         }
 
