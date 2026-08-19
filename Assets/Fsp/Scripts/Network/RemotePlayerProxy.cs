@@ -32,6 +32,11 @@ namespace Fsp.Networking
             targetRotation = transform.rotation;
             worldParent = transform.parent;
             initialized = true;
+
+            NetworkPlayerIdentity identity = GetComponent<NetworkPlayerIdentity>();
+            if (identity == null) identity = gameObject.AddComponent<NetworkPlayerIdentity>();
+            identity.Initialize(playerId, false);
+
             if (parachuteVisual != null) parachuteVisual.SetActive(false);
             if (!string.IsNullOrWhiteSpace(playerId)) registry[playerId] = this;
         }
