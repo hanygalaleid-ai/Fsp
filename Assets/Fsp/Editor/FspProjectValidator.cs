@@ -20,7 +20,7 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Scripts/Combat/HitscanWeapon.cs",
             "Assets/Fsp/Scripts/Inventory/PlayerInventory.cs",
             "Assets/Fsp/Scripts/AI/BotBrain.cs",
-            "Assets/Fsp/Scripts/Vehicles/VehicleController.cs",
+            "Assets/Fsp/Scripts/Vehicles/SimpleVehicleController.cs",
             "Packages/manifest.json",
             "ProjectSettings/ProjectVersion.txt"
         };
