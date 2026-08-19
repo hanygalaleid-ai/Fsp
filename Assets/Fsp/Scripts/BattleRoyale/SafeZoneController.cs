@@ -163,11 +163,10 @@ namespace Fsp.BattleRoyale
         private Vector3 PickNextCenter(Vector3 current, float currentRadius, float nextRadius, float shiftFactor, int phaseIndex)
         {
             string matchId = MatchRoomState.HasMatch ? MatchRoomState.MatchId : "offline";
-            var random = new System.Random(StableHash(matchId + ":zone:" + phaseIndex));
-            double angle = random.NextDouble() * Math.PI * 2.0;
+            float angle = Hash01(matchId + ":zone:" + phaseIndex + ":a") * Mathf.PI * 2f;
             float maxShift = Mathf.Max(0f, currentRadius - nextRadius) * Mathf.Clamp01(shiftFactor);
-            float distance = maxShift * (0.35f + 0.65f * (float)random.NextDouble());
-            Vector3 offset = new(Mathf.Cos((float)angle) * distance, 0f, Mathf.Sin((float)angle) * distance);
+            float distance = maxShift * (0.35f + 0.65f * Hash01(matchId + ":zone:" + phaseIndex + ":d"));
+            Vector3 offset = new(Mathf.Cos(angle) * distance, 0f, Mathf.Sin(angle) * distance);
             Vector3 candidate = Flatten(current + offset);
             candidate.x = Mathf.Clamp(candidate.x, -playableHalfExtent + nextRadius, playableHalfExtent - nextRadius);
             candidate.z = Mathf.Clamp(candidate.z, -playableHalfExtent + nextRadius, playableHalfExtent - nextRadius);
@@ -184,6 +183,6 @@ namespace Fsp.BattleRoyale
 
         private void RefreshVisual() { if (zoneVisual == null) return; float diameter = CurrentRadius * 2f; zoneVisual.position = Center; zoneVisual.localScale = new Vector3(diameter, zoneVisual.localScale.y, diameter); }
         private static Vector3 Flatten(Vector3 v) => new(v.x, 0f, v.z);
-        private static int StableHash(string value) { unchecked { int hash = 23; foreach (char c in value ?? string.Empty) hash = hash * 31 + c; return hash; } }
+        private static float Hash01(string value) { unchecked { uint hash = 23; foreach (char c in value ?? string.Empty) hash = hash * 31 + c; return (hash & 0x00FFFFFFu) / 16777215f; } }
     }
 }
