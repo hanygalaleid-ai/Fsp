@@ -10,21 +10,52 @@ namespace Fsp.Networking
         [SerializeField] private PlayerVitals localVitals;
 
         private INetworkTransport transport;
+        private bool subscribed;
 
         private void Awake()
         {
-            transport = transportBehaviour as INetworkTransport;
             if (localVitals == null) localVitals = GetComponent<PlayerVitals>();
+            TryResolveTransport();
         }
 
         private void OnEnable()
         {
-            if (transport != null) transport.DamageReceived += HandleDamage;
+            TryResolveTransport();
+            TrySubscribe();
+        }
+
+        private void Update()
+        {
+            if (subscribed) return;
+            TryResolveTransport();
+            TrySubscribe();
+        }
+
+        private void TryResolveTransport()
+        {
+            transport = transportBehaviour as INetworkTransport;
+            if (transport != null) return;
+
+            foreach (MonoBehaviour behaviour in FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
+            {
+                if (behaviour is not INetworkTransport candidate) continue;
+                transportBehaviour = behaviour;
+                transport = candidate;
+                return;
+            }
+        }
+
+        private void TrySubscribe()
+        {
+            if (subscribed || transport == null) return;
+            transport.DamageReceived += HandleDamage;
+            subscribed = true;
         }
 
         private void OnDisable()
         {
-            if (transport != null) transport.DamageReceived -= HandleDamage;
+            if (subscribed && transport != null) transport.DamageReceived -= HandleDamage;
+            subscribed = false;
         }
 
         private void HandleDamage(NetworkDamageEvent damageEvent)
