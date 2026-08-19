@@ -23,6 +23,7 @@ namespace Fsp.Networking
         void SendFire(NetworkFireEvent fireEvent);
         void SendDamage(NetworkDamageEvent damageEvent);
         void SendBotDamage(NetworkDamageEvent damageEvent);
+        void SendZoneProbe(NetworkZoneProbe probe);
         void SendVehicle(NetworkVehicleSnapshot vehicleSnapshot);
         void SendSeat(NetworkSeatEvent seatEvent);
         void SendLootClaim(NetworkLootClaimEvent lootClaim);
