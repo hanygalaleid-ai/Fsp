@@ -8,6 +8,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Fsp.BattleRoyale;
+using Fsp.UI;
 
 namespace Fsp.EditorTools
 {
@@ -107,15 +108,37 @@ namespace Fsp.EditorTools
             Scene scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Additive);
             try
             {
-                if (!FindInScene<MatchManager>(scene)) errors.Add("Match scene has no MatchManager.");
-                if (!FindInScene<MatchSceneAssembler>(scene)) errors.Add("Match scene has no MatchSceneAssembler.");
                 if (!FindInScene<Camera>(scene)) errors.Add("Match scene has no Camera.");
+                if (!FindInScene<MatchManager>(scene)) errors.Add("Match scene has no authored MatchManager.");
+                if (!FindInScene<MatchSceneAssembler>(scene)) errors.Add("Match scene has no authored MatchSceneAssembler.");
+                if (!FindLocalParticipant(scene)) errors.Add("Match scene has no authored local MatchParticipant. Runtime player generation is disabled.");
+                if (!FindInScene<BattleRoyaleHud>(scene)) errors.Add("Match scene has no authored BattleRoyaleHud. Runtime HUD generation is disabled.");
+                if (CountInScene<Renderer>(scene) == 0) errors.Add("Match scene contains no authored renderers/world art.");
+                if (CountInScene<Collider>(scene) == 0) errors.Add("Match scene contains no authored collision surfaces.");
             }
             finally
             {
                 EditorSceneManager.CloseScene(scene, true);
                 if (previous.IsValid() && previous.isLoaded) SceneManager.SetActiveScene(previous);
             }
+        }
+
+        private static bool FindLocalParticipant(Scene scene)
+        {
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                foreach (MatchParticipant participant in root.GetComponentsInChildren<MatchParticipant>(true))
+                    if (participant != null && participant.IsLocalPlayer) return true;
+            }
+            return false;
+        }
+
+        private static int CountInScene<T>(Scene scene) where T : Component
+        {
+            int count = 0;
+            foreach (GameObject root in scene.GetRootGameObjects())
+                count += root.GetComponentsInChildren<T>(true).Length;
+            return count;
         }
 
         private static bool FindInScene<T>(Scene scene) where T : Component
