@@ -22,11 +22,13 @@ namespace Fsp.Networking
             dropPlane = FindFirstObjectByType<DropPlaneController>();
             airdrops = FindFirstObjectByType<AirdropController>();
             TryBindTransport();
+            if (NetworkWorldClockCache.HasValue) HandleWorldState(NetworkWorldClockCache.Latest);
         }
 
         private void Update()
         {
             if (transport == null) TryBindTransport();
+            if (!hasClock && NetworkWorldClockCache.HasValue) HandleWorldState(NetworkWorldClockCache.Latest);
             if (!hasClock) return;
             double elapsed = elapsedAtSync + (Time.realtimeSinceStartupAsDouble - localRealtimeAtSync);
             float seconds = Mathf.Max(0f, (float)elapsed);
@@ -43,6 +45,7 @@ namespace Fsp.Networking
                 if (transport != null) transport.WorldStateReceived -= HandleWorldState;
                 transport = candidate;
                 transport.WorldStateReceived += HandleWorldState;
+                if (NetworkWorldClockCache.HasValue) HandleWorldState(NetworkWorldClockCache.Latest);
                 return;
             }
         }
