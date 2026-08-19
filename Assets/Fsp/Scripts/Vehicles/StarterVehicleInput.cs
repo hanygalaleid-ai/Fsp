@@ -1,3 +1,5 @@
+using Fsp.Backend;
+using Fsp.Networking;
 using Fsp.Player;
 using UnityEngine;
 
@@ -13,10 +15,12 @@ namespace Fsp.Vehicles
         [SerializeField] private float enterDistance = 4f;
 
         private SimpleVehicleController activeVehicle;
+        private NetworkVehicleSync activeSync;
         private ThirdPersonMotor motor;
         private CharacterController characterController;
         private Renderer[] renderers;
         private Transform originalParent;
+        private bool enterPending;
 
         public bool IsDriving => activeVehicle != null;
 
@@ -29,23 +33,30 @@ namespace Fsp.Vehicles
 
         private void Update()
         {
+#if ENABLE_LEGACY_INPUT_MANAGER
             if (UnityEngine.Input.GetKeyDown(KeyCode.E))
                 ToggleVehicleInteraction();
+#endif
 
             if (activeVehicle == null) return;
 
             float throttle = 0f;
             float steering = 0f;
+#if ENABLE_LEGACY_INPUT_MANAGER
             if (UnityEngine.Input.GetKey(KeyCode.W) || UnityEngine.Input.GetKey(KeyCode.UpArrow)) throttle += 1f;
             if (UnityEngine.Input.GetKey(KeyCode.S) || UnityEngine.Input.GetKey(KeyCode.DownArrow)) throttle -= 1f;
             if (UnityEngine.Input.GetKey(KeyCode.A) || UnityEngine.Input.GetKey(KeyCode.LeftArrow)) steering -= 1f;
             if (UnityEngine.Input.GetKey(KeyCode.D) || UnityEngine.Input.GetKey(KeyCode.RightArrow)) steering += 1f;
-
-            activeVehicle.SetInput(throttle, steering, UnityEngine.Input.GetKey(KeyCode.Space));
+            bool brake = UnityEngine.Input.GetKey(KeyCode.Space);
+#else
+            bool brake = false;
+#endif
+            activeVehicle.SetInput(throttle, steering, brake);
         }
 
         public void ToggleVehicleInteraction()
         {
+            if (enterPending) return;
             if (activeVehicle == null) TryEnterNearestVehicle();
             else ExitVehicle();
         }
@@ -54,9 +65,11 @@ namespace Fsp.Vehicles
         {
             if (activeVehicle != null) return true;
             float maxSqr = enterDistance * enterDistance;
-            foreach (SimpleVehicleController vehicle in FindObjectsOfType<SimpleVehicleController>())
+            foreach (SimpleVehicleController vehicle in FindObjectsByType<SimpleVehicleController>(FindObjectsSortMode.None))
             {
                 if (vehicle == null || vehicle.DriverPresent) continue;
+                NetworkVehicleSync sync = vehicle.GetComponent<NetworkVehicleSync>();
+                if (sync != null && sync.RemotelyOccupied) continue;
                 if ((vehicle.transform.position - transform.position).sqrMagnitude <= maxSqr)
                     return true;
             }
@@ -65,13 +78,15 @@ namespace Fsp.Vehicles
 
         private void TryEnterNearestVehicle()
         {
-            SimpleVehicleController[] vehicles = FindObjectsOfType<SimpleVehicleController>();
+            SimpleVehicleController[] vehicles = FindObjectsByType<SimpleVehicleController>(FindObjectsSortMode.None);
             SimpleVehicleController best = null;
             float bestSqr = enterDistance * enterDistance;
 
             foreach (SimpleVehicleController vehicle in vehicles)
             {
                 if (vehicle == null || vehicle.DriverPresent) continue;
+                NetworkVehicleSync sync = vehicle.GetComponent<NetworkVehicleSync>();
+                if (sync != null && sync.RemotelyOccupied) continue;
                 float sqr = (vehicle.transform.position - transform.position).sqrMagnitude;
                 if (sqr > bestSqr) continue;
                 bestSqr = sqr;
@@ -79,10 +94,34 @@ namespace Fsp.Vehicles
             }
 
             if (best == null) return;
-            activeVehicle = best;
-            activeVehicle.SetDriverPresent(true);
-            originalParent = transform.parent;
 
+            bool onlineMatch = SupabaseSession.IsSignedIn && MatchRoomState.HasMatch;
+            NetworkVehicleSync networkSync = best.GetComponent<NetworkVehicleSync>();
+            if (onlineMatch)
+            {
+                if (networkSync == null) networkSync = best.gameObject.AddComponent<NetworkVehicleSync>();
+                enterPending = true;
+                bool requested = networkSync.RequestDriverSeat(accepted =>
+                {
+                    enterPending = false;
+                    if (accepted) CompleteEnter(best, networkSync);
+                });
+                if (!requested) enterPending = false;
+                return;
+            }
+
+            CompleteEnter(best, networkSync);
+        }
+
+        private void CompleteEnter(SimpleVehicleController vehicle, NetworkVehicleSync networkSync)
+        {
+            if (vehicle == null || activeVehicle != null) return;
+            activeVehicle = vehicle;
+            activeSync = networkSync;
+            if (activeSync != null) activeSync.MarkLocalDriverActive();
+            else activeVehicle.SetDriverPresent(true);
+
+            originalParent = transform.parent;
             if (motor != null) motor.enabled = false;
             if (characterController != null) characterController.enabled = false;
             SetRenderers(false);
@@ -96,9 +135,14 @@ namespace Fsp.Vehicles
         {
             if (activeVehicle == null) return;
             SimpleVehicleController vehicle = activeVehicle;
+            NetworkVehicleSync sync = activeSync;
+
             vehicle.SetInput(0f, 0f, true);
-            vehicle.SetDriverPresent(false);
+            if (sync != null) sync.ReleaseDriverSeat();
+            else vehicle.SetDriverPresent(false);
+
             activeVehicle = null;
+            activeSync = null;
 
             transform.SetParent(originalParent, true);
             transform.position = vehicle.transform.position + vehicle.transform.right * 2.4f + Vector3.up * 0.2f;
