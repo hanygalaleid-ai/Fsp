@@ -22,7 +22,38 @@ namespace Fsp.Networking
 
         private void Awake()
         {
+            AutoWireRuntimeDependencies();
+        }
+
+        private void AutoWireRuntimeDependencies()
+        {
             transport = transportBehaviour as INetworkTransport;
+            if (transport == null)
+            {
+                var behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+                foreach (var behaviour in behaviours)
+                {
+                    if (behaviour is INetworkTransport candidate)
+                    {
+                        transportBehaviour = behaviour;
+                        transport = candidate;
+                        break;
+                    }
+                }
+            }
+
+            if (localPlayer == null)
+            {
+                foreach (MatchParticipant participant in FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None))
+                {
+                    if (participant != null && participant.IsLocalPlayer)
+                    {
+                        localPlayer = participant.transform;
+                        break;
+                    }
+                }
+            }
+
             if (localPlayer != null)
             {
                 if (localVitals == null) localVitals = localPlayer.GetComponent<PlayerVitals>();
@@ -33,7 +64,29 @@ namespace Fsp.Networking
 
         private void Start()
         {
-            if (transport == null || !SupabaseSession.IsSignedIn || !MatchRoomState.HasMatch) return;
+            if (transport == null)
+            {
+                Debug.LogError("FSP Network: no INetworkTransport found in Match scene.");
+                return;
+            }
+            if (localPlayer == null)
+            {
+                Debug.LogError("FSP Network: no local MatchParticipant found in Match scene.");
+                return;
+            }
+            if (!SupabaseSession.IsSignedIn)
+            {
+                Debug.LogWarning("FSP Network: Supabase session is not signed in; online session will not start.");
+                return;
+            }
+            if (!MatchRoomState.HasMatch)
+            {
+                Debug.LogWarning("FSP Network: no active MatchRoomState; online session will not start.");
+                return;
+            }
+            if (remotePlayerPrefab == null)
+                Debug.LogWarning("FSP Network: remotePlayerPrefab is missing; snapshots will connect but remote players cannot be rendered.");
+
             transport.SnapshotReceived += HandleSnapshot;
             transport.Connect(MatchRoomState.MatchId, SupabaseSession.UserId);
         }
