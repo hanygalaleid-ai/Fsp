@@ -20,6 +20,7 @@ namespace Fsp.EditorTools
         public static void BuildAndroidApk()
         {
             FspProjectBootstrap.EnsureProjectForBuild();
+            FspProjectValidator.ValidateOrThrow();
             PrepareCommonPlayerSettings();
             PrepareAndroidSettings(false);
             EditorUserBuildSettings.buildAppBundle = false;
@@ -31,6 +32,7 @@ namespace Fsp.EditorTools
         public static void BuildAndroidAab()
         {
             FspProjectBootstrap.EnsureProjectForBuild();
+            FspProjectValidator.ValidateOrThrow();
             PrepareCommonPlayerSettings();
             PrepareAndroidSettings(true);
             EditorUserBuildSettings.buildAppBundle = true;
@@ -42,6 +44,7 @@ namespace Fsp.EditorTools
         public static void BuildWindows()
         {
             FspProjectBootstrap.EnsureProjectForBuild();
+            FspProjectValidator.ValidateOrThrow();
             PrepareCommonPlayerSettings();
             Build(BuildTarget.StandaloneWindows64, "Builds/Windows/Fsp/Fsp.exe");
         }
@@ -50,6 +53,7 @@ namespace Fsp.EditorTools
         public static void BuildIos()
         {
             FspProjectBootstrap.EnsureProjectForBuild();
+            FspProjectValidator.ValidateOrThrow();
             PrepareCommonPlayerSettings();
             Build(BuildTarget.iOS, "Builds/iOS");
         }
