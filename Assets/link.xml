@@ -1,0 +1,15 @@
+<linker>
+  <!-- Runtime world generation uses GameObject.CreatePrimitive. On IL2CPP Android,
+       aggressive managed stripping can remove collider classes that CreatePrimitive
+       tries to attach indirectly. Preserve the physics module and the concrete collider
+       types so generated terrain, characters and bots can be constructed reliably. -->
+  <assembly fullname="UnityEngine.PhysicsModule" preserve="all" />
+  <assembly fullname="UnityEngine.CoreModule">
+    <type fullname="UnityEngine.Collider" preserve="all" />
+    <type fullname="UnityEngine.BoxCollider" preserve="all" />
+    <type fullname="UnityEngine.SphereCollider" preserve="all" />
+    <type fullname="UnityEngine.CapsuleCollider" preserve="all" />
+    <type fullname="UnityEngine.MeshCollider" preserve="all" />
+    <type fullname="UnityEngine.CharacterController" preserve="all" />
+  </assembly>
+</linker>
