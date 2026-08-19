@@ -8,14 +8,15 @@ using UnityEngine;
 namespace Fsp.EditorTools
 {
     /// <summary>
-    /// Visual release gate for the checked-in final lobby artwork.
-    /// It validates the real artwork and never creates or replaces visuals.
+    /// Visual integrity gate for the checked-in final lobby artwork.
+    /// This validates the in-game asset itself; Google Play store-listing graphic sizes
+    /// are managed separately in Play Console and must not block the game build.
     /// </summary>
     public sealed class FspVisualAssetBuildGuard : IPreprocessBuildWithReport
     {
         private const string LobbyArt = "Assets/Fsp/Art/Resources/Lobby/fsp_lobby_final.jpg";
-        private const int ReleaseMinWidth = 1280;
-        private const int ReleaseMinHeight = 720;
+        private const int MinWidth = 512;
+        private const int MinHeight = 256;
         public int callbackOrder => -900;
 
         public void OnPreprocessBuild(BuildReport report)
@@ -41,17 +42,14 @@ namespace Fsp.EditorTools
                 Debug.LogWarning("FSP final lobby art has not been imported yet; using validated JPEG dimensions for this check.");
             }
 
-            bool lowResolution = width < ReleaseMinWidth || height < ReleaseMinHeight;
-            if (lowResolution)
-            {
-                string message = $"FSP final lobby art is {width}x{height}. Play release requires at least {ReleaseMinWidth}x{ReleaseMinHeight}.";
-                if (EditorUserBuildSettings.buildAppBundle)
-                    throw new BuildFailedException(message + " Replace/upscale the approved artwork before the release AAB.");
+            if (width < MinWidth || height < MinHeight)
+                throw new BuildFailedException($"FSP lobby art is too small for the in-game release asset: {width}x{height}. Minimum integrity size is {MinWidth}x{MinHeight}.");
 
-                Debug.LogWarning(message + " APK is allowed for device testing only.");
-            }
+            float aspect = width / (float)height;
+            if (aspect < 1.5f || aspect > 2.5f)
+                throw new BuildFailedException($"FSP lobby art has an unexpected aspect ratio ({width}x{height}). Expected a landscape lobby image.");
 
-            Debug.Log($"FSP FINAL LOBBY ART OK: {LobbyArt} ({width}x{height}, {info.Length / 1024f:0.0} KB)");
+            Debug.Log($"FSP FINAL LOBBY ART OK: {LobbyArt} ({width}x{height}, {info.Length / 1024f:0.0} KB). Store-listing assets are validated separately in Play Console.");
         }
 
         private static bool TryReadJpegSize(string path, out int width, out int height)
