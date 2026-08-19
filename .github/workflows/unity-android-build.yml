@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
-      contents: read
+      contents: write
     env:
       UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
       UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -172,9 +172,43 @@ jobs:
         run: rm -rf .ci
 
       - name: Upload Android artifacts
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: fsp-android-${{ github.run_number }}
           path: Builds/Android/**
           if-no-files-found: error
           retention-days: 14
+
+      - name: Record latest Android CI outcome
+        if: always()
+        shell: bash
+        env:
+          BUILD_STATUS: ${{ job.status }}
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_BUILD_TYPE: ${{ inputs.build_type }}
+        run: |
+          set -euo pipefail
+          BUILD_TYPE="${REQUESTED_BUILD_TYPE:-apk}"
+          if [ "$EVENT_NAME" = "push" ]; then BUILD_TYPE="apk"; fi
+
+          mkdir -p BuildReports
+          cat > BuildReports/latest-android-build.txt <<EOF
+          FSP Android CI latest outcome
+          status=$BUILD_STATUS
+          build_type=$BUILD_TYPE
+          run_number=${{ github.run_number }}
+          run_id=${{ github.run_id }}
+          source_commit=${{ github.sha }}
+          event=$EVENT_NAME
+          utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add BuildReports/latest-android-build.txt
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "ci: record Android build outcome [skip ci]"
+          git push
