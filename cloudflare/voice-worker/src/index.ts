@@ -1,6 +1,8 @@
+import { DurableObject } from "cloudflare:workers";
+
 interface Env {
-  VOICE_ROOMS: KVNamespace;
-  CLOUDFLARE_API_TOKEN: string;
+  VOICE_ROOM_STATE: DurableObjectNamespace<VoiceRoomState>;
+  CLOUDFLARE_REALTIME_API_TOKEN: string;
   CLOUDFLARE_ACCOUNT_ID: string;
   REALTIMEKIT_APP_ID: string;
   REALTIMEKIT_PRESET_NAME: string;
@@ -31,21 +33,26 @@ export default {
     const isMember = await verifySquadMembership(env, accessToken, squadId, user.id);
     if (!isMember) return json({ error: "Not a squad member" }, 403);
 
-    const meetingId = await getOrCreateMeeting(env, squadId);
-    const participant = await addParticipant(
-      env,
-      meetingId,
-      user.id,
-      sanitizeName(body.displayName) || "Player"
-    );
+    try {
+      const meetingId = await getOrCreateMeeting(env, squadId);
+      const participant = await addParticipant(
+        env,
+        meetingId,
+        user.id,
+        sanitizeName(body.displayName) || "Player"
+      );
 
-    if (!participant?.token) return json({ error: "Could not issue voice token" }, 502);
+      if (!participant?.token) return json({ error: "Could not issue voice token" }, 502);
 
-    return json({
-      meetingId,
-      participantId: participant.id,
-      token: participant.token
-    });
+      return json({
+        meetingId,
+        participantId: participant.id,
+        token: participant.token
+      });
+    } catch (error) {
+      console.error("voice token issue failed", error);
+      return json({ error: "Voice service unavailable" }, 502);
+    }
   }
 };
 
@@ -78,22 +85,15 @@ async function verifySquadMembership(env: Env, token: string, squadId: string, u
 }
 
 async function getOrCreateMeeting(env: Env, squadId: string): Promise<string> {
-  const key = `squad:${squadId}`;
-  const existing = await env.VOICE_ROOMS.get(key);
-  if (existing) return existing;
-
-  const endpoint = `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}/realtime/kit/${env.REALTIMEKIT_APP_ID}/meetings`;
-  const res = await fetch(endpoint, {
+  const stub = env.VOICE_ROOM_STATE.getByName(squadId);
+  const res = await stub.fetch("https://voice-room.internal/meeting", {
     method: "POST",
-    headers: cloudflareHeaders(env),
-    body: JSON.stringify({ title: `Fsp squad ${squadId}` })
+    headers: { "x-fsp-squad-id": squadId }
   });
-  if (!res.ok) throw new Error(`Meeting create failed: ${await res.text()}`);
-  const payload: any = await res.json();
-  const meetingId = payload?.data?.id ?? payload?.result?.id;
-  if (!meetingId) throw new Error("Meeting ID missing");
-  await env.VOICE_ROOMS.put(key, meetingId, { expirationTtl: 86400 });
-  return meetingId;
+  if (!res.ok) throw new Error(`Voice room state failed: ${await res.text()}`);
+  const payload = await res.json<{ meetingId?: string }>();
+  if (!payload.meetingId) throw new Error("Meeting ID missing");
+  return payload.meetingId;
 }
 
 async function addParticipant(env: Env, meetingId: string, userId: string, name: string): Promise<any> {
@@ -112,10 +112,35 @@ async function addParticipant(env: Env, meetingId: string, userId: string, name:
   return payload?.data ?? payload?.result;
 }
 
+export class VoiceRoomState extends DurableObject<Env> {
+  async fetch(request: Request): Promise<Response> {
+    if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
+    const squadId = (request.headers.get("x-fsp-squad-id") ?? "").trim();
+    if (!squadId) return new Response("Squad ID missing", { status: 400 });
+
+    let meetingId = await this.ctx.storage.get<string>("meetingId");
+    if (!meetingId) {
+      const endpoint = `https://api.cloudflare.com/client/v4/accounts/${this.env.CLOUDFLARE_ACCOUNT_ID}/realtime/kit/${this.env.REALTIMEKIT_APP_ID}/meetings`;
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: cloudflareHeaders(this.env),
+        body: JSON.stringify({ title: `Fsp squad ${squadId}` })
+      });
+      if (!res.ok) return new Response(`Meeting create failed: ${await res.text()}`, { status: 502 });
+      const payload: any = await res.json();
+      meetingId = payload?.data?.id ?? payload?.result?.id;
+      if (!meetingId) return new Response("Meeting ID missing", { status: 502 });
+      await this.ctx.storage.put("meetingId", meetingId);
+    }
+
+    return json({ meetingId });
+  }
+}
+
 function cloudflareHeaders(env: Env): HeadersInit {
   return {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`
+    Authorization: `Bearer ${env.CLOUDFLARE_REALTIME_API_TOKEN}`
   };
 }
 
