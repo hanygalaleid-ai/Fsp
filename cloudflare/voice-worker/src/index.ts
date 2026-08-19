@@ -13,9 +13,9 @@ type SyncRequest = { squadId?: string; sessionId?: string };
 type RenegotiateRequest = { squadId?: string; sessionId?: string; sdp?: string };
 type LeaveRequest = { squadId?: string; sessionId?: string };
 type RoomPeer = { userId: string; sessionId: string; trackName: string };
+type PendingResult = { peers: RoomPeer[]; keys: string[] };
 
 type SfuDescription = { type?: string; sdp?: string };
-
 type SfuResponse = {
   sessionId?: string;
   sessionDescription?: SfuDescription;
@@ -81,12 +81,18 @@ async function handleSync(request: Request, env: Env, accessToken: string, userI
   if (!squadId || !sessionId) return json({ error: "squadId and sessionId required" }, 400);
   if (!(await verifySquadMembership(env, accessToken, squadId, userId))) return json({ error: "Not a squad member" }, 403);
 
-  const room = await roomCall<{ peers: RoomPeer[] }>(env, squadId, "/peers", { userId });
-  const remotes = (room.peers ?? []).filter(p => p.userId !== userId && p.sessionId && p.trackName);
+  const pending = await roomCall<PendingResult>(env, squadId, "/pending", { userId, subscriberSessionId: sessionId });
+  const remotes = pending.peers ?? [];
   if (remotes.length === 0) return json({ changed: false, sdp: "", sdpType: "" });
 
   const pulled = await sfu(env, `/sessions/${encodeURIComponent(sessionId)}/tracks/new`, "POST", {
     tracks: remotes.map(p => ({ location: "remote", sessionId: p.sessionId, trackName: p.trackName }))
+  });
+
+  await roomCall(env, squadId, "/mark-subscribed", {
+    userId,
+    subscriberSessionId: sessionId,
+    keys: pending.keys ?? []
   });
 
   return json({
@@ -184,18 +190,42 @@ export class VoiceRoomState extends DurableObject<Env> {
       return json({ ok: true });
     }
 
-    if (url.pathname === "/peers") {
+    if (url.pathname === "/pending") {
+      const userId = clean(body.userId, 128);
+      const subscriberSessionId = clean(body.subscriberSessionId, 128);
+      if (!userId || !subscriberSessionId) return json({ error: "Invalid subscriber" }, 400);
+
       const stored = await this.ctx.storage.list<RoomPeer & { touchedAt?: number }>({ prefix: "peer:" });
+      const subscribedKey = `subs:${userId}:${subscriberSessionId}`;
+      const subscribed = new Set((await this.ctx.storage.get<string[]>(subscribedKey)) ?? []);
       const now = Date.now();
       const peers: RoomPeer[] = [];
+      const keys: string[] = [];
+
       for (const [key, value] of stored) {
         if (value.touchedAt && now - value.touchedAt > 6 * 60 * 60 * 1000) {
           await this.ctx.storage.delete(key);
           continue;
         }
+        if (value.userId === userId) continue;
+        const remoteKey = `${value.sessionId}:${value.trackName}`;
+        if (subscribed.has(remoteKey)) continue;
         peers.push({ userId: value.userId, sessionId: value.sessionId, trackName: value.trackName });
+        keys.push(remoteKey);
       }
-      return json({ peers });
+      return json({ peers, keys });
+    }
+
+    if (url.pathname === "/mark-subscribed") {
+      const userId = clean(body.userId, 128);
+      const subscriberSessionId = clean(body.subscriberSessionId, 128);
+      const keys = Array.isArray(body.keys) ? body.keys.filter((v: unknown) => typeof v === "string").slice(0, 16) : [];
+      if (!userId || !subscriberSessionId) return json({ error: "Invalid subscriber" }, 400);
+      const storageKey = `subs:${userId}:${subscriberSessionId}`;
+      const current = new Set((await this.ctx.storage.get<string[]>(storageKey)) ?? []);
+      for (const value of keys) current.add(String(value).slice(0, 320));
+      await this.ctx.storage.put(storageKey, Array.from(current).slice(-64));
+      return json({ ok: true });
     }
 
     if (url.pathname === "/leave") {
