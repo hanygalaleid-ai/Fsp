@@ -17,7 +17,7 @@ namespace Fsp.World
 
         public void InstallDoors()
         {
-            OldCrownInteriorPrototype interiors = FindObjectOfType<OldCrownInteriorPrototype>();
+            OldCrownInteriorPrototype interiors = FindFirstObjectByType<OldCrownInteriorPrototype>();
             if (interiors == null) return;
 
             Transform generated = interiors.transform.Find("GeneratedInteriors");
