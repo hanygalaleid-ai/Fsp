@@ -12,29 +12,35 @@ namespace Fsp.Networking
         private SafeZoneController safeZone;
         private DropPlaneController dropPlane;
         private AirdropController airdrops;
+        private MatchManager matchManager;
         private bool hasClock;
         private double elapsedAtSync;
         private double localRealtimeAtSync;
+        private float countdownSeconds = 8f;
 
         private void Start()
         {
             safeZone = FindFirstObjectByType<SafeZoneController>();
             dropPlane = FindFirstObjectByType<DropPlaneController>();
             airdrops = FindFirstObjectByType<AirdropController>();
+            matchManager = FindFirstObjectByType<MatchManager>();
             TryBindTransport();
-            if (NetworkWorldClockCache.HasValue) HandleWorldState(NetworkWorldClockCache.Latest);
+            if (NetworkWorldStateCache.TryGet(out NetworkWorldState cached)) HandleWorldState(cached);
         }
 
         private void Update()
         {
             if (transport == null) TryBindTransport();
-            if (!hasClock && NetworkWorldClockCache.HasValue) HandleWorldState(NetworkWorldClockCache.Latest);
             if (!hasClock) return;
+
             double elapsed = elapsedAtSync + (Time.realtimeSinceStartupAsDouble - localRealtimeAtSync);
-            float seconds = Mathf.Max(0f, (float)elapsed);
-            safeZone?.ApplyAuthoritativeElapsed(seconds);
-            dropPlane?.ApplyAuthoritativeElapsed(seconds);
-            airdrops?.ApplyAuthoritativeElapsed(seconds);
+            float worldElapsed = Mathf.Max(0f, (float)elapsed);
+            float gameplayElapsed = Mathf.Max(0f, worldElapsed - countdownSeconds);
+
+            matchManager?.ApplyAuthoritativeClock(worldElapsed, countdownSeconds);
+            safeZone?.ApplyAuthoritativeElapsed(gameplayElapsed);
+            dropPlane?.ApplyAuthoritativeElapsed(gameplayElapsed);
+            airdrops?.ApplyAuthoritativeElapsed(gameplayElapsed);
         }
 
         private void TryBindTransport()
@@ -45,7 +51,6 @@ namespace Fsp.Networking
                 if (transport != null) transport.WorldStateReceived -= HandleWorldState;
                 transport = candidate;
                 transport.WorldStateReceived += HandleWorldState;
-                if (NetworkWorldClockCache.HasValue) HandleWorldState(NetworkWorldClockCache.Latest);
                 return;
             }
         }
@@ -55,6 +60,7 @@ namespace Fsp.Networking
             if (state == null || state.startedAt <= 0 || state.serverNow < state.startedAt) return;
             elapsedAtSync = state.serverNow - state.startedAt;
             localRealtimeAtSync = Time.realtimeSinceStartupAsDouble;
+            countdownSeconds = Mathf.Max(0f, state.countdownSeconds);
             hasClock = true;
         }
 
