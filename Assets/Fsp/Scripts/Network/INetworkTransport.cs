@@ -13,6 +13,7 @@ namespace Fsp.Networking
         event Action<NetworkLootClaimEvent> LootClaimReceived;
         event Action<NetworkAppearanceEvent> AppearanceReceived;
         event Action<NetworkMatchState> MatchStateReceived;
+        event Action<NetworkEliminationEvent> EliminationReceived;
         void Connect(string matchId, string playerId);
         void Disconnect();
         void SendSnapshot(NetworkPlayerSnapshot snapshot);
