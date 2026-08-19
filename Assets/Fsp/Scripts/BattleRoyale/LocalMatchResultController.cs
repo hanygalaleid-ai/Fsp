@@ -52,10 +52,10 @@ namespace Fsp.BattleRoyale
 
         private void ResolveReferences()
         {
-            if (matchManager == null) matchManager = FindObjectOfType<MatchManager>();
+            if (matchManager == null) matchManager = FindFirstObjectByType<MatchManager>();
             if (localParticipant != null) return;
 
-            foreach (MatchParticipant participant in FindObjectsOfType<MatchParticipant>())
+            foreach (MatchParticipant participant in FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None))
             {
                 if (participant == null || !participant.IsLocalPlayer) continue;
                 localParticipant = participant;
