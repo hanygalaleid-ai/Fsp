@@ -21,6 +21,7 @@ namespace Fsp.Networking
         void SendBotSnapshot(NetworkPlayerSnapshot snapshot);
         void SendFire(NetworkFireEvent fireEvent);
         void SendDamage(NetworkDamageEvent damageEvent);
+        void SendBotDamage(NetworkDamageEvent damageEvent);
         void SendVehicle(NetworkVehicleSnapshot vehicleSnapshot);
         void SendSeat(NetworkSeatEvent seatEvent);
         void SendLootClaim(NetworkLootClaimEvent lootClaim);
