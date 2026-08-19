@@ -2,7 +2,7 @@
   "name": "fsp-match-relay",
   "private": true,
   "scripts": {
-    "check": "wrangler check",
+    "check": "wrangler deploy --dry-run --outdir dist",
     "types": "wrangler types --check",
     "deploy": "wrangler deploy"
   },
