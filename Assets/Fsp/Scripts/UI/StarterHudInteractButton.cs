@@ -22,7 +22,7 @@ namespace Fsp.UI
             if (canvas == null) return;
 
             MatchParticipant local = null;
-            foreach (MatchParticipant participant in Object.FindObjectsOfType<MatchParticipant>())
+            foreach (MatchParticipant participant in Object.FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None))
             {
                 if (participant != null && participant.IsLocalPlayer)
                 {
