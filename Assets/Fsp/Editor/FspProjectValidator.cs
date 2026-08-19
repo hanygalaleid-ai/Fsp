@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using Fsp.BattleRoyale;
 using Fsp.Lobby;
-using Fsp.Networking;
 using Fsp.UI;
 using UnityEditor;
 using UnityEditor.Build;
@@ -28,10 +27,19 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Scripts/Player/ThirdPersonMotor.cs",
             "Assets/Fsp/Scripts/Combat/HitscanWeapon.cs",
             "Assets/Fsp/Scripts/Inventory/PlayerInventory.cs",
+            "Assets/Fsp/Scripts/Inventory/LootPickup.cs",
             "Assets/Fsp/Scripts/AI/BotBrain.cs",
             "Assets/Fsp/Scripts/Vehicles/SimpleVehicleController.cs",
             "Assets/Fsp/Scripts/Network/NetworkSessionManager.cs",
             "Assets/Fsp/Scripts/Network/CloudflareWebSocketTransport.cs",
+            "Assets/Fsp/Scripts/Network/MatchNetworkRuntimeInstaller.cs",
+            "Assets/Fsp/Scripts/Network/MatchNetworkRuntimeConfigBootstrap.cs",
+            "Assets/Fsp/Scripts/Network/NetworkCombatRuntimeBridge.cs",
+            "Assets/Fsp/Scripts/Network/NetworkVehicleSync.cs",
+            "Assets/Fsp/Scripts/Voice/CloudflareSfuVoiceRuntime.cs",
+            "Assets/Fsp/Scripts/Voice/CloudflareSfuSignalingClient.cs",
+            "Assets/Fsp/Scripts/Voice/SquadVoiceCoordinator.cs",
+            "Assets/Fsp/Scripts/Voice/SquadVoiceHudRuntime.cs",
             "Packages/manifest.json",
             "ProjectSettings/ProjectVersion.txt"
         };
@@ -40,7 +48,7 @@ namespace Fsp.EditorTools
         public static void ValidateFromMenu()
         {
             ValidateOrThrow();
-            Debug.Log("Fsp validation passed: required files, authored scenes and online wiring are ready for build.");
+            Debug.Log("Fsp validation passed: required files, authored gameplay scenes and runtime online wiring are ready for build.");
         }
 
         public static void ValidateOrThrow()
@@ -71,8 +79,11 @@ namespace Fsp.EditorTools
                 Debug.LogWarning("Fsp was prepared for Unity 6000.3.17f1. Current ProjectVersion.txt differs.");
 
             string manifest = File.ReadAllText("Packages/manifest.json");
+            if (!manifest.Contains("com.unity.webrtc"))
+                throw new BuildFailedException("Fsp voice build requires com.unity.webrtc in Packages/manifest.json.");
+
             if (!manifest.Contains("com.unity.inputsystem"))
-                Debug.LogWarning("Unity Input System package is not declared; mobile/PC controls may not initialize as intended.");
+                Debug.LogWarning("Unity Input System package is not declared; legacy/mobile controls must remain enabled in Player Settings.");
         }
 
         private static void ValidateLobbyScene()
@@ -106,18 +117,13 @@ namespace Fsp.EditorTools
 
                 RequireSceneComponent<BattleRoyaleHud>(scene, "BattleRoyaleHud");
                 RequireSceneComponent<SafeZoneController>(scene, "SafeZoneController");
-                RequireSceneComponent<NetworkSessionManager>(scene, "NetworkSessionManager");
-                RequireSceneComponent<CloudflareWebSocketTransport>(scene, "CloudflareWebSocketTransport");
 
                 if (FindSceneComponents<MatchManager>(scene).Length == 0 && FindSceneComponents<MatchSceneAssembler>(scene).Length == 0)
                     throw new BuildFailedException("Fsp Match scene needs an authored MatchManager or MatchSceneAssembler so match state can initialize.");
 
-                CloudflareWebSocketTransport[] transports = FindSceneComponents<CloudflareWebSocketTransport>(scene);
-                foreach (CloudflareWebSocketTransport transport in transports)
-                {
-                    if (transport != null && !transport.IsConfigured)
-                        throw new BuildFailedException("Fsp online build blocked: Cloudflare match relay URL is still missing/placeholder in Match scene.");
-                }
+                // Online transport, combat bridge, vehicle sync and squad voice are intentionally
+                // installed at runtime after Supabase auth/match state exists. Do not require them
+                // as authored scene components or a hard-coded workers.dev URL.
             }
             finally
             {
