@@ -14,6 +14,7 @@ namespace Fsp.Networking
         event Action<NetworkAppearanceEvent> AppearanceReceived;
         event Action<NetworkMatchState> MatchStateReceived;
         event Action<NetworkEliminationEvent> EliminationReceived;
+        event Action<NetworkBotAuthorityEvent> BotAuthorityReceived;
         void Connect(string matchId, string playerId);
         void Disconnect();
         void SendSnapshot(NetworkPlayerSnapshot snapshot);
