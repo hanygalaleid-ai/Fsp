@@ -3,17 +3,23 @@
   "name": "fsp-voice-token",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-17",
-  "kv_namespaces": [
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "VOICE_ROOM_STATE",
+        "class_name": "VoiceRoomState"
+      }
+    ]
+  },
+  "migrations": [
     {
-      "binding": "VOICE_ROOMS",
-      "id": "REPLACE_WITH_KV_NAMESPACE_ID"
+      "tag": "v1",
+      "new_sqlite_classes": ["VoiceRoomState"]
     }
   ],
   "vars": {
     "SUPABASE_URL": "https://izjdvlkwuqgtawwbksun.supabase.co",
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_08NCQibhlj6aDJPsAHZSfw_Xa4y8Vb8",
-    "CLOUDFLARE_ACCOUNT_ID": "REPLACE_IN_DEPLOYMENT",
-    "REALTIMEKIT_APP_ID": "REPLACE_IN_DEPLOYMENT",
     "REALTIMEKIT_PRESET_NAME": "group_call_host"
   }
 }
