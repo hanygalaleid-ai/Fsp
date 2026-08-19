@@ -32,13 +32,13 @@ namespace Fsp.BattleRoyale
 
         private static MatchManager EnsureMatchManager()
         {
-            MatchManager existing = FindObjectOfType<MatchManager>();
+            MatchManager existing = FindFirstObjectByType<MatchManager>();
             return existing != null ? existing : new GameObject("MatchManager").AddComponent<MatchManager>();
         }
 
         private static MatchParticipant FindLocalPlayer()
         {
-            foreach (MatchParticipant participant in FindObjectsOfType<MatchParticipant>())
+            foreach (MatchParticipant participant in FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None))
             {
                 if (participant != null && participant.IsLocalPlayer)
                     return participant;
@@ -59,7 +59,7 @@ namespace Fsp.BattleRoyale
         private static void WireExistingHud(GameObject player)
         {
             if (player == null) return;
-            BattleRoyaleHud hud = FindObjectOfType<BattleRoyaleHud>();
+            BattleRoyaleHud hud = FindFirstObjectByType<BattleRoyaleHud>();
             if (hud == null)
             {
                 Debug.LogWarning("FSP Match: authored BattleRoyaleHud not found; fallback HUD generation is disabled.");
@@ -69,8 +69,8 @@ namespace Fsp.BattleRoyale
             hud.ConfigureSources(
                 player.GetComponent<PlayerVitals>(),
                 player.GetComponent<PlayerInventory>(),
-                FindObjectOfType<MatchManager>(),
-                FindObjectOfType<SafeZoneController>(),
+                FindFirstObjectByType<MatchManager>(),
+                FindFirstObjectByType<SafeZoneController>(),
                 player.transform);
         }
     }
