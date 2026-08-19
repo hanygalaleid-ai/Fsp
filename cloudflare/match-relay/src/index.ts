@@ -7,9 +7,11 @@ interface Env {
 }
 
 type SocketAttachment = { playerId: string };
-type Envelope = { type: "snapshot" | "fire" | "damage" | "vehicle" | "seat" | "loot_claim" | "loot_claimed" | "appearance"; payload: string };
+type Envelope = { type: "snapshot" | "fire" | "damage" | "vehicle" | "seat" | "loot_claim" | "loot_claimed" | "appearance" | "match_state"; payload: string };
+type PlayerState = { position: Vec3; health: number; armor: number; alive: boolean; updatedAt: number };
+type Vec3 = { x: number; y: number; z: number };
 
-async function authenticate(request: Request, env: Env): Promise<string | null> {
+aSync function authenticate(request: Request, env: Env): Promise<string | null> {
   const auth = request.headers.get("Authorization") ?? "";
   if (!auth.startsWith("Bearer ")) return null;
   const res = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, { headers: { Authorization: auth, apikey: env.SUPABASE_PUBLISHABLE_KEY } });
@@ -73,8 +75,25 @@ export class MatchRoom extends DurableObject<Env> {
       if (currentDriver !== attachment.playerId) return;
     } else {
       if (payload.attackerId !== attachment.playerId) return;
-      const damage = Number(payload.damage ?? 0);
-      if (!Number.isFinite(damage) || damage <= 0 || damage > 200) return;
+    }
+
+    if (envelope.type === "snapshot") {
+      await this.handleSnapshot(ws, attachment.playerId, payload, message);
+      return;
+    }
+
+    if (envelope.type === "damage") {
+      await this.handleDamage(ws, attachment.playerId, payload);
+      return;
+    }
+
+    if (envelope.type === "fire") {
+      const now = Date.now();
+      const last = await this.ctx.storage.get<number>(`fire:${attachment.playerId}`) ?? 0;
+      if (now - last < 55) return;
+      await this.ctx.storage.put(`fire:${attachment.playerId}`, now);
+      this.broadcast(message, ws);
+      return;
     }
 
     if (envelope.type === "appearance") {
@@ -104,13 +123,7 @@ export class MatchRoom extends DurableObject<Env> {
         if (existing === attachment.playerId) await this.ctx.storage.delete(key);
       }
 
-      const resultPayload = JSON.stringify({
-        playerId: attachment.playerId,
-        vehicleId,
-        seated,
-        accepted,
-        timestamp: Date.now() / 1000
-      });
+      const resultPayload = JSON.stringify({ playerId: attachment.playerId, vehicleId, seated, accepted, timestamp: Date.now() / 1000 });
       this.broadcast(JSON.stringify({ type: "seat", payload: resultPayload }));
       return;
     }
@@ -130,6 +143,69 @@ export class MatchRoom extends DurableObject<Env> {
     this.broadcast(message, ws);
   }
 
+  private async handleSnapshot(ws: WebSocket, playerId: string, payload: Record<string, unknown>, originalMessage: string): Promise<void> {
+    const position = readVec3(payload.position);
+    const health = Number(payload.health ?? 100);
+    const armor = Number(payload.armor ?? 0);
+    const alive = payload.alive !== false;
+    if (!position || !finiteRange(health, 0, 100) || !finiteRange(armor, 0, 100)) return;
+
+    const now = Date.now();
+    const key = `player:${playerId}`;
+    const previous = await this.ctx.storage.get<PlayerState>(key);
+    if (previous) {
+      const dt = Math.max(0.05, (now - previous.updatedAt) / 1000);
+      const speed = distance(previous.position, position) / dt;
+      if (speed > 95) return;
+      if (!previous.alive && alive) return;
+      if (health > previous.health + 60) return;
+      if (armor > previous.armor + 100) return;
+    }
+
+    await this.ctx.storage.put(key, { position, health, armor, alive, updatedAt: now } satisfies PlayerState);
+    this.broadcast(originalMessage, ws);
+    await this.broadcastMatchState();
+  }
+
+  private async handleDamage(ws: WebSocket, attackerId: string, payload: Record<string, unknown>): Promise<void> {
+    const targetId = typeof payload.targetId === "string" ? payload.targetId.trim() : "";
+    const damage = Number(payload.damage ?? 0);
+    const hitPoint = readVec3(payload.hitPoint);
+    if (!targetId || targetId === attackerId || !hitPoint || !finiteRange(damage, 0.1, 90)) return;
+
+    const attacker = await this.ctx.storage.get<PlayerState>(`player:${attackerId}`);
+    const target = await this.ctx.storage.get<PlayerState>(`player:${targetId}`);
+    if (!attacker?.alive || !target?.alive) return;
+    if (distance(attacker.position, target.position) > 350) return;
+    if (distance(hitPoint, target.position) > 4.5) return;
+
+    const now = Date.now();
+    const throttleKey = `damage:${attackerId}:${targetId}`;
+    const lastDamage = await this.ctx.storage.get<number>(throttleKey) ?? 0;
+    if (now - lastDamage < 55) return;
+    await this.ctx.storage.put(throttleKey, now);
+
+    const sanitized = JSON.stringify({
+      attackerId,
+      targetId,
+      damage,
+      hitPoint,
+      timestamp: now / 1000
+    });
+    this.broadcast(JSON.stringify({ type: "damage", payload: sanitized }), ws);
+  }
+
+  private async broadcastMatchState(): Promise<void> {
+    const states = await this.ctx.storage.list<PlayerState>({ prefix: "player:" });
+    const aliveIds: string[] = [];
+    for (const [key, value] of states) {
+      if (value.alive) aliveIds.push(key.slice("player:".length));
+    }
+    const winnerId = aliveIds.length === 1 && states.size > 1 ? aliveIds[0] : "";
+    const payload = JSON.stringify({ aliveCount: aliveIds.length, totalCount: states.size, winnerId, finished: !!winnerId, timestamp: Date.now() / 1000 });
+    this.broadcast(JSON.stringify({ type: "match_state", payload }));
+  }
+
   private broadcast(message: string, except?: WebSocket): void {
     for (const peer of this.ctx.getWebSockets()) if (peer !== except && peer.readyState === WebSocket.OPEN) peer.send(message);
   }
@@ -138,12 +214,26 @@ export class MatchRoom extends DurableObject<Env> {
     const attachment = ws.deserializeAttachment() as SocketAttachment | null;
     if (attachment?.playerId) {
       const seats = await this.ctx.storage.list<string>({ prefix: "seat:" });
-      for (const [key, owner] of seats) {
-        if (owner === attachment.playerId) await this.ctx.storage.delete(key);
-      }
+      for (const [key, owner] of seats) if (owner === attachment.playerId) await this.ctx.storage.delete(key);
     }
     ws.close(code, reason);
   }
 
   async webSocketError(_ws: WebSocket, error: unknown): Promise<void> { console.error("match relay websocket error", error); }
+}
+
+function readVec3(value: unknown): Vec3 | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  const x = Number(v.x), y = Number(v.y), z = Number(v.z);
+  return Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z) ? { x, y, z } : null;
+}
+
+function distance(a: Vec3, b: Vec3): number {
+  const x = a.x - b.x, y = a.y - b.y, z = a.z - b.z;
+  return Math.sqrt(x * x + y * y + z * z);
+}
+
+function finiteRange(value: number, min: number, max: number): boolean {
+  return Number.isFinite(value) && value >= min && value <= max;
 }
