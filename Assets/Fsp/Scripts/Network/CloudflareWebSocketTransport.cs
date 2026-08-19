@@ -34,6 +34,27 @@ namespace Fsp.Networking
         public event Action<NetworkLootClaimEvent> LootClaimReceived;
         public event Action<NetworkAppearanceEvent> AppearanceReceived;
 
+        public bool ConfigureRelayBaseUrl(string value)
+        {
+            string normalized = (value ?? string.Empty).Trim();
+            if (normalized.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                normalized = "wss://" + normalized.Substring("https://".Length);
+            else if (normalized.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                normalized = "ws://" + normalized.Substring("http://".Length);
+
+            if (!normalized.EndsWith("/ws", StringComparison.OrdinalIgnoreCase))
+                normalized = normalized.TrimEnd('/') + "/ws";
+
+            if (!normalized.StartsWith("wss://", StringComparison.OrdinalIgnoreCase))
+            {
+                Debug.LogError("FSP Network: match relay URL must use secure wss://.");
+                return false;
+            }
+
+            relayBaseUrl = normalized;
+            return IsConfigured;
+        }
+
         private void Update() { while (mainThread.TryDequeue(out var action)) action?.Invoke(); }
 
         public async void Connect(string matchId, string playerId)
@@ -45,7 +66,7 @@ namespace Fsp.Networking
             Disconnect();
             if (!IsConfigured)
             {
-                Debug.LogError("CloudflareWebSocketTransport: relay URL is not configured. Set the deployed fsp-match-relay wss:// URL before online testing.");
+                Debug.LogWarning("CloudflareWebSocketTransport: relay URL is not configured yet; waiting for runtime config.");
                 return;
             }
             if (string.IsNullOrWhiteSpace(matchId) || !SupabaseSession.IsSignedIn) return;
