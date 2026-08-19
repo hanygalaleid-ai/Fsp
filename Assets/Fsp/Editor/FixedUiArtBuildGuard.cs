@@ -27,34 +27,33 @@ namespace Fsp.EditorTools
 
         public void OnPreprocessBuild(BuildReport report)
         {
-            // Recreate the historically-corrupted generated art in the clean Cloud Build workspace
-            // before Unity validates/imports it. This prevents one broken PNG/JPEG from poisoning
-            // every later build and makes the gate deterministic on every machine.
-            FspGeneratedBuildArt.EnsureAll();
+            // IMPORTANT: Never regenerate or overwrite production art during Cloud Build.
+            // The previous implementation called FspGeneratedBuildArt.EnsureAll(), which
+            // replaced approved lobby/UI art with placeholder graphics on every build.
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
 
             foreach (string path in RequiredArt)
             {
                 if (!File.Exists(path))
-                    throw new BuildFailedException("Required fixed FSP art is missing after repair: " + path);
+                    throw new BuildFailedException("Required production FSP art is missing: " + path);
 
                 long bytes = new FileInfo(path).Length;
                 if (bytes < 256)
-                    throw new BuildFailedException("Required fixed FSP art looks invalid or empty after repair: " + path);
+                    throw new BuildFailedException("Required production FSP art looks invalid or empty: " + path);
 
                 AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
                 Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
                 if (texture == null || texture.width <= 0 || texture.height <= 0)
-                    throw new BuildFailedException("Unity failed to import required FSP texture after automatic repair: " + path);
+                    throw new BuildFailedException("Unity failed to import required production FSP texture: " + path);
 
-                Debug.Log($"FSP ART IMPORT OK: {path} ({texture.width}x{texture.height}, {bytes / 1024f:0.0} KB)");
+                Debug.Log($"FSP PRODUCTION ART OK: {path} ({texture.width}x{texture.height}, {bytes / 1024f:0.0} KB)");
             }
 
             if (report.summary.platform == BuildTarget.Android)
                 FspAndroidIconSetup.Apply();
 
             AssetDatabase.SaveAssets();
-            Debug.Log("FSP ART IMPORT GATE PASSED: all Lobby/UI/World textures repaired, imported and build-visible.");
+            Debug.Log("FSP PRODUCTION ART GATE PASSED: approved art preserved without regeneration.");
         }
     }
 }
