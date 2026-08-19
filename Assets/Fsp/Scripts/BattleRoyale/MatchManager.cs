@@ -15,6 +15,8 @@ namespace Fsp.BattleRoyale
         [SerializeField] private bool autoStart = true;
         [SerializeField, Min(0f)] private float preMatchCountdown = 8f;
 
+        private bool networkAuthoritative;
+
         public static MatchManager Instance => instance;
         public bool MatchStarted => Phase == MatchPhase.Active || Phase == MatchPhase.Finished;
         public bool MatchEnded => Phase == MatchPhase.Finished;
@@ -23,6 +25,7 @@ namespace Fsp.BattleRoyale
         public MatchPhase Phase { get; private set; } = MatchPhase.Waiting;
         public float CountdownRemaining { get; private set; }
         public string AuthoritativeWinnerId { get; private set; } = string.Empty;
+        public bool NetworkAuthoritative => networkAuthoritative;
 
         public event Action<int> AliveCountChanged;
         public event Action<int> ParticipantCountChanged;
@@ -64,6 +67,17 @@ namespace Fsp.BattleRoyale
             if (CountdownRemaining <= 0f) StartMatch();
         }
 
+        public void SetNetworkAuthoritative(bool enabled)
+        {
+            networkAuthoritative = enabled;
+            if (enabled && Phase == MatchPhase.Finished)
+            {
+                Phase = MatchPhase.Active;
+                AuthoritativeWinnerId = string.Empty;
+                PhaseChanged?.Invoke(Phase);
+            }
+        }
+
         public void BeginCountdown()
         {
             PruneParticipants();
@@ -87,19 +101,25 @@ namespace Fsp.BattleRoyale
 
         public void ApplyAuthoritativeState(int aliveCount, int totalCount, string winnerId, bool finished)
         {
+            networkAuthoritative = true;
             AliveCount = Mathf.Max(0, aliveCount);
             TotalParticipants = Mathf.Max(AliveCount, totalCount);
             AliveCountChanged?.Invoke(AliveCount);
             ParticipantCountChanged?.Invoke(TotalParticipants);
 
-            if (Phase == MatchPhase.Waiting || Phase == MatchPhase.Countdown)
+            if (!finished)
             {
-                Phase = MatchPhase.Active;
-                CountdownRemaining = 0f;
-                PhaseChanged?.Invoke(Phase);
+                if (Phase != MatchPhase.Active)
+                {
+                    Phase = MatchPhase.Active;
+                    CountdownRemaining = 0f;
+                    AuthoritativeWinnerId = string.Empty;
+                    PhaseChanged?.Invoke(Phase);
+                }
+                return;
             }
 
-            if (!finished || Phase == MatchPhase.Finished) return;
+            if (Phase == MatchPhase.Finished && AuthoritativeWinnerId == (winnerId ?? string.Empty)) return;
             AuthoritativeWinnerId = winnerId ?? string.Empty;
             Phase = MatchPhase.Finished;
             PhaseChanged?.Invoke(Phase);
@@ -150,6 +170,7 @@ namespace Fsp.BattleRoyale
 
         private void EvaluateEndCondition()
         {
+            if (networkAuthoritative) return;
             if (Phase != MatchPhase.Active || AliveCount > 1) return;
             Phase = MatchPhase.Finished;
             MatchParticipant winner = null;
@@ -168,6 +189,7 @@ namespace Fsp.BattleRoyale
 
         private void RecountAlive()
         {
+            if (networkAuthoritative) return;
             PruneParticipants();
             int alive = 0;
             int total = 0;
