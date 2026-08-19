@@ -73,6 +73,7 @@ namespace Fsp.Networking
         }
 
         public void SendSnapshot(NetworkPlayerSnapshot v) => Send("snapshot", JsonUtility.ToJson(v));
+        public void SendBotSnapshot(NetworkPlayerSnapshot v) => Send("bot_snapshot", JsonUtility.ToJson(v));
         public void SendFire(NetworkFireEvent v) => Send("fire", JsonUtility.ToJson(v));
         public void SendDamage(NetworkDamageEvent v) => Send("damage", JsonUtility.ToJson(v));
         public void SendVehicle(NetworkVehicleSnapshot v) => Send("vehicle", JsonUtility.ToJson(v));
