@@ -7,12 +7,12 @@ namespace Fsp.Voice
     {
         public static SquadVoiceState Instance { get; private set; }
 
-        public bool TokenReady => CurrentToken != null && !string.IsNullOrWhiteSpace(CurrentToken.token);
         public bool Connected { get; private set; }
         public bool MicrophoneMuted { get; private set; } = true;
         public bool PushToTalk { get; private set; } = true;
         public string RuntimeStatus { get; private set; } = "Voice runtime not connected";
-        public CloudflareVoiceTokenClient.VoiceToken CurrentToken { get; private set; }
+
+        private CloudflareSfuVoiceRuntime runtime;
 
         public event Action Changed;
 
@@ -27,25 +27,29 @@ namespace Fsp.Voice
             DontDestroyOnLoad(gameObject);
         }
 
-        /// <summary>
-        /// Stores a server-issued RealtimeKit token. This does NOT mean audio is connected.
-        /// A platform voice runtime must successfully join the meeting before Connected becomes true.
-        /// </summary>
-        public void SetToken(CloudflareVoiceTokenClient.VoiceToken token)
+        public void BindRuntime(CloudflareSfuVoiceRuntime value)
         {
-            CurrentToken = token;
+            runtime = value;
+            MicrophoneMuted = true;
+            runtime?.SetMuted(true);
+            Changed?.Invoke();
+        }
+
+        public void UnbindRuntime(CloudflareSfuVoiceRuntime value)
+        {
+            if (runtime != value) return;
+            runtime = null;
             Connected = false;
             MicrophoneMuted = true;
-            RuntimeStatus = TokenReady ? "Voice token ready; runtime connection required" : "Voice token unavailable";
             Changed?.Invoke();
         }
 
         public void MarkRuntimeConnected()
         {
-            if (!TokenReady) return;
             Connected = true;
             MicrophoneMuted = true;
             RuntimeStatus = "Voice connected";
+            runtime?.SetMuted(true);
             Changed?.Invoke();
         }
 
@@ -54,13 +58,24 @@ namespace Fsp.Voice
             Connected = false;
             MicrophoneMuted = true;
             RuntimeStatus = string.IsNullOrWhiteSpace(message) ? "Voice connection failed" : message.Trim();
+            runtime?.SetMuted(true);
+            Changed?.Invoke();
+        }
+
+        public void SetRuntimeStatus(string message)
+        {
+            RuntimeStatus = string.IsNullOrWhiteSpace(message) ? RuntimeStatus : message.Trim();
             Changed?.Invoke();
         }
 
         public void SetPushToTalk(bool enabled)
         {
             PushToTalk = enabled;
-            if (enabled) MicrophoneMuted = true;
+            if (enabled)
+            {
+                MicrophoneMuted = true;
+                runtime?.SetMuted(true);
+            }
             Changed?.Invoke();
         }
 
@@ -68,6 +83,7 @@ namespace Fsp.Voice
         {
             if (!Connected) return;
             MicrophoneMuted = muted;
+            runtime?.SetMuted(muted);
             Changed?.Invoke();
         }
 
@@ -75,6 +91,7 @@ namespace Fsp.Voice
         {
             if (!Connected || !PushToTalk) return;
             MicrophoneMuted = false;
+            runtime?.SetMuted(false);
             Changed?.Invoke();
         }
 
@@ -82,15 +99,16 @@ namespace Fsp.Voice
         {
             if (!Connected || !PushToTalk) return;
             MicrophoneMuted = true;
+            runtime?.SetMuted(true);
             Changed?.Invoke();
         }
 
         public void Disconnect()
         {
             Connected = false;
-            CurrentToken = null;
             MicrophoneMuted = true;
             RuntimeStatus = "Voice disconnected";
+            runtime?.SetMuted(true);
             Changed?.Invoke();
         }
     }
