@@ -124,18 +124,6 @@ namespace Fsp.BattleRoyale
             Phase = MatchPhase.Finished;
             PhaseChanged?.Invoke(Phase);
             NetworkWinnerDeclared?.Invoke(AuthoritativeWinnerId);
-
-            MatchParticipant localWinner = null;
-            foreach (MatchParticipant p in participants)
-            {
-                if (p != null && p.IsAlive)
-                {
-                    localWinner = p;
-                    break;
-                }
-            }
-            if (localWinner != null) localWinner.SetPlacement(1);
-            MatchWon?.Invoke(localWinner);
         }
 
         public static void Register(MatchParticipant participant)
@@ -162,7 +150,7 @@ namespace Fsp.BattleRoyale
         {
             if (Phase != MatchPhase.Active) return;
             RecountAlive();
-            int placement = Mathf.Max(1, AliveCount + 1);
+            int placement = networkAuthoritative ? Mathf.Max(1, AliveCount) : Mathf.Max(1, AliveCount + 1);
             participant?.SetPlacement(placement);
             ParticipantEliminated?.Invoke(participant, placement);
             EvaluateEndCondition();
