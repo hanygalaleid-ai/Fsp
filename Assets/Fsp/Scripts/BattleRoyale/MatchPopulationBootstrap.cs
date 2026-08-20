@@ -12,6 +12,7 @@ namespace Fsp.BattleRoyale
         [SerializeField] private BotSpawner botSpawner;
         [SerializeField, Min(1)] private int fallbackHumanPlayers = 1;
         [SerializeField, Min(1f)] private float authorityWaitSeconds = 12f;
+        [SerializeField, Min(1)] private int fallbackBotsPerFrame = 2;
 
         private INetworkTransport transport;
         private string authorityPlayerId = string.Empty;
@@ -91,9 +92,29 @@ namespace Fsp.BattleRoyale
             if (authorityPlayerId != SupabaseSession.UserId) return;
 
             int humans = Mathf.Max(1, MatchRoomState.MemberCount);
-            botSpawner.FillToTarget(humans);
             spawned = true;
-            Debug.Log($"FSP Bots: this client is bot authority; spawned population for {humans} human player(s).");
+            StartCoroutine(SpawnAuthorityPopulation(humans));
+        }
+
+        private IEnumerator SpawnAuthorityPopulation(int humans)
+        {
+            if (botSpawner == null) yield break;
+            botSpawner.RemoveDestroyedBots();
+            int botsNeeded = Mathf.Max(0, botSpawner.EffectiveTargetPopulation - Mathf.Max(0, humans));
+            int createdThisFrame = 0;
+
+            while (botSpawner.SpawnedCount < botsNeeded)
+            {
+                if (!botSpawner.TrySpawnOne()) break;
+                createdThisFrame++;
+                if (createdThisFrame >= Mathf.Max(1, fallbackBotsPerFrame))
+                {
+                    createdThisFrame = 0;
+                    yield return null;
+                }
+            }
+
+            Debug.Log($"FSP Bots: this client is bot authority; population ready for {humans} human player(s), {botSpawner.SpawnedCount} bot(s), target {botSpawner.EffectiveTargetPopulation} total actors.");
         }
 
         private static INetworkTransport FindTransport()
