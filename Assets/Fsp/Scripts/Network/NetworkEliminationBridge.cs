@@ -1,6 +1,7 @@
 using Fsp.Backend;
 using Fsp.UI;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Fsp.Networking
 {
@@ -38,11 +39,16 @@ namespace Fsp.Networking
     public static class NetworkEliminationInstaller
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void Install()
+        private static void InstallAfterSceneLoad() => EnsureInstalled();
+
+        public static bool EnsureInstalled()
         {
-            if (!SupabaseSession.IsSignedIn || !MatchRoomState.HasMatch) return;
+            Scene scene = SceneManager.GetActiveScene();
+            if (!scene.IsValid() || !string.Equals(scene.name, "Match", System.StringComparison.OrdinalIgnoreCase)) return false;
+            if (!SupabaseSession.IsSignedIn || !MatchRoomState.HasMatch) return false;
             if (UnityEngine.Object.FindFirstObjectByType<NetworkEliminationBridge>() == null)
                 new GameObject("NetworkEliminationBridge").AddComponent<NetworkEliminationBridge>();
+            return true;
         }
     }
 }
