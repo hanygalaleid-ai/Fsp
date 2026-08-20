@@ -9,6 +9,7 @@ namespace Fsp.Networking
         private CloudflareWebSocketTransport transport;
         private NetworkSessionManager session;
         private SupabaseRuntimeSettingsClient settings;
+        private bool loading;
 
         public void Configure(CloudflareWebSocketTransport targetTransport, NetworkSessionManager targetSession)
         {
@@ -16,11 +17,12 @@ namespace Fsp.Networking
             session = targetSession;
             settings = GetComponent<SupabaseRuntimeSettingsClient>();
             if (settings == null) settings = gameObject.AddComponent<SupabaseRuntimeSettingsClient>();
-            StartCoroutine(LoadRelay());
+            if (!loading) StartCoroutine(LoadRelay());
         }
 
         private IEnumerator LoadRelay()
         {
+            loading = true;
             bool ok = false;
             string value = string.Empty;
             yield return settings.GetValue("match_relay_ws_url", (success, result) =>
@@ -28,26 +30,30 @@ namespace Fsp.Networking
                 ok = success;
                 value = result;
             });
+            loading = false;
 
             if (!ok)
             {
-                Debug.LogError("FSP Network: failed to load match_relay_ws_url runtime setting: " + value);
+                Debug.LogWarning("FSP Network: failed to load match_relay_ws_url runtime setting: " + value);
+                session?.FallbackOffline("relay runtime configuration unavailable");
                 yield break;
             }
 
             if (string.IsNullOrWhiteSpace(value))
             {
-                Debug.LogWarning("FSP Network: match_relay_ws_url exists but is empty. Deploy Cloudflare relay and update Supabase runtime config.");
+                Debug.LogWarning("FSP Network: match_relay_ws_url exists but is empty.");
+                session?.FallbackOffline("relay runtime configuration is empty");
                 yield break;
             }
 
-            if (!transport.ConfigureRelayBaseUrl(value))
+            if (transport == null || !transport.ConfigureRelayBaseUrl(value))
             {
-                Debug.LogError("FSP Network: runtime match relay URL is invalid: " + value);
+                Debug.LogWarning("FSP Network: runtime match relay URL is invalid: " + value);
+                session?.FallbackOffline("relay runtime configuration is invalid");
                 yield break;
             }
 
-            session.RetryStartOnlineSession();
+            session?.RetryStartOnlineSession();
         }
     }
 }
