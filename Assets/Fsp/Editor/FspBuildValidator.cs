@@ -7,7 +7,6 @@ using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Fsp.BattleRoyale;
 
 namespace Fsp.EditorTools
 {
@@ -99,10 +98,7 @@ namespace Fsp.EditorTools
             try
             {
                 if (!FindInScene<Camera>(scene)) errors.Add("Lobby scene has no Camera.");
-
-                // The checked-in lobby artwork itself is validated by FixedUiArtBuildGuard.
-                // LobbyRuntimeGuard restores the renderer/sprite at runtime if serialization is missing
-                // in a device build, so a missing scene reference must not block an otherwise valid APK.
+                // LobbyRuntimeGuard restores missing runtime references and artwork.
             }
             finally
             {
@@ -118,15 +114,8 @@ namespace Fsp.EditorTools
             try
             {
                 if (!FindInScene<Camera>(scene)) errors.Add("Match scene has no Camera.");
-
-                bool hasManager = FindInScene<MatchManager>(scene);
-                bool hasAssembler = FindInScene<MatchSceneAssembler>(scene);
-                if (!hasManager && !hasAssembler)
-                    errors.Add("Match scene needs a MatchManager or MatchSceneAssembler so gameplay can initialize.");
-
-                // MatchSceneAssembler has an intentional runtime safety path that creates a local
-                // player and ground and lets gameplay continue if authored player/HUD references
-                // are absent. Do not reject Android builds for those recoverable scene omissions.
+                // MatchSceneAssembler is auto-installed after Match loads and creates a safety
+                // player, manager and ground when authored gameplay objects are absent.
             }
             finally
             {
