@@ -32,13 +32,15 @@ namespace Fsp.Lobby
             if (host.GetComponent<LobbyController>() == null) host.AddComponent<LobbyController>();
             if (host.GetComponent<LobbyMatchLauncher>() == null) host.AddComponent<LobbyMatchLauncher>();
             if (host.GetComponent<FixedLobbyStartHitRegion>() == null) host.AddComponent<FixedLobbyStartHitRegion>();
+
+            // LobbyBackendRuntimeInstaller's original RuntimeInitialize callback is startup-order
+            // sensitive and does not by itself guarantee a reinstall after Match -> Lobby. Make
+            // the lobby re-entry boundary authoritative for matchmaking/profile/squad services too.
+            LobbyBackendRuntimeInstaller.EnsureInstalled();
         }
 
         private static void ResetTransientMatchState()
         {
-            // Lobby is a hard reset boundary for every transient match state. MobileInputBridge is
-            // DontDestroyOnLoad, so clear held and one-shot actions here rather than relying on the
-            // previous frame's LateUpdate to have happened before the scene transition.
             if (MatchRoomState.Instance != null && MatchRoomState.HasMatch)
                 MatchRoomState.Instance.Clear();
 
