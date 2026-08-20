@@ -1,9 +1,11 @@
+using System;
 using Fsp.Core;
 using Fsp.Inventory;
 using Fsp.Player;
 using Fsp.UI;
 using Fsp.Vehicles;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Fsp.BattleRoyale
 {
@@ -15,6 +17,17 @@ namespace Fsp.BattleRoyale
     public sealed class MatchSceneAssembler : MonoBehaviour
     {
         private MatchParticipant localParticipant;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void InstallForMatchScene()
+        {
+            Scene scene = SceneManager.GetActiveScene();
+            if (!scene.IsValid() || !string.Equals(scene.name, "Match", StringComparison.OrdinalIgnoreCase)) return;
+            if (FindFirstObjectByType<MatchSceneAssembler>() != null) return;
+
+            new GameObject("MatchSceneAssembler").AddComponent<MatchSceneAssembler>();
+            Debug.Log("FSP Match: runtime safety assembler installed.");
+        }
 
         private void Awake()
         {
@@ -82,8 +95,6 @@ namespace Fsp.BattleRoyale
             MatchParticipant participant = player.AddComponent<MatchParticipant>();
             participant.ConfigureAsLocalPlayer("Player");
 
-            // Give the emergency player a visible floor immediately around spawn so a valid
-            // device build never looks like a frozen empty camera while world systems initialize.
             if (GameObject.Find("RuntimeSafetyGround") == null)
             {
                 GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
