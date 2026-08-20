@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Fsp.UI;
@@ -91,6 +92,7 @@ namespace Fsp.Lobby
 
         private bool EnsureCanvasReady()
         {
+            EnsureEventSystem();
             if (productionCanvas != null) return true;
             GameObject existing = GameObject.Find("ProductionLobbyCanvas");
             if (existing != null) productionCanvas = existing.GetComponent<Canvas>();
@@ -113,6 +115,24 @@ namespace Fsp.Lobby
                 Debug.LogError("FSP responsive lobby UI could not be created: " + exception);
                 return false;
             }
+        }
+
+        private static void EnsureEventSystem()
+        {
+            EventSystem eventSystem = FindFirstObjectByType<EventSystem>(FindObjectsInactive.Include);
+            if (eventSystem == null)
+            {
+                GameObject inputObject = new("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+                DontDestroyOnLoad(inputObject);
+                return;
+            }
+
+            if (!eventSystem.gameObject.activeSelf)
+                eventSystem.gameObject.SetActive(true);
+            if (!eventSystem.enabled)
+                eventSystem.enabled = true;
+            if (eventSystem.GetComponent<BaseInputModule>() == null)
+                eventSystem.gameObject.AddComponent<StandaloneInputModule>();
         }
 
         private void Build()
