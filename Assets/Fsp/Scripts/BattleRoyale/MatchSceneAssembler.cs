@@ -51,16 +51,16 @@ namespace Fsp.BattleRoyale
             MobileMatchControlsInstaller.Install();
             EnsureOfflineOpponent(localParticipant.transform.position);
 
-            // Online systems are installed only after player, inventory and starter weapon exist.
             MatchNetworkRuntimeInstaller.EnsureInstalled();
             NetworkMatchStateInstaller.EnsureInstalled();
             NetworkCombatRuntimeInstaller.EnsureInstalled();
             NetworkEliminationInstaller.EnsureInstalled();
 
             StarterResultsUiInstaller.EnsureInstalled();
+            MatchProgressReporter.EnsureInstalled();
             WireExistingHud(localParticipant.gameObject);
 
-            Debug.Log("FSP Match: runtime path ready (manager, safe zone, player, weapon, world, mobile controls, authoritative network combat and results).");
+            Debug.Log("FSP Match: runtime path ready (manager, safe zone, player, weapon, world, mobile controls, authoritative network combat, results and progress saving).");
         }
 
         private static MatchManager EnsureMatchManager()
