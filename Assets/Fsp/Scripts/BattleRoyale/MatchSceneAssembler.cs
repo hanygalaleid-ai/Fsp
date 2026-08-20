@@ -51,15 +51,17 @@ namespace Fsp.BattleRoyale
             MobileMatchControlsInstaller.Install();
             EnsureOfflineOpponent(localParticipant.transform.position);
 
-            // Online networking must be installed only after the local participant definitely exists.
-            // This removes another RuntimeInitialize ordering race that could leave an authenticated
-            // match with no transport/session on device builds.
+            // Online systems are installed only after player, inventory and starter weapon exist.
+            // This removes scene-load ordering races that previously left online damage/elimination
+            // bridges missing even when the transport itself was present.
             MatchNetworkRuntimeInstaller.EnsureInstalled();
+            NetworkCombatRuntimeInstaller.EnsureInstalled();
+            NetworkEliminationInstaller.EnsureInstalled();
 
             StarterResultsUiInstaller.EnsureInstalled();
             WireExistingHud(localParticipant.gameObject);
 
-            Debug.Log("FSP Match: runtime path ready (manager, safe zone, player, weapon, world, mobile controls, opponent/network and results).");
+            Debug.Log("FSP Match: runtime path ready (manager, safe zone, player, weapon, world, mobile controls, opponent/network combat and results).");
         }
 
         private static MatchManager EnsureMatchManager()
