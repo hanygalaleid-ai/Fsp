@@ -1,3 +1,4 @@
+using Fsp.Backend;
 using Fsp.BattleRoyale;
 using Fsp.Combat;
 using Fsp.Input;
@@ -153,7 +154,22 @@ namespace Fsp.UI
             return 40 + kills * 25 + placementXp + (placement == 1 ? 200 : 0);
         }
 
-        public void ReturnToLobby() => SceneManager.LoadScene("Lobby");
+        public void ReturnToLobby()
+        {
+            MobileInputBridge input = MobileInputBridge.Instance;
+            if (input != null)
+            {
+                input.SetMove(Vector2.zero);
+                input.SetFire(false);
+                input.SetAim(false);
+                input.SetSprint(false);
+            }
+
+            if (MatchRoomState.Instance != null)
+                MatchRoomState.Instance.Clear();
+
+            SceneManager.LoadScene("Lobby");
+        }
 
         public void Configure(GameObject panelRoot, Text title, Text placement, Text kills, Text xp, Button returnToLobby)
         {
