@@ -17,6 +17,7 @@ namespace Fsp.BattleRoyale
 
         public bool IsAboard => aboard;
         public bool HasJumped => jumped;
+        public DropPlaneController Plane => plane;
 
         private void Awake()
         {

@@ -57,7 +57,9 @@ namespace Fsp.EditorTools
                 "Assets/Fsp/Art/Resources/World/sand_ground_v2.png",
                 "Assets/Fsp/Art/Resources/World/road_dust_v2.png",
                 "Assets/Fsp/Art/Resources/World/rock_cliff_v2.png",
-                "Assets/Fsp/Art/Resources/World/fortress_wall_v2.png"
+                "Assets/Fsp/Art/Resources/World/fortress_wall_v2.png",
+                "Assets/Fsp/Art/Resources/World/sunscar_sky_panorama.png",
+                "Assets/Fsp/Art/Resources/UI/mobile_joystick.png"
             };
             foreach (string artPath in requiredRuntimeArt)
                 if (!File.Exists(artPath)) errors.Add("Required runtime art is missing: " + artPath);

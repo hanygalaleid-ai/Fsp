@@ -11,7 +11,7 @@ namespace Fsp.Bots
     {
         [SerializeField] private float moveSpeed = 3.8f;
         [SerializeField] private float attackRange = 18f;
-        [SerializeField] private float detectionRange = 65f;
+        [SerializeField] private float detectionRange = 320f;
         [SerializeField] private float damage = 12f;
         [SerializeField] private float shotsPerSecond = 1.8f;
         [SerializeField] private float turnSpeed = 8f;

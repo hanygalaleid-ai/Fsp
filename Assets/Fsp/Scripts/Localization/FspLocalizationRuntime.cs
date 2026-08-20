@@ -217,6 +217,7 @@ namespace Fsp.Localization
             image.color = new Color(0.025f, 0.055f, 0.09f, 0.92f);
             languageButton = buttonGo.GetComponent<Button>();
             languageButton.onClick.AddListener(CycleLanguage);
+            buttonGo.AddComponent<Fsp.Audio.FspUiClickAudio>();
 
             GameObject labelGo = new GameObject("Label", typeof(RectTransform), typeof(Text));
             labelGo.transform.SetParent(buttonGo.transform, false);

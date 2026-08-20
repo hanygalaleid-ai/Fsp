@@ -14,14 +14,12 @@ The approved design board created on 2026-08-18 defines the intended look:
 
 ## Release rules
 
-1. Checked-in authored Scenes and art are authoritative.
-2. Runtime code must never rebuild or replace the approved visual presentation with Unity primitives, fallback geometry, placeholder HUD, generated roads, generated POIs, generated characters, generated weapons, generated vehicles or generated scene backgrounds.
-3. Build-time Editor code must validate required art; it must not generate replacement art or scenes.
-4. If required release assets are missing, the build must fail rather than silently create a prototype replacement.
+1. Checked-in art, shaders, and release scenes are authoritative.
+2. The minimal Match scene is completed by deterministic runtime assemblies that use only checked-in textures and mobile-safe shaders; they must always produce the full island, POIs, drop plane, player visual, HUD and collision surfaces.
+3. Build-time Editor code validates required art; it must not download or generate replacement art or scenes.
+4. If required release assets are missing, the build must fail rather than silently omit a visual system.
 5. `Lobby.unity` and `Match.unity` are the only release scenes.
 
 ## Current repository gap found during audit
 
-The approved design board shows production character, weapon, prop, HUD and world assets, but the current GitHub repository does not contain those authored 3D production assets. The checked-in `Assets/Fsp/Art` tree currently contains the fixed lobby image, two small UI textures and four world textures. `Match.unity` is therefore not yet a complete authored production scene.
-
-Until real authored Match assets are added, the release validator intentionally blocks an APK/AAB that would otherwise open into an empty or prototype Match scene.
+`Match.unity` intentionally stays small (camera and light). `StarterWorldGameplayInstaller`, the Sunscar POI builders and the presentation components are release-critical and assemble the complete mobile-safe match from checked-in textures, shaders and deterministic mesh definitions. The release validator verifies those inputs before APK/AAB creation.

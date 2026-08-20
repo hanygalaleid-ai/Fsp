@@ -30,6 +30,7 @@ namespace Fsp.UI
         private Text aliveText;
         private Text phaseText;
         private Text zoneWarning;
+        private Text crosshair;
 
         private float nextResolve;
 
@@ -120,7 +121,7 @@ namespace Fsp.UI
             zoneWarning.color = new Color(1f, 0.34f, 0.10f, 1f);
             zoneWarning.gameObject.SetActive(false);
 
-            Text crosshair = CreateText(root, "+", 30, new Vector2(0.485f, 0.47f), new Vector2(0.515f, 0.53f), TextAnchor.MiddleCenter);
+            crosshair = CreateText(root, "+", 30, new Vector2(0.485f, 0.47f), new Vector2(0.515f, 0.53f), TextAnchor.MiddleCenter);
             crosshair.color = new Color(1f, 1f, 1f, 0.86f);
         }
 
@@ -153,8 +154,19 @@ namespace Fsp.UI
 
             if (zoneWarning != null)
             {
-                bool outside = safeZone != null && player != null && !safeZone.IsInside(player.position);
+                DropPlanePassenger passenger = player != null ? player.GetComponent<DropPlanePassenger>() : null;
+                ParachuteController parachute = player != null ? player.GetComponent<ParachuteController>() : null;
+                bool deploying = (passenger != null && passenger.IsAboard) || (parachute != null && parachute.IsActive);
+                bool outside = !deploying && safeZone != null && player != null && !safeZone.IsInside(player.position);
                 zoneWarning.gameObject.SetActive(outside);
+            }
+
+            if (crosshair != null && player != null)
+            {
+                DropPlanePassenger passenger = player.GetComponent<DropPlanePassenger>();
+                ParachuteController parachute = player.GetComponent<ParachuteController>();
+                bool combatView = (passenger == null || !passenger.IsAboard) && (parachute == null || !parachute.IsActive);
+                crosshair.gameObject.SetActive(combatView);
             }
         }
 

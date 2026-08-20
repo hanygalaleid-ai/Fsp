@@ -73,9 +73,14 @@ namespace Fsp.Player
         private void LateUpdate()
         {
             if (cameraTransform == null) return;
-            Vector3 desired = transform.position + transform.rotation * cameraOffset;
+            bool aboard = passenger != null && passenger.IsAboard && passenger.Plane != null;
+            Vector3 desired = aboard
+                ? passenger.Plane.transform.TransformPoint(new Vector3(10f, 7.5f, -25f))
+                : transform.position + transform.rotation * cameraOffset;
             cameraTransform.position = Vector3.Lerp(cameraTransform.position, desired, 1f - Mathf.Exp(-cameraFollow * Time.deltaTime));
-            Vector3 lookPoint = transform.position + Vector3.up * 1.35f;
+            Vector3 lookPoint = aboard
+                ? passenger.Plane.transform.position + passenger.Plane.transform.forward * 5f
+                : transform.position + Vector3.up * 1.35f;
             Vector3 direction = lookPoint - cameraTransform.position;
             if (direction.sqrMagnitude > 0.01f)
                 cameraTransform.rotation = Quaternion.LookRotation(direction.normalized, Vector3.up);

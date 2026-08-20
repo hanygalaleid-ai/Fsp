@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using Fsp.Audio;
 
 namespace Fsp.Voice
 {
@@ -7,6 +8,7 @@ namespace Fsp.Voice
     {
         public void OnPointerDown(PointerEventData eventData)
         {
+            FspAudioRuntime.PlayActionTap();
             SquadVoiceState.Instance?.BeginTalking();
         }
 

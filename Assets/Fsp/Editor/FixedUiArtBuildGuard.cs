@@ -23,6 +23,7 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Art/Resources/UI/bmg_adaptive_background.png",
             "Assets/Fsp/Art/Resources/UI/google_signin_square.png",
             "Assets/Fsp/Art/Resources/UI/action_icons.png",
+            "Assets/Fsp/Art/Resources/UI/mobile_joystick.png",
             "Assets/Fsp/Art/Resources/UI/language_icons.png",
             "Assets/Fsp/Art/Resources/World/sand_ground.png",
             "Assets/Fsp/Art/Resources/World/rock_cliff.png",
@@ -31,15 +32,16 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Art/Resources/World/sand_ground_v2.png",
             "Assets/Fsp/Art/Resources/World/rock_cliff_v2.png",
             "Assets/Fsp/Art/Resources/World/road_dust_v2.png",
-            "Assets/Fsp/Art/Resources/World/fortress_wall_v2.png"
+            "Assets/Fsp/Art/Resources/World/fortress_wall_v2.png",
+            "Assets/Fsp/Art/Resources/World/sunscar_sky_panorama.png"
         };
 
         public void OnPreprocessBuild(BuildReport report)
         {
             ApplyDeterministicPlayerSettings(report.summary.platform);
 
-            // Release builds must use checked-in production art only.
-            // No placeholder/procedural art generation is allowed here.
+            // Release builds use checked-in art only. Runtime world assembly may construct
+            // collision geometry, but every visual texture and shader must pass this gate.
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
 
             foreach (string path in RequiredArt)
@@ -63,7 +65,7 @@ namespace Fsp.EditorTools
                 FspAndroidIconSetup.Apply();
 
             AssetDatabase.SaveAssets();
-            Debug.Log("FSP PRODUCTION ART GATE PASSED: fixed checked-in art preserved; no art generation executed.");
+            Debug.Log("FSP PRODUCTION ART GATE PASSED: all checked-in lobby, HUD, world and Android art imported successfully.");
         }
 
         private static void ApplyDeterministicPlayerSettings(BuildTarget platform)

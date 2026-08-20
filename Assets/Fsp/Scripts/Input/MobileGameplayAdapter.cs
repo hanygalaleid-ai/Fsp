@@ -31,6 +31,8 @@ namespace Fsp.Input
         private float pitch;
         private VehicleSeat activeSeat;
         private bool cameraInitialized;
+        private bool wasAboard;
+        private bool wasParachuting;
 
         private void Awake()
         {
@@ -109,10 +111,30 @@ namespace Fsp.Input
                 cameraInitialized = false;
             }
 
-            Vector3 lookPoint = transform.position + Vector3.up * 1.35f;
-            Quaternion orbit = Quaternion.Euler(pitch, yaw, 0f);
-            Vector3 desired = transform.position + orbit * followOffset;
-            desired = ResolveCameraCollision(lookPoint, desired);
+            bool aboard = planePassenger != null && planePassenger.IsAboard && planePassenger.Plane != null;
+            bool parachuting = parachute != null && parachute.IsActive;
+            Vector3 lookPoint;
+            Vector3 desired;
+
+            if (aboard)
+            {
+                Transform planeTransform = planePassenger.Plane.transform;
+                lookPoint = planeTransform.position + planeTransform.forward * 5f;
+                desired = planeTransform.TransformPoint(new Vector3(10f, 7.5f, -25f));
+            }
+            else
+            {
+                lookPoint = transform.position + Vector3.up * (parachuting ? 2.1f : 1.35f);
+                Quaternion orbit = Quaternion.Euler(pitch, yaw, 0f);
+                Vector3 stateOffset = parachuting ? new Vector3(0f, 3.8f, -8.2f) : followOffset;
+                desired = transform.position + orbit * stateOffset;
+                desired = ResolveCameraCollision(lookPoint, desired);
+            }
+
+            if (aboard != wasAboard || parachuting != wasParachuting)
+                cameraInitialized = false;
+            wasAboard = aboard;
+            wasParachuting = parachuting;
 
             if (!cameraInitialized)
             {

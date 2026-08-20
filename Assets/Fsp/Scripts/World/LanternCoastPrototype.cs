@@ -3,14 +3,15 @@ using UnityEngine;
 namespace Fsp.World
 {
     /// <summary>
-    /// Legacy compatibility component. Runtime Lantern Coast prototype generation is disabled.
-    /// Authored Lantern Coast scene geometry and loot placement are authoritative.
+    /// Mobile-safe Lantern Coast world section used by the minimal checked-in Match scene.
     /// </summary>
     public sealed class LanternCoastPrototype : MonoBehaviour
     {
+        private void Start() => BuildIfNeeded();
+
         public void BuildIfNeeded()
         {
-            // Intentionally empty. Never generate primitive world art in release builds.
+            SunscarMissingPoiRuntime.BuildLanternCoast(transform);
         }
     }
 }

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using Fsp.Audio;
 
 namespace Fsp.Input
 {
@@ -25,6 +26,7 @@ namespace Fsp.Input
         {
             var input = MobileInputBridge.Instance;
             if (input == null) return;
+            if (action != MobileButtonActionType.Fire) FspAudioRuntime.PlayActionTap();
 
             switch (action)
             {

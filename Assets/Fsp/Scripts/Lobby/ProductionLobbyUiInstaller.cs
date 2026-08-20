@@ -238,9 +238,9 @@ namespace Fsp.Lobby
             modeText = Label(panel, "SOLO", 29, new Vector2(0.06f, 0.55f), new Vector2(0.94f, 0.78f), TextAnchor.MiddleCenter);
             Button(panel, "Solo", "SOLO", new Vector2(0.06f, 0.31f), new Vector2(0.47f, 0.53f), Orange, () => LobbyState.Instance?.SetMode(MatchMode.Solo), 19);
             Button(panel, "Squad", "SQUAD", new Vector2(0.53f, 0.31f), new Vector2(0.94f, 0.53f), Navy, () => LobbyState.Instance?.SetMode(MatchMode.Squad), 19);
-            Button(panel, "Prev", "<", new Vector2(0.06f, 0.07f), new Vector2(0.22f, 0.27f), Navy, PreviousCharacter, 24);
+            Button(panel, "Prev", "◀", new Vector2(0.06f, 0.07f), new Vector2(0.22f, 0.27f), Navy, PreviousCharacter, 30);
             characterText = Label(panel, "SOLDIER 01", 17, new Vector2(0.23f, 0.07f), new Vector2(0.77f, 0.27f), TextAnchor.MiddleCenter);
-            Button(panel, "Next", ">", new Vector2(0.78f, 0.07f), new Vector2(0.94f, 0.27f), Navy, NextCharacter, 24);
+            Button(panel, "Next", "▶", new Vector2(0.78f, 0.07f), new Vector2(0.94f, 0.27f), Navy, NextCharacter, 30);
         }
 
         private void CreateBottomActions()
@@ -426,8 +426,8 @@ namespace Fsp.Lobby
             root.offsetMax = Vector2.zero;
 
             wardrobeSlotText = Label(root, "TORSO", 20, new Vector2(0.18f, 0.72f), new Vector2(0.82f, 0.98f), TextAnchor.MiddleCenter);
-            Button(root, "PrevSlot", "<", new Vector2(0f, 0.72f), new Vector2(0.15f, 0.98f), NavySoft, PreviousWardrobeSlot, 22);
-            Button(root, "NextSlot", ">", new Vector2(0.85f, 0.72f), new Vector2(1f, 0.98f), NavySoft, NextWardrobeSlot, 22);
+            Button(root, "PrevSlot", "◀", new Vector2(0f, 0.72f), new Vector2(0.15f, 0.98f), NavySoft, PreviousWardrobeSlot, 27);
+            Button(root, "NextSlot", "▶", new Vector2(0.85f, 0.72f), new Vector2(1f, 0.98f), NavySoft, NextWardrobeSlot, 27);
 
             GameObject swatchObject = new("ColorPreview", typeof(RectTransform), typeof(Image));
             swatchObject.transform.SetParent(root, false);
@@ -439,8 +439,8 @@ namespace Fsp.Lobby
             wardrobeSwatch = swatchObject.GetComponent<Image>();
 
             wardrobeItemText = Label(root, "FOREST UNIFORM", 17, new Vector2(0.18f, 0.13f), new Vector2(0.82f, 0.39f), TextAnchor.MiddleCenter);
-            Button(root, "PrevItem", "<", new Vector2(0f, 0.13f), new Vector2(0.15f, 0.39f), NavySoft, PreviousWardrobeItem, 22);
-            Button(root, "NextItem", ">", new Vector2(0.85f, 0.13f), new Vector2(1f, 0.39f), NavySoft, NextWardrobeItem, 22);
+            Button(root, "PrevItem", "◀", new Vector2(0f, 0.13f), new Vector2(0.15f, 0.39f), NavySoft, PreviousWardrobeItem, 27);
+            Button(root, "NextItem", "▶", new Vector2(0.85f, 0.13f), new Vector2(1f, 0.39f), NavySoft, NextWardrobeItem, 27);
             Button(root, "Equip", "EQUIP & SAVE", new Vector2(0.28f, 0f), new Vector2(0.72f, 0.12f), Orange, EquipWardrobeItem, 15);
             wardrobeStatusText = Label(root, "", 13, new Vector2(0f, -0.14f), new Vector2(1f, -0.01f), TextAnchor.MiddleCenter);
             wardrobeControls.SetActive(false);

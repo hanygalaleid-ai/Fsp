@@ -37,9 +37,9 @@ Shader "Fsp/MobileSafeLit"
             fixed4 frag(v2f i) : SV_Target
             {
                 fixed3 normal = normalize(i.worldNormal);
-                fixed diffuse = saturate(dot(normal, normalize(_WorldSpaceLightPos0.xyz)));
+                fixed diffuse = saturate(dot(normal, normalize(_WorldSpaceLightPos0.xyz))) * 0.5 + 0.5;
                 fixed3 ambient = ShadeSH9(float4(normal, 1.0));
-                fixed3 lighting = max(ambient, fixed3(0.22, 0.24, 0.28)) + _LightColor0.rgb * diffuse * 0.72;
+                fixed3 lighting = max(ambient, fixed3(0.48, 0.50, 0.54)) + _LightColor0.rgb * diffuse * 0.62;
                 fixed4 baseColor = tex2D(_MainTex, i.uv) * _Color;
                 fixed4 result = fixed4(baseColor.rgb * lighting, baseColor.a);
                 UNITY_APPLY_FOG(i.fogCoord, result);

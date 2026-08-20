@@ -47,6 +47,7 @@ namespace Fsp.UI
             Image image = go.AddComponent<Image>();
             image.color = new Color(0.72f, 0.47f, 0.22f, 0.92f);
             Button button = go.AddComponent<Button>();
+            go.AddComponent<Fsp.Audio.FspUiClickAudio>();
 
             var textGo = new GameObject("Label");
             textGo.transform.SetParent(go.transform, false);

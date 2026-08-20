@@ -3,14 +3,15 @@ using UnityEngine;
 namespace Fsp.World
 {
     /// <summary>
-    /// Legacy compatibility component. Runtime Copper Port prototype generation is disabled.
-    /// Authored Copper Port scene geometry and loot placement are authoritative.
+    /// Mobile-safe Copper Port world section used by the minimal checked-in Match scene.
     /// </summary>
     public sealed class CopperPortPrototype : MonoBehaviour
     {
+        private void Start() => BuildIfNeeded();
+
         public void BuildIfNeeded()
         {
-            // Intentionally empty. Never generate primitive world art in release builds.
+            SunscarMissingPoiRuntime.BuildCopperPort(transform);
         }
     }
 }

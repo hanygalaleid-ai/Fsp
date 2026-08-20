@@ -114,6 +114,7 @@ namespace Fsp.UI
             image.color = FspFixedTheme.Accent;
             Button button = go.AddComponent<Button>();
             button.targetGraphic = image;
+            go.AddComponent<Fsp.Audio.FspUiClickAudio>();
             Text text = MakeText(go.transform, "Label", label, 20, Vector2.zero, FspFixedTheme.Text);
             RectTransform tr = text.rectTransform;
             tr.anchorMin = Vector2.zero;

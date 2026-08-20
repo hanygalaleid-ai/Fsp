@@ -27,6 +27,7 @@ namespace Fsp.Combat
         public event Action<string, float, Vector3> NetworkPlayerHit;
         public event Action ReloadStarted;
         public event Action ReloadFinished;
+        public event Action DryFired;
 
         private void Awake()
         {
@@ -47,8 +48,15 @@ namespace Fsp.Combat
 
         public bool TryFire()
         {
-            if (config == null || aimCamera == null || reloading || Time.time < nextShotTime || ammoInMagazine <= 0)
+            if (config == null || aimCamera == null || reloading || Time.time < nextShotTime)
                 return false;
+
+            if (ammoInMagazine <= 0)
+            {
+                nextShotTime = Time.time + .22f;
+                DryFired?.Invoke();
+                return false;
+            }
 
             ammoInMagazine--;
             AmmoChanged?.Invoke(ammoInMagazine);

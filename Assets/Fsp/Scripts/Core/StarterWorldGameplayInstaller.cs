@@ -38,6 +38,7 @@ namespace Fsp.Core
             if (Object.FindFirstObjectByType<LanternCoastRoadLink>() == null) new GameObject("LanternCoast_Road_Links").AddComponent<LanternCoastRoadLink>();
 
             if (Object.FindFirstObjectByType<SunscarIslandPolish>() == null) new GameObject("SunscarIsland_Polish").AddComponent<SunscarIslandPolish>();
+            if (Object.FindFirstObjectByType<SunscarSkyBackdrop>() == null) new GameObject("Sunscar_SkyBackdrop").AddComponent<SunscarSkyBackdrop>();
             if (Object.FindFirstObjectByType<StarterVehicleDistribution>() == null) new GameObject("SunscarIsland_Vehicles").AddComponent<StarterVehicleDistribution>();
             if (Object.FindFirstObjectByType<MobileQualityTier>() == null) new GameObject("Fsp_MobileQualityTier").AddComponent<MobileQualityTier>();
             if (Object.FindFirstObjectByType<MobileWorldOptimizer>() == null) new GameObject("SunscarIsland_MobileOptimizer").AddComponent<MobileWorldOptimizer>();

@@ -53,7 +53,7 @@ namespace Fsp.BattleRoyale
             StarterWorldGameplayInstaller.EnsureInstalled();
             AndroidMaterialRecovery.EnsureInstalled();
             MobileMatchControlsInstaller.Install();
-            EnsureOfflineOpponent(localParticipant.transform.position);
+            EnsureOfflineOpponent();
 
             MatchNetworkRuntimeInstaller.EnsureInstalled();
             NetworkMatchStateInstaller.EnsureInstalled();
@@ -167,19 +167,6 @@ namespace Fsp.BattleRoyale
                 return;
             }
 
-            GameObject weaponObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            weaponObject.name = "RuntimeStarterRifle";
-            weaponObject.transform.SetParent(player.transform, false);
-            weaponObject.transform.localPosition = new Vector3(0.42f, 1.25f, 0.42f);
-            weaponObject.transform.localRotation = Quaternion.identity;
-            weaponObject.transform.localScale = new Vector3(0.12f, 0.12f, 0.62f);
-            Collider weaponCollider = weaponObject.GetComponent<Collider>();
-            if (weaponCollider != null) Destroy(weaponCollider);
-
-            GameObject muzzleObject = new GameObject("Muzzle");
-            muzzleObject.transform.SetParent(weaponObject.transform, false);
-            muzzleObject.transform.localPosition = new Vector3(0f, 0f, 0.58f);
-
             WeaponConfig config = ScriptableObject.CreateInstance<WeaponConfig>();
             config.weaponId = "runtime_rifle";
             int loadout = LobbyGameplayProgress.LoadoutIndex;
@@ -193,10 +180,55 @@ namespace Fsp.BattleRoyale
             config.reloadSeconds = loadout == 1 ? 1.7f : loadout == 2 ? 2.4f : 2.0f;
             config.spreadDegrees = loadout == 1 ? 0.35f : loadout == 2 ? 1.0f : 0.8f;
 
+            WeaponConfig secondaryConfig = ScriptableObject.CreateInstance<WeaponConfig>();
+            secondaryConfig.weaponId = "runtime_smg";
+            secondaryConfig.displayName = "Viper SMG";
+            secondaryConfig.weaponClass = WeaponClass.SMG;
+            secondaryConfig.ammoClass = AmmoClass.Light;
+            secondaryConfig.damage = 19f;
+            secondaryConfig.range = 95f;
+            secondaryConfig.roundsPerSecond = 13f;
+            secondaryConfig.magazineSize = 32;
+            secondaryConfig.reloadSeconds = 1.55f;
+            secondaryConfig.spreadDegrees = 1.25f;
+
+            HitscanWeapon primary = CreateRuntimeWeapon(player.transform, inventory, aimCamera, config,
+                "RuntimePrimaryRifle", new Vector3(.42f, 1.25f, .42f), new Vector3(.12f, .12f, .62f));
+            HitscanWeapon secondary = CreateRuntimeWeapon(player.transform, inventory, aimCamera, secondaryConfig,
+                "RuntimeSecondarySmg", new Vector3(.38f, 1.18f, .34f), new Vector3(.10f, .10f, .46f));
+            inventory.ConfigureStarterLoadout(primary, secondary, loadout == 2 ? 120 : 90, 128, loadout == 1 ? 3 : 2);
+            Debug.Log("FSP Match: primary rifle, secondary SMG and independent reserve ammo installed.");
+        }
+
+        private static HitscanWeapon CreateRuntimeWeapon(Transform owner, PlayerInventory inventory, Camera aimCamera,
+            WeaponConfig config, string objectName, Vector3 localPosition, Vector3 localScale)
+        {
+            GameObject weaponObject = AndroidSafeMesh.CreateBox(objectName, owner);
+            weaponObject.transform.localPosition = localPosition;
+            weaponObject.transform.localRotation = Quaternion.identity;
+            weaponObject.transform.localScale = localScale;
+            MeshRenderer weaponRenderer = weaponObject.GetComponent<MeshRenderer>();
+            if (weaponRenderer != null)
+            {
+                Shader shader = Resources.Load<Shader>("Shaders/FspMobileSafe");
+                if (shader == null) shader = Shader.Find("Fsp/MobileSafeLit");
+                if (shader == null) shader = Shader.Find("Sprites/Default");
+                if (shader != null)
+                {
+                    Color color = config.weaponClass == WeaponClass.SMG
+                        ? new Color(.11f, .14f, .15f, 1f)
+                        : new Color(.25f, .29f, .22f, 1f);
+                    weaponRenderer.sharedMaterial = new Material(shader) { color = color, hideFlags = HideFlags.DontSave };
+                }
+            }
+
+            GameObject muzzleObject = new GameObject("Muzzle");
+            muzzleObject.transform.SetParent(weaponObject.transform, false);
+            muzzleObject.transform.localPosition = new Vector3(0f, 0f, .58f);
+
             HitscanWeapon weapon = weaponObject.AddComponent<HitscanWeapon>();
             weapon.Configure(config, aimCamera, muzzleObject.transform, inventory);
-            inventory.ConfigureStarterLoadout(weapon, null, loadout == 2 ? 120 : 90, 0, loadout == 1 ? 3 : 2);
-            Debug.Log("FSP Match: runtime starter rifle and reserve ammo installed.");
+            return weapon;
         }
 
         private static void EnsureDropFlow(GameObject player)
@@ -240,7 +272,7 @@ namespace Fsp.BattleRoyale
                 new GameObject("DropPhaseCoordinator").AddComponent<DropPhaseCoordinator>();
         }
 
-        private static void EnsureOfflineOpponent(Vector3 playerPosition)
+        private static void EnsureOfflineOpponent()
         {
             if (MatchRoomState.HasMatch) return;
             MatchParticipant[] participants = FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None);
@@ -252,8 +284,10 @@ namespace Fsp.BattleRoyale
             if (spawner == null) spawner = spawnerObject.AddComponent<BotSpawner>();
 
             GameObject spawnObject = GameObject.Find("RuntimeOfflineBotSpawn") ?? new GameObject("RuntimeOfflineBotSpawn");
-            Vector3 spawn = playerPosition + new Vector3(18f, 0f, 22f);
-            spawn.y = Mathf.Max(1f, playerPosition.y);
+            // Never derive this from the passenger while it is parented to the route start:
+            // that position is intentionally outside the island. Keep the fallback opponent
+            // near the forced-drop side of the playable land so an offline match can finish.
+            Vector3 spawn = new Vector3(145f, 1.1f, 142f);
             spawnObject.transform.position = spawn;
             spawner.ConfigureSpawnPoints(new[] { spawnObject.transform });
 

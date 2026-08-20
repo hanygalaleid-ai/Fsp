@@ -19,6 +19,7 @@ namespace Fsp.UI
         private static readonly Color Accent = new Color(0.90f, 0.43f, 0.05f, 0.96f);
         private static readonly Color TextColor = new Color(0.96f, 0.94f, 0.89f, 1f);
         private static Texture2D actionAtlas;
+        private static Texture2D joystickTexture;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void InstallAfterSceneLoad()
@@ -72,6 +73,7 @@ namespace Fsp.UI
             CreateActionButton(root, "Sprint", "SPRINT", new Vector2(0.12f, 0.39f), new Vector2(118f, 72f), PanelStrong, MobileButtonActionType.Sprint, 16, 7);
 
             CreateTopBadge(root, "FSP // SUNSCAR", new Vector2(0.5f, 0.955f));
+            canvasObject.AddComponent<MobileMatchHudPhaseVisibility>().Configure(local);
             Debug.Log("FSP mobile combat HUD installed successfully.");
             return true;
         }
@@ -123,23 +125,30 @@ namespace Fsp.UI
 
         private static void CreateJoystick(RectTransform root)
         {
-            GameObject baseObject = new GameObject("MoveJoystick", typeof(RectTransform), typeof(Image), typeof(VirtualJoystick));
+            GameObject baseObject = new GameObject("MoveJoystick", typeof(RectTransform), typeof(RawImage), typeof(VirtualJoystick));
             baseObject.transform.SetParent(root, false);
             RectTransform rt = baseObject.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = new Vector2(0.12f, 0.20f);
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.sizeDelta = new Vector2(250f, 250f);
             rt.anchoredPosition = Vector2.zero;
-            baseObject.GetComponent<Image>().color = Panel;
+            if (joystickTexture == null) joystickTexture = Resources.Load<Texture2D>("UI/mobile_joystick");
+            RawImage baseImage = baseObject.GetComponent<RawImage>();
+            baseImage.texture = joystickTexture;
+            baseImage.color = new Color(1f, 1f, 1f, .88f);
 
-            GameObject handle = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+            GameObject handle = new GameObject("Handle", typeof(RectTransform), typeof(RawImage));
             handle.transform.SetParent(baseObject.transform, false);
             RectTransform handleRt = handle.GetComponent<RectTransform>();
             handleRt.anchorMin = handleRt.anchorMax = new Vector2(0.5f, 0.5f);
             handleRt.pivot = new Vector2(0.5f, 0.5f);
             handleRt.sizeDelta = new Vector2(105f, 105f);
             handleRt.anchoredPosition = Vector2.zero;
-            handle.GetComponent<Image>().color = new Color(0.88f, 0.89f, 0.87f, 0.74f);
+            RawImage handleImage = handle.GetComponent<RawImage>();
+            handleImage.texture = joystickTexture;
+            handleImage.uvRect = new Rect(.30f, .30f, .40f, .40f);
+            handleImage.color = new Color(1f, 1f, 1f, .90f);
+            handleImage.raycastTarget = false;
         }
 
         private static void CreateActionButton(RectTransform root, string name, string label, Vector2 anchor, Vector2 size, Color color, MobileButtonActionType action, int fontSize, int iconIndex)
@@ -213,6 +222,51 @@ namespace Fsp.UI
             text.resizeTextMinSize = 10;
             text.resizeTextMaxSize = size;
             text.raycastTarget = false;
+        }
+    }
+
+    public sealed class MobileMatchHudPhaseVisibility : MonoBehaviour
+    {
+        private DropPlanePassenger passenger;
+        private ParachuteController parachute;
+        private Transform root;
+        private bool? lastDropOnly;
+        private bool? lastParachute;
+
+        public void Configure(MatchParticipant participant)
+        {
+            root = transform;
+            passenger = participant != null ? participant.GetComponent<DropPlanePassenger>() : null;
+            parachute = participant != null ? participant.GetComponent<ParachuteController>() : null;
+            Refresh(true);
+        }
+
+        private void Update() => Refresh(false);
+
+        private void Refresh(bool force)
+        {
+            bool aboard = passenger != null && passenger.IsAboard;
+            bool falling = !aboard && parachute != null && parachute.IsActive;
+            if (!force && lastDropOnly == aboard && lastParachute == falling) return;
+            lastDropOnly = aboard;
+            lastParachute = falling;
+
+            Set("MoveJoystick", !aboard);
+            Set("Sprint", !aboard && !falling);
+            Set("Fire", !aboard && !falling);
+            Set("Aim", !aboard && !falling);
+            Set("Reload", !aboard && !falling);
+            Set("Heal", !aboard && !falling);
+            Set("Interact", !aboard && !falling);
+            Set("Switch", !aboard && !falling);
+            Set("Jump", true);
+        }
+
+        private void Set(string childName, bool visible)
+        {
+            if (root == null) root = transform;
+            Transform child = root.Find(childName);
+            if (child != null && child.gameObject.activeSelf != visible) child.gameObject.SetActive(visible);
         }
     }
 

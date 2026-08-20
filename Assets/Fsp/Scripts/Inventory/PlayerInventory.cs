@@ -21,6 +21,9 @@ namespace Fsp.Inventory
         public HitscanWeapon SecondaryWeapon => secondaryWeapon;
 
         public event Action InventoryChanged;
+        public event Action<InventoryItem> ItemPickedUp;
+        public event Action MedkitUsed;
+        public event Action WeaponSwitched;
 
         private void Awake()
         {
@@ -62,6 +65,7 @@ namespace Fsp.Inventory
                 case InventoryItemType.Weapon: return false;
             }
             InventoryChanged?.Invoke();
+            ItemPickedUp?.Invoke(item);
             return true;
         }
 
@@ -93,7 +97,9 @@ namespace Fsp.Inventory
         {
             if (primaryWeapon == null && secondaryWeapon == null) return;
             if (ActiveWeapon != null && ActiveWeapon.IsReloading) return;
+            HitscanWeapon previous = ActiveWeapon;
             SetActiveWeapon(ActiveWeapon == primaryWeapon ? secondaryWeapon : primaryWeapon);
+            if (ActiveWeapon != previous) WeaponSwitched?.Invoke();
         }
 
         public bool TryUseMedkit()
@@ -102,6 +108,7 @@ namespace Fsp.Inventory
             Medkits--;
             vitals.Heal(medkitHealAmount);
             InventoryChanged?.Invoke();
+            MedkitUsed?.Invoke();
             return true;
         }
 
@@ -129,11 +136,17 @@ namespace Fsp.Inventory
         private void SetActiveWeapon(HitscanWeapon weapon)
         {
             ActiveWeapon = weapon;
-            if (primaryWeapon != null) primaryWeapon.gameObject.SetActive(true);
-            if (secondaryWeapon != null) secondaryWeapon.gameObject.SetActive(true);
-            if (primaryWeapon != null) primaryWeapon.enabled = primaryWeapon == weapon;
-            if (secondaryWeapon != null) secondaryWeapon.enabled = secondaryWeapon == weapon;
+            SetWeaponActive(primaryWeapon, primaryWeapon == weapon);
+            SetWeaponActive(secondaryWeapon, secondaryWeapon == weapon);
             InventoryChanged?.Invoke();
+        }
+
+        private static void SetWeaponActive(HitscanWeapon weapon, bool active)
+        {
+            if (weapon == null) return;
+            weapon.enabled = active;
+            foreach (Renderer renderer in weapon.GetComponentsInChildren<Renderer>(true))
+                if (renderer != null) renderer.enabled = active;
         }
     }
 }

@@ -16,6 +16,7 @@ namespace Fsp.BattleRoyale
         private bool active;
         private bool opened;
         private Vector2 steerInput;
+        private float dropStartedAt;
 
         public bool IsActive => active;
         public bool IsOpen => opened;
@@ -36,6 +37,8 @@ namespace Fsp.BattleRoyale
         {
             active = true;
             opened = false;
+            dropStartedAt = Time.unscaledTime;
+            steerInput = Vector2.zero;
             if (parachuteVisual != null) parachuteVisual.SetActive(false);
         }
 
@@ -55,7 +58,9 @@ namespace Fsp.BattleRoyale
             // Open only when the ground is inside the configured safety height. The
             // previous inverted check opened immediately while the player was still
             // high above the island.
-            if (!opened && Physics.Raycast(transform.position, Vector3.down, out _, autoOpenHeight, groundMask, QueryTriggerInteraction.Ignore))
+            bool groundNear = Physics.Raycast(transform.position, Vector3.down, out _, autoOpenHeight, groundMask, QueryTriggerInteraction.Ignore);
+            bool safetyTimeout = Time.unscaledTime - dropStartedAt >= 4f;
+            if (!opened && (groundNear || safetyTimeout))
                 OpenParachute();
 
             float fallSpeed = opened ? parachuteFallSpeed : freeFallSpeed;
@@ -64,10 +69,41 @@ namespace Fsp.BattleRoyale
 
             if (controller.isGrounded)
             {
-                active = false;
-                opened = false;
-                if (parachuteVisual != null) parachuteVisual.SetActive(false);
+                CompleteLanding();
+                return;
             }
+
+            // Device/scene safety: a missing collision must never leave the player falling forever.
+            if (transform.position.y < -15f) RecoverToIslandSurface();
+        }
+
+        private void CompleteLanding()
+        {
+            active = false;
+            opened = false;
+            steerInput = Vector2.zero;
+            if (parachuteVisual != null) parachuteVisual.SetActive(false);
+        }
+
+        private void RecoverToIslandSurface()
+        {
+            Vector3 probe = new Vector3(transform.position.x, 320f, transform.position.z);
+            Vector3 destination = new Vector3(0f, 3f, 0f);
+            float nearest = float.MaxValue;
+            foreach (RaycastHit hit in Physics.RaycastAll(probe, Vector3.down, 640f, groundMask, QueryTriggerInteraction.Ignore))
+            {
+                if (hit.collider == null || hit.collider == controller || hit.collider.transform.IsChildOf(transform)) continue;
+                if (hit.distance >= nearest) continue;
+                nearest = hit.distance;
+                destination = hit.point + Vector3.up * .15f;
+            }
+
+            bool wasEnabled = controller.enabled;
+            controller.enabled = false;
+            transform.position = destination;
+            controller.enabled = wasEnabled;
+            CompleteLanding();
+            Debug.LogWarning("BMG drop recovery moved the player to a safe island surface after a missing ground collision.");
         }
     }
 }

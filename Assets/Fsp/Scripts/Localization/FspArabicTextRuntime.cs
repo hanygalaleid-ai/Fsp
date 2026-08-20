@@ -86,8 +86,14 @@ namespace Fsp.Localization
         {
             if (Time.unscaledTime < nextScan) return;
             nextScan = Time.unscaledTime + 0.25f;
+            if (FspLocalizationRuntime.Current != FspLanguage.Arabic) RestoreLogicalText();
+        }
+
+        // Match HUD values are rewritten during Update (health, ammo, alive and phase). Shape
+        // them in LateUpdate so the rendered frame never exposes unshaped/reversed Arabic.
+        private void LateUpdate()
+        {
             if (FspLocalizationRuntime.Current == FspLanguage.Arabic) Apply();
-            else RestoreLogicalText();
         }
 
         private static void Apply()

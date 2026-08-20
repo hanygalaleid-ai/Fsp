@@ -14,6 +14,7 @@ namespace Fsp.Player
         public bool IsAlive => Health > 0f;
 
         public event Action<float, float> Changed;
+        public event Action<float> Damaged;
         public event Action Died;
 
         private void Awake()
@@ -31,6 +32,7 @@ namespace Fsp.Player
             float healthDamage = amount - armorDamage;
             Health = Mathf.Max(0f, Health - healthDamage);
 
+            Damaged?.Invoke(amount);
             Changed?.Invoke(Health, Armor);
             if (Health <= 0f) Died?.Invoke();
         }

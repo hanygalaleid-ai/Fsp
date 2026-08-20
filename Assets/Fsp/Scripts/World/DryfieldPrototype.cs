@@ -3,14 +3,15 @@ using UnityEngine;
 namespace Fsp.World
 {
     /// <summary>
-    /// Legacy compatibility component. Runtime Dryfield prototype generation is disabled.
-    /// Authored Dryfield scene geometry and loot placement are authoritative.
+    /// Mobile-safe Dryfield world section used by the minimal checked-in Match scene.
     /// </summary>
     public sealed class DryfieldPrototype : MonoBehaviour
     {
+        private void Start() => BuildIfNeeded();
+
         public void BuildIfNeeded()
         {
-            // Intentionally empty. Never generate primitive world art in release builds.
+            SunscarMissingPoiRuntime.BuildDryfield(transform);
         }
     }
 }

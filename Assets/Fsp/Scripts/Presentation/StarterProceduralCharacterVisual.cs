@@ -16,6 +16,7 @@ namespace Fsp.Presentation
         private ParachuteController parachute;
         private Vector3 previousPosition;
         private float stride;
+        private Transform visualRoot;
 
         private void Awake() => Build();
 
@@ -25,6 +26,7 @@ namespace Fsp.Presentation
             previousPosition = transform.position;
             if (planePassenger == null) planePassenger = GetComponent<DropPlanePassenger>();
             if (parachute == null) parachute = GetComponent<ParachuteController>();
+            if (visualRoot != null) visualRoot.gameObject.SetActive(planePassenger == null || !planePassenger.IsAboard);
             bool locomotionEnabled = (planePassenger == null || !planePassenger.IsAboard) &&
                                      (parachute == null || !parachute.IsActive);
             float speed = Time.deltaTime > 0f ? Vector3.ProjectOnPlane(movement, Vector3.up).magnitude / Time.deltaTime : 0f;
@@ -44,15 +46,17 @@ namespace Fsp.Presentation
 
             MatchParticipant participant = GetComponent<MatchParticipant>();
             bool bot = participant != null && participant.IsBot;
-            Color cloth = bot ? new Color(0.34f, 0.17f, 0.12f) : new Color(0.12f, 0.23f, 0.16f);
+            Color cloth = bot ? new Color(0.52f, 0.24f, 0.14f) : new Color(0.23f, 0.42f, 0.27f);
             Material uniform = MaterialFor(cloth);
-            Material armor = MaterialFor(bot ? new Color(0.18f, 0.08f, 0.06f) : new Color(0.055f, 0.085f, 0.07f));
-            Material skin = MaterialFor(new Color(0.47f, 0.31f, 0.22f));
-            Material metal = MaterialFor(new Color(0.055f, 0.065f, 0.07f));
+            Material armor = MaterialFor(bot ? new Color(0.30f, 0.11f, 0.07f) : new Color(0.13f, 0.18f, 0.14f));
+            Material skin = MaterialFor(new Color(0.58f, 0.39f, 0.28f));
+            Material metal = MaterialFor(new Color(0.12f, 0.14f, 0.15f));
             Material accent = MaterialFor(bot ? new Color(0.78f, 0.12f, 0.05f) : new Color(1f, 0.36f, 0.015f));
 
             Transform root = new GameObject("FSP_CharacterVisual").transform;
             root.SetParent(transform, false);
+            visualRoot = root;
+            root.localScale = Vector3.one * 1.06f;
 
             Part(root, "Torso", new Vector3(0f, 1.18f, 0f), new Vector3(.62f, .72f, .34f), uniform);
             Part(root, "Vest", new Vector3(0f, 1.22f, .20f), new Vector3(.68f, .55f, .13f), armor);
@@ -61,8 +65,11 @@ namespace Fsp.Presentation
             Part(root, "Head", new Vector3(0f, 1.84f, 0f), new Vector3(.38f, .38f, .36f), skin);
             Part(root, "Helmet", new Vector3(0f, 2.04f, -.01f), new Vector3(.46f, .20f, .42f), armor);
             Part(root, "HelmetVisor", new Vector3(0f, 1.94f, .22f), new Vector3(.30f, .07f, .08f), metal);
+            Part(root, "FaceMask", new Vector3(0f, 1.79f, .195f), new Vector3(.31f, .14f, .06f), armor);
             Part(root, "Backpack", new Vector3(0f, 1.22f, -.27f), new Vector3(.50f, .58f, .22f), armor);
             Part(root, "TeamMark", new Vector3(0f, 1.35f, .28f), new Vector3(.18f, .08f, .03f), accent);
+            Part(root, "ChestPouchL", new Vector3(-.19f, 1.12f, .285f), new Vector3(.18f, .23f, .08f), armor);
+            Part(root, "ChestPouchR", new Vector3(.19f, 1.12f, .285f), new Vector3(.18f, .23f, .08f), armor);
 
             leftArm = Limb(root, "LeftArm", new Vector3(-.42f, 1.46f, 0f), new Vector3(.18f, .66f, .18f), uniform);
             rightArm = Limb(root, "RightArm", new Vector3(.42f, 1.46f, 0f), new Vector3(.18f, .66f, .18f), uniform);
@@ -70,6 +77,8 @@ namespace Fsp.Presentation
             rightLeg = Limb(root, "RightLeg", new Vector3(.18f, .75f, 0f), new Vector3(.24f, .82f, .27f), uniform);
             Part(leftLeg, "LeftBoot", new Vector3(0f, -.45f, .08f), new Vector3(.28f, .18f, .42f), metal);
             Part(rightLeg, "RightBoot", new Vector3(0f, -.45f, .08f), new Vector3(.28f, .18f, .42f), metal);
+            Part(leftLeg, "LeftKnee", new Vector3(0f, -.14f, .16f), new Vector3(.26f, .18f, .09f), armor);
+            Part(rightLeg, "RightKnee", new Vector3(0f, -.14f, .16f), new Vector3(.26f, .18f, .09f), armor);
 
             Transform rifle = new GameObject("RifleVisual").transform;
             rifle.SetParent(rightArm, false);
