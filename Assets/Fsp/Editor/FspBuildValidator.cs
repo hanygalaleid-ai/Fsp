@@ -64,6 +64,9 @@ namespace Fsp.EditorTools
             const string oauthManifest = "Assets/Plugins/Android/FspAuth.androidlib/AndroidManifest.xml";
             if (!File.Exists(oauthManifest) || !File.ReadAllText(oauthManifest).Contains("auth-callback"))
                 errors.Add("Google OAuth Android callback manifest is missing or invalid.");
+            const string oauthGradle = "Assets/Plugins/Android/FspAuth.androidlib/build.gradle";
+            if (!File.Exists(oauthGradle) || !File.ReadAllText(oauthGradle).Contains("namespace \"com.hanygalaleid.fsp.auth\""))
+                errors.Add("Google OAuth Android library Gradle namespace is missing or invalid.");
 
             var enabledScenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
             if (!enabledScenes.Contains(lobbyPath)) errors.Add("Lobby scene is not enabled in Build Settings.");
