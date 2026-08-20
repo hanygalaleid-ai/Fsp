@@ -124,11 +124,30 @@ namespace Fsp.Networking
         private void SendBotDamage(string botId, string targetId, float damage, Vector3 hitPoint)
         {
             if (!isAuthority || transport == null || !transport.IsConnected || string.IsNullOrWhiteSpace(botId) || string.IsNullOrWhiteSpace(targetId)) return;
+
+            float appliedDamage = Mathf.Clamp(damage, 0f, 35f);
+
+            // Cloudflare intentionally excludes the sending bot-authority socket when relaying
+            // bot_damage to avoid redundant echoes. When an authority-owned bot attacks the
+            // authority player's own character, apply the same verified amount locally before
+            // sending so that player cannot become immune to its own simulated bots.
+            if (targetId == SupabaseSession.UserId)
+            {
+                foreach (MatchParticipant participant in FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None))
+                {
+                    if (participant == null || !participant.IsLocalPlayer) continue;
+                    PlayerVitals localVitals = participant.GetComponent<PlayerVitals>();
+                    if (localVitals != null && localVitals.IsAlive)
+                        localVitals.ApplyDamage(appliedDamage);
+                    break;
+                }
+            }
+
             transport.SendBotDamage(new NetworkDamageEvent
             {
                 attackerId = botId,
                 targetId = targetId,
-                damage = Mathf.Clamp(damage, 0f, 35f),
+                damage = appliedDamage,
                 hitPoint = hitPoint,
                 timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0
             });
