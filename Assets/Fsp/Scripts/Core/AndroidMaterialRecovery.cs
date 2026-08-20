@@ -8,6 +8,10 @@ namespace Fsp.Core
     public sealed class AndroidMaterialRecovery : MonoBehaviour
     {
         private Shader safeShader;
+        private Texture2D sandTexture;
+        private Texture2D roadTexture;
+        private Texture2D rockTexture;
+        private Texture2D wallTexture;
         private float nextScan;
         private float stopAt;
 
@@ -22,6 +26,10 @@ namespace Fsp.Core
         {
             safeShader = Resources.Load<Shader>("Shaders/FspMobileSafe");
             if (safeShader == null) safeShader = Shader.Find("Fsp/MobileSafeLit");
+            sandTexture = Resources.Load<Texture2D>("World/sand_ground_v2");
+            roadTexture = Resources.Load<Texture2D>("World/road_dust_v2");
+            rockTexture = Resources.Load<Texture2D>("World/rock_cliff_v2");
+            wallTexture = Resources.Load<Texture2D>("World/fortress_wall_v2");
             stopAt = Time.unscaledTime + 30f;
             RepairAllRenderers();
         }
@@ -52,16 +60,85 @@ namespace Fsp.Core
                     Material source = materials[i];
                     if (!NeedsRepair(source)) continue;
                     Material replacement = new Material(safeShader) { name = "FSP_AndroidSafeMaterial" };
+                    Color sourceColor = Color.white;
                     if (source != null)
                     {
-                        if (source.HasProperty("_Color")) replacement.color = source.color;
+                        if (source.HasProperty("_Color")) sourceColor = source.color;
                         if (source.HasProperty("_MainTex")) replacement.mainTexture = source.mainTexture;
+                        if (replacement.mainTexture == null && source.HasProperty("_BaseMap"))
+                            replacement.mainTexture = source.GetTexture("_BaseMap");
+                    }
+                    replacement.color = SafeSourceColor(sourceColor, renderer);
+                    if (replacement.mainTexture == null)
+                    {
+                        Texture2D worldTexture = TextureFor(renderer);
+                        if (worldTexture != null)
+                        {
+                            replacement.mainTexture = worldTexture;
+                            replacement.color = Color.white;
+                            replacement.mainTextureScale = ScaleFor(renderer);
+                        }
                     }
                     materials[i] = replacement;
                     changed = true;
                 }
                 if (changed) renderer.sharedMaterials = materials;
             }
+        }
+
+        private Texture2D TextureFor(Renderer renderer)
+        {
+            string n = Descriptor(renderer);
+            if (n.Contains("road") || n.Contains("runway") || n.Contains("asphalt")) return roadTexture;
+            if (n.Contains("rock") || n.Contains("ridge") || n.Contains("quarry") || n.Contains("stone") || n.Contains("cliff")) return rockTexture;
+            if (n.Contains("wall") || n.Contains("fort") || n.Contains("hangar") || n.Contains("building") || n.Contains("sign")) return wallTexture;
+            if (n.Contains("ground") || n.Contains("island") || n.Contains("sand") || n.Contains("floor") || IsLargeHorizontalSurface(renderer)) return sandTexture;
+            return null;
+        }
+
+        private static Vector2 ScaleFor(Renderer renderer)
+        {
+            string n = Descriptor(renderer);
+            if (n.Contains("ground") || n.Contains("island") || IsLargeHorizontalSurface(renderer)) return new Vector2(18f, 18f);
+            if (n.Contains("road") || n.Contains("runway")) return new Vector2(2f, 5f);
+            return new Vector2(2f, 2f);
+        }
+
+        private static Color SafeSourceColor(Color source, Renderer renderer)
+        {
+            string n = Descriptor(renderer);
+            if (n.Contains("ocean") || n.Contains("water") || n.Contains("sea")) return new Color(.12f, .34f, .44f, 1f);
+            if (n.Contains("tree") || n.Contains("crown") || n.Contains("grass") || n.Contains("plant")) return new Color(.22f, .34f, .18f, 1f);
+            if (n.Contains("road") || n.Contains("runway") || n.Contains("asphalt")) return new Color(.20f, .18f, .15f, 1f);
+            if (n.Contains("rock") || n.Contains("ridge") || n.Contains("quarry") || n.Contains("stone") || n.Contains("cliff")) return new Color(.34f, .30f, .25f, 1f);
+            if (n.Contains("wall") || n.Contains("fort") || n.Contains("hangar") || n.Contains("building") || n.Contains("sign")) return new Color(.43f, .34f, .23f, 1f);
+            if (n.Contains("ground") || n.Contains("island") || n.Contains("sand") || n.Contains("floor") || IsLargeHorizontalSurface(renderer)) return new Color(.52f, .42f, .27f, 1f);
+
+            bool nearWhite = source.r > .92f && source.g > .92f && source.b > .92f;
+            bool magenta = source.r > .75f && source.b > .75f && source.g < .35f;
+            if (!nearWhite && !magenta && source.a > .01f) return source;
+            return new Color(.32f, .30f, .27f, 1f);
+        }
+
+        private static string Descriptor(Renderer renderer)
+        {
+            if (renderer == null) return string.Empty;
+            System.Text.StringBuilder value = new System.Text.StringBuilder(96);
+            Transform current = renderer.transform;
+            int depth = 0;
+            while (current != null && depth++ < 8)
+            {
+                value.Append(current.name).Append(' ');
+                current = current.parent;
+            }
+            return value.ToString().ToLowerInvariant();
+        }
+
+        private static bool IsLargeHorizontalSurface(Renderer renderer)
+        {
+            if (renderer == null) return false;
+            Vector3 size = renderer.bounds.size;
+            return size.x >= 40f && size.z >= 40f && size.y <= Mathf.Max(12f, Mathf.Min(size.x, size.z) * .2f);
         }
 
         private static bool NeedsRepair(Material material)

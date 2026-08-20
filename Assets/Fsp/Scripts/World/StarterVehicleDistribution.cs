@@ -1,4 +1,5 @@
 using Fsp.Vehicles;
+using Fsp.Presentation;
 using UnityEngine;
 
 namespace Fsp.World
@@ -22,12 +23,31 @@ namespace Fsp.World
                 g.name = "ScoutVehicle_" + i;
                 g.transform.position = Spots[i * 2 % Spots.Length];
                 g.transform.localScale = new Vector3(2.2f, 1.1f, 4.1f);
+                Renderer rootRenderer = g.GetComponent<Renderer>();
+                if (rootRenderer != null) rootRenderer.enabled = false;
+                g.transform.localScale = Vector3.one;
+                BoxCollider bodyCollider = g.GetComponent<BoxCollider>();
+                if (bodyCollider != null)
+                {
+                    bodyCollider.size = new Vector3(2.2f, 1.4f, 4.1f);
+                    bodyCollider.center = new Vector3(0f, .7f, 0f);
+                }
 
                 Rigidbody rb = g.AddComponent<Rigidbody>();
                 rb.mass = 950f;
                 rb.linearDamping = 0.25f;
                 rb.angularDamping = 2f;
-                g.AddComponent<SimpleVehicleController>();
+                SimpleVehicleController vehicle = g.AddComponent<SimpleVehicleController>();
+                g.AddComponent<StarterProceduralVehicleVisual>();
+
+                Transform seat = new GameObject("DriverSeat").transform;
+                seat.SetParent(g.transform, false);
+                seat.localPosition = new Vector3(-.45f, 1.15f, -.2f);
+                Transform exit = new GameObject("DriverExit").transform;
+                exit.SetParent(g.transform, false);
+                exit.localPosition = new Vector3(-1.8f, .9f, 0f);
+                VehicleSeat vehicleSeat = g.AddComponent<VehicleSeat>();
+                vehicleSeat.Configure(vehicle, seat, exit);
             }
         }
     }

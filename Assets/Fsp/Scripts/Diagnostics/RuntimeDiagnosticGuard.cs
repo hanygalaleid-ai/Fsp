@@ -74,35 +74,45 @@ namespace Fsp.Diagnostics
 
             if (scene.Equals("Lobby", StringComparison.OrdinalIgnoreCase))
             {
-                // The production lobby is a SpriteRenderer, not the old LobbyCanvas/RawImage UI.
-                // Use the same Resource path as LobbyRuntimeGuard so diagnostics cannot report a
-                // false failure simply because the obsolete lobby_reference asset is absent.
+                // The release lobby must be the responsive overlay canvas. The obsolete
+                // world-space SpriteRenderer is intentionally disabled on every device.
                 Sprite resourceArt = Resources.Load<Sprite>("Lobby/fsp_lobby_final");
-                GameObject artObject = GameObject.Find("FSP_FIXED_LOBBY_ART");
-                SpriteRenderer artRenderer = artObject != null ? artObject.GetComponent<SpriteRenderer>() : null;
-                bool sceneArtReady = artRenderer != null && artRenderer.enabled && artRenderer.sprite != null;
+                GameObject productionCanvas = GameObject.Find("ProductionLobbyCanvas");
+                bool productionUiReady = productionCanvas != null && productionCanvas.GetComponent<Canvas>() != null;
 
                 Write(
                     "LOBBY_VISUAL",
                     "camera=" + (main != null) +
                     " resourceArt=" + (resourceArt != null) +
-                    " sceneArt=" + sceneArtReady +
+                    " productionUi=" + productionUiReady +
                     " canvases=" + canvases.Length +
                     " renderers=" + renderers.Length);
 
-                if (!sceneArtReady && resourceArt == null)
-                    Write("LOBBY_VISUAL_ERROR", "Production lobby sprite is unavailable both in scene and Resources.");
+                if (!productionUiReady || resourceArt == null)
+                    Write("LOBBY_VISUAL_ERROR", "Responsive lobby canvas or its Resources background is unavailable.");
 
                 return;
             }
 
             if (scene.Equals("Match", StringComparison.OrdinalIgnoreCase))
             {
+                int unsafeMaterials = 0;
+                foreach (Renderer renderer in renderers)
+                {
+                    if (renderer == null || renderer is SpriteRenderer || renderer is ParticleSystemRenderer) continue;
+                    foreach (Material material in renderer.sharedMaterials)
+                    {
+                        if (material == null || material.shader == null || !material.shader.isSupported ||
+                            material.shader.name.IndexOf("InternalErrorShader", StringComparison.OrdinalIgnoreCase) >= 0)
+                            unsafeMaterials++;
+                    }
+                }
                 Write(
                     "MATCH_VISUAL",
                     "camera=" + (main != null) +
                     " canvases=" + canvases.Length +
-                    " renderers=" + renderers.Length);
+                    " renderers=" + renderers.Length +
+                    " unsafeMaterials=" + unsafeMaterials);
             }
         }
 

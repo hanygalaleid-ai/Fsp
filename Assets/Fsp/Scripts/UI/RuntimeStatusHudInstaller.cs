@@ -5,6 +5,7 @@ using Fsp.Player;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Fsp.Localization;
 
 namespace Fsp.UI
 {
@@ -90,7 +91,7 @@ namespace Fsp.UI
         {
             if (GameObject.Find("RuntimeStatusHUD") != null) return;
 
-            GameObject canvasObject = new GameObject("RuntimeStatusHUD", typeof(Canvas), typeof(CanvasScaler));
+            GameObject canvasObject = new GameObject("RuntimeStatusHUD", typeof(Canvas), typeof(CanvasScaler), typeof(MobileSafeArea));
             Canvas canvas = canvasObject.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.overrideSorting = true;
@@ -114,7 +115,8 @@ namespace Fsp.UI
             ammoText = CreateText(rightPanel.transform, "AMMO -- / --", 22, new Vector2(0.48f, 0.53f), new Vector2(0.96f, 0.93f), TextAnchor.MiddleRight);
             phaseText = CreateText(rightPanel.transform, "WAITING", 18, new Vector2(0.04f, 0.08f), new Vector2(0.96f, 0.48f), TextAnchor.MiddleCenter);
 
-            zoneWarning = CreateText(root, "RETURN TO SAFE ZONE", 24, new Vector2(0.36f, 0.89f), new Vector2(0.64f, 0.95f), TextAnchor.MiddleCenter);
+            // Reserve the top-center area for the minimap and title badge.
+            zoneWarning = CreateText(root, "RETURN TO SAFE ZONE", 24, new Vector2(0.36f, 0.64f), new Vector2(0.64f, 0.70f), TextAnchor.MiddleCenter);
             zoneWarning.color = new Color(1f, 0.34f, 0.10f, 1f);
             zoneWarning.gameObject.SetActive(false);
 
@@ -128,25 +130,25 @@ namespace Fsp.UI
             float armor = vitals != null ? Mathf.Clamp(vitals.Armor, 0f, 100f) : 0f;
             SetBar(healthFill, hp / 100f);
             SetBar(armorFill, armor / 100f);
-            if (healthText != null) healthText.text = "HP " + Mathf.CeilToInt(hp);
-            if (armorText != null) armorText.text = "ARMOR " + Mathf.CeilToInt(armor);
+            if (healthText != null) healthText.text = FspLocalizationRuntime.T("HP") + " " + Mathf.CeilToInt(hp);
+            if (armorText != null) armorText.text = FspLocalizationRuntime.T("ARMOR") + " " + Mathf.CeilToInt(armor);
 
             if (inventory != null && inventory.ActiveWeapon != null)
             {
                 if (ammoText != null)
-                    ammoText.text = "AMMO " + inventory.ActiveWeapon.AmmoInMagazine + " / " + inventory.GetReserveAmmoForActiveWeapon();
+                    ammoText.text = FspLocalizationRuntime.T("AMMO") + " " + inventory.ActiveWeapon.AmmoInMagazine + " / " + inventory.GetReserveAmmoForActiveWeapon();
             }
-            else if (ammoText != null) ammoText.text = "AMMO -- / --";
+            else if (ammoText != null) ammoText.text = FspLocalizationRuntime.T("AMMO") + " -- / --";
 
             if (aliveText != null)
-                aliveText.text = "ALIVE " + (matchManager != null ? matchManager.AliveCount.ToString() : "--");
+                aliveText.text = FspLocalizationRuntime.T("ALIVE") + " " + (matchManager != null ? matchManager.AliveCount.ToString() : "--");
 
             if (phaseText != null)
             {
-                if (matchManager == null) phaseText.text = "LOADING MATCH";
+                if (matchManager == null) phaseText.text = FspLocalizationRuntime.T("LOADING MATCH");
                 else if (matchManager.Phase == MatchManager.MatchPhase.Countdown)
-                    phaseText.text = "STARTING " + Mathf.CeilToInt(matchManager.CountdownRemaining);
-                else phaseText.text = matchManager.Phase.ToString().ToUpperInvariant();
+                    phaseText.text = FspLocalizationRuntime.T("STARTING") + " " + Mathf.CeilToInt(matchManager.CountdownRemaining);
+                else phaseText.text = FspLocalizationRuntime.T(matchManager.Phase.ToString().ToUpperInvariant());
             }
 
             if (zoneWarning != null)

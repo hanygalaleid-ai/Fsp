@@ -16,7 +16,8 @@ namespace Fsp.BattleRoyale
             [Min(0f)] public float damagePerSecond;
         }
 
-        [Min(50f)] public float initialRadius = 1100f;
+        // Sunscar's checked-in runtime island is roughly 410 x 410 world units.
+        [Min(50f)] public float initialRadius = 190f;
         public Phase[] phases = new Phase[]
         {
             new Phase { waitSeconds = 90f, shrinkSeconds = 70f, radiusFactor = 0.72f, centerShiftFactor = 0.35f, damagePerSecond = 1f },

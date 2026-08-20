@@ -44,19 +44,25 @@ namespace Fsp.Core
             if (Object.FindFirstObjectByType<StarterSpawnBalance>() == null) new GameObject("SunscarIsland_SpawnBalance").AddComponent<StarterSpawnBalance>();
             if (Object.FindFirstObjectByType<PoiLootTierBalancer>() == null) new GameObject("SunscarIsland_LootBalance").AddComponent<PoiLootTierBalancer>();
 
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.34f, 0.31f, 0.27f);
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.54f, 0.59f, 0.66f);
+            RenderSettings.ambientEquatorColor = new Color(0.42f, 0.36f, 0.29f);
+            RenderSettings.ambientGroundColor = new Color(0.18f, 0.15f, 0.12f);
+            RenderSettings.ambientIntensity = 1.05f;
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.58f, 0.61f, 0.62f);
-            RenderSettings.fogDensity = 0.0018f;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogColor = new Color(0.60f, 0.65f, 0.68f);
+            RenderSettings.fogStartDistance = 135f;
+            RenderSettings.fogEndDistance = 360f;
 
             Camera camera = Camera.main != null ? Camera.main : Object.FindFirstObjectByType<Camera>();
             if (camera != null)
             {
                 camera.clearFlags = CameraClearFlags.Skybox;
                 camera.nearClipPlane = 0.08f;
-                camera.farClipPlane = 1600f;
-                camera.allowHDR = false;
+                camera.farClipPlane = 420f;
+                camera.allowHDR = PlayerPrefs.GetInt("fsp_quality", 1) >= 2;
+                camera.allowMSAA = PlayerPrefs.GetInt("fsp_quality", 1) >= 1;
             }
         }
     }

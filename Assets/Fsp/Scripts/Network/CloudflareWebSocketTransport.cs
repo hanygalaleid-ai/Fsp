@@ -12,7 +12,7 @@ namespace Fsp.Networking
     public sealed class CloudflareWebSocketTransport : MonoBehaviour, INetworkTransport
     {
         [Serializable] private sealed class Envelope { public string type; public string payload; }
-        [SerializeField] private string relayBaseUrl = "wss://YOUR_MATCH_RELAY.workers.dev/ws";
+        [SerializeField] private string relayBaseUrl = "";
 
         private readonly ConcurrentQueue<Action> mainThread = new();
         private readonly SemaphoreSlim sendLock = new(1, 1);
@@ -20,7 +20,7 @@ namespace Fsp.Networking
         private CancellationTokenSource lifetime;
 
         public bool IsConnected => socket != null && socket.State == WebSocketState.Open;
-        public bool IsConfigured => !string.IsNullOrWhiteSpace(relayBaseUrl) && relayBaseUrl.StartsWith("wss://", StringComparison.OrdinalIgnoreCase) && !relayBaseUrl.Contains("YOUR_MATCH_RELAY", StringComparison.OrdinalIgnoreCase);
+        public bool IsConfigured => !string.IsNullOrWhiteSpace(relayBaseUrl) && relayBaseUrl.StartsWith("wss://", StringComparison.OrdinalIgnoreCase);
         public string RelayBaseUrl => relayBaseUrl;
         public NetworkBotAuthorityEvent LastBotAuthority { get; private set; }
 

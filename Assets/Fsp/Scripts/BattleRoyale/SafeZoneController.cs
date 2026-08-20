@@ -9,7 +9,7 @@ namespace Fsp.BattleRoyale
         public enum PhaseState { Waiting, Shrinking, Complete }
         [SerializeField] private Transform zoneVisual;
         [SerializeField] private SafeZonePlan plan;
-        [SerializeField] private float playableHalfExtent = 1200f;
+        [SerializeField] private float playableHalfExtent = 200f;
         public Vector3 Center { get; private set; }
         public float CurrentRadius { get; private set; }
         public Vector3 TargetCenter { get; private set; }

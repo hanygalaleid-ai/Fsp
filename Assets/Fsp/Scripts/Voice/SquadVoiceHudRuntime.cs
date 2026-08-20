@@ -1,6 +1,7 @@
 using System;
 using Fsp.Backend;
 using Fsp.Lobby;
+using Fsp.Localization;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -51,15 +52,20 @@ namespace Fsp.Voice
 
         private void BuildUi()
         {
-            Canvas canvas = FindFirstObjectByType<Canvas>();
+            GameObject canvasObject = GameObject.Find("SquadVoiceCanvas");
+            Canvas canvas = canvasObject != null ? canvasObject.GetComponent<Canvas>() : null;
             if (canvas == null)
             {
-                GameObject canvasObject = new GameObject("FspRuntimeCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+                canvasObject = new GameObject("SquadVoiceCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster), typeof(MobileSafeArea));
                 canvas = canvasObject.GetComponent<Canvas>();
                 canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.overrideSorting = true;
+                canvas.sortingOrder = 95;
                 var scaler = canvasObject.GetComponent<CanvasScaler>();
                 scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
                 scaler.referenceResolution = new Vector2(1920f, 1080f);
+                scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+                scaler.matchWidthOrHeight = 0.5f;
             }
 
             if (FindFirstObjectByType<EventSystem>() == null)
@@ -68,11 +74,13 @@ namespace Fsp.Voice
             GameObject panel = new GameObject("SquadVoicePanel", typeof(RectTransform), typeof(Image));
             panel.transform.SetParent(canvas.transform, false);
             var panelRect = panel.GetComponent<RectTransform>();
-            panelRect.anchorMin = new Vector2(1f, 0f);
-            panelRect.anchorMax = new Vector2(1f, 0f);
-            panelRect.pivot = new Vector2(1f, 0f);
-            panelRect.anchoredPosition = new Vector2(-36f, 38f);
-            panelRect.sizeDelta = new Vector2(310f, 128f);
+            // Sit below the top-right status card. Bottom-right is reserved for FIRE,
+            // AIM and RELOAD on touch devices.
+            panelRect.anchorMin = new Vector2(1f, 1f);
+            panelRect.anchorMax = new Vector2(1f, 1f);
+            panelRect.pivot = new Vector2(1f, 1f);
+            panelRect.anchoredPosition = new Vector2(-36f, -220f);
+            panelRect.sizeDelta = new Vector2(310f, 112f);
             panel.GetComponent<Image>().color = new Color(0.03f, 0.05f, 0.09f, 0.78f);
 
             GameObject statusObject = new GameObject("VoiceStatus", typeof(RectTransform), typeof(Text));
@@ -118,17 +126,19 @@ namespace Fsp.Voice
             SquadVoiceState state = SquadVoiceState.Instance;
             if (state == null)
             {
-                if (statusText != null) statusText.text = "VOICE OFFLINE";
-                if (buttonText != null) buttonText.text = "VOICE";
+                if (statusText != null) statusText.text = FspLocalizationRuntime.T("VOICE OFFLINE");
+                if (buttonText != null) buttonText.text = FspLocalizationRuntime.T("VOICE");
                 if (talkButton != null) talkButton.interactable = false;
                 return;
             }
 
             if (statusText != null)
-                statusText.text = state.Connected ? (state.MicrophoneMuted ? "SQUAD VOICE • READY" : "SQUAD VOICE • TALKING") : state.RuntimeStatus;
+                statusText.text = state.Connected
+                    ? FspLocalizationRuntime.T(state.MicrophoneMuted ? "SQUAD VOICE • READY" : "SQUAD VOICE • TALKING")
+                    : FspLocalizationRuntime.T(state.RuntimeStatus);
 
             if (buttonText != null)
-                buttonText.text = state.MicrophoneMuted ? "HOLD TO TALK" : "TALKING...";
+                buttonText.text = FspLocalizationRuntime.T(state.MicrophoneMuted ? "HOLD TO TALK" : "TALKING...");
 
             if (talkButton != null)
                 talkButton.interactable = state.Connected;

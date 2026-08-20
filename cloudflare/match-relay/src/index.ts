@@ -15,8 +15,8 @@ type ZonePhase = { wait: number; shrink: number; factor: number; shift: number; 
 
 const STARTER_DAMAGE_CAP = 35;
 const COUNTDOWN_SECONDS = 8;
-const INITIAL_ZONE_RADIUS = 1100;
-const PLAYABLE_HALF_EXTENT = 1200;
+const INITIAL_ZONE_RADIUS = 190;
+const PLAYABLE_HALF_EXTENT = 200;
 const DROP_GROUNDED = 0;
 const DROP_ABOARD = 1;
 const DROP_FREEFALL = 2;
@@ -30,6 +30,12 @@ const ZONE_PHASES: ZonePhase[] = [
   { wait: 15, shrink: 22, factor: 0.08, shift: 0.85, dps: 16 },
 ];
 const CLIENT_TYPES = new Set(["snapshot", "bot_snapshot", "fire", "damage", "bot_damage", "zone_probe", "vehicle", "seat", "loot_claim", "appearance"]);
+const CHARACTER_IDS = new Set(["soldier_01", "soldier_02", "soldier_03"]);
+const COSMETIC_IDS = new Set([
+  "head_default", "head_sand", "head_night", "face_none", "face_amber", "face_ice",
+  "torso_default", "torso_sand", "torso_night", "legs_default", "legs_sand", "legs_night",
+  "backpack_default", "backpack_sand", "backpack_rescue", "parachute_default", "parachute_sand", "parachute_night"
+]);
 
 async function authenticate(request: Request, env: Env): Promise<string | null> {
   const auth = request.headers.get("Authorization") ?? "";
@@ -113,10 +119,11 @@ export class MatchRoom extends DurableObject<Env> {
     if (envelope.type === "damage") { await this.handleDamage(ws, attachment.playerId, payload); return; }
 
     if (envelope.type === "appearance") {
+      if (!CHARACTER_IDS.has(cleanString(payload.characterId, 32))) return;
       const loadout = payload.loadout as Record<string, unknown> | undefined;
       if (!loadout) return;
       for (const key of ["headItemId", "faceItemId", "torsoItemId", "legsItemId", "backpackItemId", "parachuteItemId"])
-        if (!cleanString(loadout[key], 80)) return;
+        if (!COSMETIC_IDS.has(cleanString(loadout[key], 80))) return;
       this.broadcast(message, ws);
       return;
     }

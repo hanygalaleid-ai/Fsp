@@ -66,6 +66,15 @@ namespace Fsp.BattleRoyale
 
         private void Update()
         {
+            // Online configuration can finish after the local plane reaches its route end.
+            // Retry the forced jump once the authoritative match becomes Active instead of
+            // leaving the player permanently parented to a stopped plane.
+            if (aboard && !jumped && plane != null && !plane.IsFlying)
+            {
+                Jump();
+                if (aboard) return;
+            }
+
             if (!jumped || parachute == null || parachute.IsActive) return;
             if (motor != null) motor.enabled = true;
             enabled = false;

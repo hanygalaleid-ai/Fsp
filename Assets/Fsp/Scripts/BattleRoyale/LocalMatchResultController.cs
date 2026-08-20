@@ -1,4 +1,5 @@
 using System;
+using Fsp.Lobby;
 using Fsp.UI;
 using UnityEngine;
 
@@ -81,6 +82,7 @@ namespace Fsp.BattleRoyale
             Placement = Mathf.Max(1, placement);
             LocalKills = Mathf.Max(KillFeedBus.LocalPlayerKills, legacyRecordedKills);
             HasResult = true;
+            LobbyGameplayProgress.RecordMatch(LocalKills, Placement);
             ResultReady?.Invoke();
         }
     }

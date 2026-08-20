@@ -2,6 +2,7 @@ using System;
 using Fsp.Lobby;
 using UnityEngine;
 using UnityEngine.UI;
+using Fsp.Localization;
 
 namespace Fsp.Backend
 {
@@ -24,10 +25,10 @@ namespace Fsp.Backend
         public void SignIn()
         {
             if (!ValidateCredentials()) return;
-            SetStatus("جاري تسجيل الدخول...");
+            SetStatus(FspLocalizationRuntime.T("Signing in..."));
             StartCoroutine(authClient.SignIn(emailInput.text.Trim(), passwordInput.text, async (ok, error) =>
             {
-                if (!ok) { SetStatus("فشل تسجيل الدخول"); Debug.LogWarning(error); return; }
+                if (!ok) { SetStatus(FspLocalizationRuntime.T("Sign in failed")); Debug.LogWarning(error); return; }
                 SetSignedInState(true);
                 await EnsureProfileAsync();
             }));
@@ -36,19 +37,23 @@ namespace Fsp.Backend
         public void SignUp()
         {
             if (!ValidateCredentials()) return;
-            SetStatus("جاري إنشاء الحساب...");
+            SetStatus(FspLocalizationRuntime.T("Creating account..."));
             StartCoroutine(authClient.SignUp(emailInput.text.Trim(), passwordInput.text, (ok, error) =>
             {
-                if (!ok) { SetStatus("تعذر إنشاء الحساب"); Debug.LogWarning(error); return; }
-                SetStatus("تم إنشاء الحساب. تحقق من بريدك ثم سجل الدخول.");
+                if (!ok) { SetStatus(FspLocalizationRuntime.T("Could not create account")); Debug.LogWarning(error); return; }
+                SetStatus(FspLocalizationRuntime.T("Account created. Verify your email, then sign in."));
             }));
         }
 
         public void SignOut()
         {
-            SupabaseSession.Clear();
-            SetSignedInState(false);
-            SetStatus(string.Empty);
+            if (authClient == null) { SupabaseSession.Clear(); SetSignedInState(false); return; }
+            StartCoroutine(authClient.SignOut((ok, error) =>
+            {
+                SetSignedInState(false);
+                SetStatus(string.Empty);
+                if (!ok && !string.IsNullOrWhiteSpace(error)) Debug.LogWarning("FSP server sign out failed; local session was cleared: " + error);
+            }));
         }
 
         private async System.Threading.Tasks.Task EnsureProfileAsync()
@@ -61,12 +66,12 @@ namespace Fsp.Backend
                     profile = new PlayerProfile(SupabaseSession.UserId, "Player", "soldier_01");
                     await profileStore.SaveAsync(profile);
                 }
-                SetStatus("تم تسجيل الدخول");
+                SetStatus(FspLocalizationRuntime.T("Signed in"));
             }
             catch (Exception ex)
             {
                 Debug.LogException(ex);
-                SetStatus("تم الدخول، لكن تعذر تحميل الملف الشخصي");
+                SetStatus(FspLocalizationRuntime.T("Signed in, but profile could not be loaded"));
             }
         }
 
@@ -77,7 +82,7 @@ namespace Fsp.Backend
             string password = passwordInput != null ? passwordInput.text : string.Empty;
             if (string.IsNullOrWhiteSpace(email) || password.Length < 6)
             {
-                SetStatus("اكتب بريدًا صحيحًا وكلمة مرور 6 أحرف على الأقل");
+                SetStatus(FspLocalizationRuntime.T("Enter a valid email and a password of at least 6 characters"));
                 return false;
             }
             return true;

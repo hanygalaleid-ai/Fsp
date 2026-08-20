@@ -25,6 +25,12 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Scripts/BattleRoyale/DropPlaneController.cs",
             "Assets/Fsp/Scripts/BattleRoyale/DropPlanePassenger.cs",
             "Assets/Fsp/Scripts/BattleRoyale/ParachuteController.cs",
+            "Assets/Fsp/Scripts/Presentation/StarterPlaneVisual.cs",
+            "Assets/Fsp/Scripts/Presentation/StarterParachuteVisual.cs",
+            "Assets/Fsp/Scripts/Presentation/StarterProceduralCharacterVisual.cs",
+            "Assets/Fsp/Scripts/Presentation/StarterCosmeticCatalog.cs",
+            "Assets/Fsp/Scripts/Presentation/StarterWardrobeRuntime.cs",
+            "Assets/Fsp/Scripts/Presentation/StarterProceduralVehicleVisual.cs",
             "Assets/Fsp/Scripts/BattleRoyale/AirdropController.cs",
             "Assets/Fsp/Scripts/BattleRoyale/MatchPopulationBootstrap.cs",
             "Assets/Fsp/Scripts/Player/PlayerVitals.cs",
@@ -48,6 +54,17 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Scripts/Voice/CloudflareSfuSignalingClient.cs",
             "Assets/Fsp/Scripts/Voice/SquadVoiceCoordinator.cs",
             "Assets/Fsp/Scripts/Voice/SquadVoiceHudRuntime.cs",
+            "Assets/Fsp/Scripts/UI/RuntimeMiniMapInstaller.cs",
+            "Assets/Fsp/Scripts/Audio/FspAudioRuntime.cs",
+            "Assets/Fsp/Scripts/Core/AndroidMaterialRecovery.cs",
+            "Assets/Fsp/Scripts/Core/DeviceGraphicsConfigurator.cs",
+            "Assets/Fsp/Scripts/Lobby/ProductionLobbyUiInstaller.cs",
+            "Assets/Fsp/Scripts/Lobby/LobbyGameplayProgress.cs",
+            "Assets/Fsp/Scripts/Backend/LegalRuntimeConfig.cs",
+            "Assets/Fsp/Scripts/Backend/SupabaseAuthClient.cs",
+            "Assets/Fsp/Scripts/Backend/SupabaseCosmeticsClient.cs",
+            "Assets/Plugins/Android/FspAuth.androidlib/AndroidManifest.xml",
+            "Assets/Fsp/Art/Resources/Shaders/FspMobileSafe.shader",
             "Packages/manifest.json",
             "ProjectSettings/ProjectVersion.txt"
         };
@@ -89,6 +106,10 @@ namespace Fsp.EditorTools
 
             if (!manifest.Contains("com.unity.inputsystem"))
                 Debug.Log("Fsp input validation: Unity Input System package is not declared; project is intentionally using legacy/mobile input paths.");
+
+            string authManifest = File.ReadAllText("Assets/Plugins/Android/FspAuth.androidlib/AndroidManifest.xml");
+            if (!authManifest.Contains("com.hanygalaleid.fsp") || !authManifest.Contains("auth-callback"))
+                throw new BuildFailedException("Fsp Google OAuth requires the Android auth callback deep link manifest.");
         }
 
         private static void ValidateLobbyScene()

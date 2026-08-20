@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Fsp.Backend;
+using Fsp.Lobby;
 using Fsp.Presentation;
 using UnityEngine;
 
@@ -12,7 +13,7 @@ namespace Fsp.Networking
         [SerializeField] private CosmeticCatalog catalog;
 
         private INetworkTransport transport;
-        private readonly Dictionary<string, CosmeticLoadout> pending = new();
+        private readonly Dictionary<string, NetworkAppearanceEvent> pending = new();
         private bool localSent;
 
         private void Awake()
@@ -34,6 +35,7 @@ namespace Fsp.Networking
                 transport.SendAppearance(new NetworkAppearanceEvent
                 {
                     playerId = SupabaseSession.UserId,
+                    characterId = LobbyState.Instance != null ? LobbyState.Instance.SelectedCharacterId : "soldier_01",
                     loadout = loadout,
                     timestamp = Time.realtimeSinceStartupAsDouble
                 });
@@ -45,8 +47,14 @@ namespace Fsp.Networking
             {
                 if (!RemotePlayerProxy.TryFind(pair.Key, out var proxy)) continue;
                 var modular = proxy.GetComponentInChildren<ModularCharacterCosmetics>(true);
-                if (modular == null) continue;
-                Apply(modular, pair.Value);
+                if (modular != null) Apply(modular, pair.Value.loadout);
+                else
+                {
+                    var procedural = proxy.GetComponentInChildren<StarterProceduralCharacterVisual>(true);
+                    if (procedural == null) continue;
+                    procedural.ApplyCharacterIdentity(pair.Value.characterId);
+                    procedural.ApplyCosmeticLoadout(pair.Value.loadout);
+                }
                 completed.Add(pair.Key);
             }
             foreach (string id in completed) pending.Remove(id);
@@ -55,7 +63,7 @@ namespace Fsp.Networking
         private void HandleAppearance(NetworkAppearanceEvent evt)
         {
             if (evt == null || string.IsNullOrWhiteSpace(evt.playerId) || evt.playerId == SupabaseSession.UserId || evt.loadout == null) return;
-            pending[evt.playerId] = evt.loadout;
+            pending[evt.playerId] = evt;
         }
 
         private void Apply(ModularCharacterCosmetics target, CosmeticLoadout loadout)

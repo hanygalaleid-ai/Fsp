@@ -76,10 +76,10 @@ namespace Fsp.Localization
             switch (language)
             {
                 case FspLanguage.Arabic:
-                    candidates = new[] { "Noto Sans Arabic", "Noto Naskh Arabic", "NotoSansArabic", "Roboto", "Arial" };
+                    candidates = new[] { "Noto Sans Arabic", "Noto Naskh Arabic", "NotoSansArabic", "Droid Arabic Naskh", "Droid Sans Arabic", "Roboto", "Arial" };
                     break;
                 case FspLanguage.Hindi:
-                    candidates = new[] { "Noto Sans Devanagari", "NotoSansDevanagari", "Noto Sans", "Roboto", "Arial" };
+                    candidates = new[] { "Noto Sans Devanagari", "NotoSansDevanagari", "Noto Serif Devanagari", "Droid Sans Devanagari", "Kohinoor Devanagari", "Mangal", "Noto Sans", "Roboto", "Arial" };
                     break;
                 default:
                     candidates = new[] { "Roboto", "Noto Sans", "Arial" };

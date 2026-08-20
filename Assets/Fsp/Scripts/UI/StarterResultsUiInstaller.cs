@@ -40,6 +40,7 @@ namespace Fsp.UI
                 scaler.referenceResolution = new Vector2(1920f, 1080f);
                 scaler.matchWidthOrHeight = 0.5f;
                 canvasObject.AddComponent<GraphicRaycaster>();
+                canvasObject.AddComponent<MobileSafeArea>();
             }
             else
             {
@@ -52,6 +53,8 @@ namespace Fsp.UI
                     canvasObject.AddComponent<CanvasScaler>();
                 if (canvasObject.GetComponent<GraphicRaycaster>() == null)
                     canvasObject.AddComponent<GraphicRaycaster>();
+                if (canvasObject.GetComponent<MobileSafeArea>() == null)
+                    canvasObject.AddComponent<MobileSafeArea>();
             }
 
             GameObject host = new GameObject("MatchResultsController");

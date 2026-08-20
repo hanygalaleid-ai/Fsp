@@ -44,6 +44,9 @@ namespace Fsp.Lobby
             SupabaseProfileStore profileStore = host.GetComponent<SupabaseProfileStore>();
             if (profileStore == null) profileStore = host.AddComponent<SupabaseProfileStore>();
 
+            SupabaseCosmeticsClient cosmetics = host.GetComponent<SupabaseCosmeticsClient>();
+            if (cosmetics == null) cosmetics = host.AddComponent<SupabaseCosmeticsClient>();
+
             LobbyProfileSync profileSync = host.GetComponent<LobbyProfileSync>();
             if (profileSync == null) profileSync = host.AddComponent<LobbyProfileSync>();
             profileSync.ConfigureRuntime(profileStore);

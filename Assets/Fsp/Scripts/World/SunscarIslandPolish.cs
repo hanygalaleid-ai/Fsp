@@ -19,11 +19,11 @@ namespace Fsp.World
             Transform root = new GameObject("GeneratedIslandPolish").transform;
             root.SetParent(transform, false);
 
-            sand = Mat(new Color(.48f, .40f, .28f), "World/sand_ground", new Vector2(18f, 18f));
-            rock = Mat(new Color(.38f, .36f, .32f), "World/rock_cliff", new Vector2(5f, 5f));
+            sand = Mat(new Color(.52f, .42f, .27f), "World/sand_ground_v2", new Vector2(18f, 18f));
+            rock = Mat(new Color(.34f, .30f, .25f), "World/rock_cliff_v2", new Vector2(5f, 5f));
             green = Mat(new Color(.24f, .31f, .20f), null, Vector2.one);
             water = Mat(new Color(.16f, .38f, .48f), null, Vector2.one);
-            roadSign = Mat(new Color(.10f, .16f, .20f), "World/fortress_wall", new Vector2(1f, 1f));
+            roadSign = Mat(new Color(.43f, .34f, .23f), "World/fortress_wall_v2", new Vector2(1f, 1f));
 
             Block(root, "IslandBase", new Vector3(0, -2.2f, 10), new Vector3(410, 4, 410), sand, true);
             BuildSea(root);
@@ -131,7 +131,9 @@ namespace Fsp.World
 
         private static Material Mat(Color fallbackColor, string resourcePath, Vector2 textureScale)
         {
-            Shader shader = Shader.Find("Standard");
+            Shader shader = Resources.Load<Shader>("Shaders/FspMobileSafe");
+            if (shader == null) shader = Shader.Find("Fsp/MobileSafeLit");
+            if (shader == null) shader = Shader.Find("Standard");
             if (shader == null) shader = Shader.Find("Universal Render Pipeline/Lit");
             if (shader == null) shader = Shader.Find("Sprites/Default");
             if (shader == null)

@@ -49,6 +49,21 @@ namespace Fsp.EditorTools
 
             if (!File.Exists(lobbyPath)) errors.Add("Lobby scene is missing.");
             if (!File.Exists(matchPath)) errors.Add("Match scene is missing.");
+            if (!File.Exists("Assets/Fsp/Art/Resources/Shaders/FspMobileSafe.shader"))
+                errors.Add("Android mobile-safe shader is missing; release could render magenta materials.");
+            string[] requiredRuntimeArt =
+            {
+                "Assets/Fsp/Art/Resources/Lobby/fsp_lobby_final.jpg",
+                "Assets/Fsp/Art/Resources/World/sand_ground_v2.png",
+                "Assets/Fsp/Art/Resources/World/road_dust_v2.png",
+                "Assets/Fsp/Art/Resources/World/rock_cliff_v2.png",
+                "Assets/Fsp/Art/Resources/World/fortress_wall_v2.png"
+            };
+            foreach (string artPath in requiredRuntimeArt)
+                if (!File.Exists(artPath)) errors.Add("Required runtime art is missing: " + artPath);
+            const string oauthManifest = "Assets/Plugins/Android/FspAuth.androidlib/AndroidManifest.xml";
+            if (!File.Exists(oauthManifest) || !File.ReadAllText(oauthManifest).Contains("auth-callback"))
+                errors.Add("Google OAuth Android callback manifest is missing or invalid.");
 
             var enabledScenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
             if (!enabledScenes.Contains(lobbyPath)) errors.Add("Lobby scene is not enabled in Build Settings.");
@@ -69,8 +84,17 @@ namespace Fsp.EditorTools
                 if (PlayerSettings.Android.bundleVersionCode < 1)
                     errors.Add("Google Play AAB must use a positive Android versionCode.");
 
+                if (!File.Exists(FspAndroidIconSetup.IconPath))
+                    errors.Add("Google Play AAB requires the checked-in FSP launcher icon: " + FspAndroidIconSetup.IconPath);
+
                 if ((PlayerSettings.Android.targetArchitectures & AndroidArchitecture.ARM64) == 0)
                     errors.Add("Google Play AAB must include ARM64.");
+
+                if (PlayerSettings.Android.applicationEntry != AndroidApplicationEntry.Activity)
+                    errors.Add("Google OAuth callback requires the single Unity Activity application entry point.");
+
+                if (!PlayerSettings.Android.forceInternetPermission)
+                    errors.Add("Google Play AAB must include Android INTERNET permission for Supabase, matchmaking and WebRTC voice.");
 
                 if (PlayerSettings.GetScriptingBackend(NamedBuildTarget.Android) != ScriptingImplementation.IL2CPP)
                     errors.Add("Google Play AAB must use IL2CPP in the Fsp release pipeline.");
@@ -98,7 +122,8 @@ namespace Fsp.EditorTools
             try
             {
                 if (!FindInScene<Camera>(scene)) errors.Add("Lobby scene has no Camera.");
-                // LobbyRuntimeGuard restores missing runtime references and artwork.
+                // LobbyRuntimeGuard creates the responsive overlay and keeps legacy
+                // world-space artwork disabled on every aspect ratio.
             }
             finally
             {

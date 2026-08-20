@@ -8,15 +8,14 @@ namespace Fsp.EditorTools
 {
     public static class FspAndroidIconSetup
     {
-        // Optional checked-in launcher icon. Do not depend on removed procedural build-art code.
+        // Checked-in launcher icon used by every Android release.
         public const string IconPath = "Assets/Fsp/Art/Resources/UI/fsp_app_icon.png";
 
         public static void Apply()
         {
             if (!File.Exists(IconPath))
             {
-                Debug.LogWarning("[FSP] Optional Android launcher icon was not found; preserving current PlayerSettings icons: " + IconPath);
-                return;
+                throw new BuildFailedException("Required Android launcher icon was not found: " + IconPath);
             }
 
             AssetDatabase.ImportAsset(IconPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);

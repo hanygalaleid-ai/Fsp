@@ -9,7 +9,7 @@ using UnityEngine.SceneManagement;
 namespace Fsp.World
 {
     /// <summary>
-    /// Conservative mobile culling for the generated 2400x2400 Sunscar world. It caches static world
+    /// Conservative mobile culling for the generated Sunscar world. It caches static world
     /// components instead of scanning the whole scene every frame and never disables gameplay actors.
     /// </summary>
     public sealed class MobileWorldOptimizer : MonoBehaviour
@@ -74,8 +74,9 @@ namespace Fsp.World
 
         private void ApplyQualityTier()
         {
+            int savedTier = PlayerPrefs.GetInt("fsp_quality", -1);
             int ram = SystemInfo.systemMemorySize;
-            if (ram > 0 && ram <= 3500)
+            if (savedTier == 0 || savedTier < 0 && ram > 0 && ram <= 3500)
             {
                 highDetailDistance = 130f;
                 visibleDistance = 280f;
@@ -83,13 +84,21 @@ namespace Fsp.World
                 flightVisibleDistance = 700f;
                 updateInterval = 1.05f;
             }
-            else if (ram >= 7000)
+            else if (savedTier == 2 || savedTier < 0 && ram >= 7000)
             {
                 highDetailDistance = 240f;
                 visibleDistance = 500f;
                 colliderDistance = 165f;
                 flightVisibleDistance = 1100f;
                 updateInterval = 0.65f;
+            }
+            else
+            {
+                highDetailDistance = 180f;
+                visibleDistance = 360f;
+                colliderDistance = 125f;
+                flightVisibleDistance = 900f;
+                updateInterval = 0.85f;
             }
         }
 

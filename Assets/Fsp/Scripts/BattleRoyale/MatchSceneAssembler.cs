@@ -4,8 +4,10 @@ using Fsp.Bots;
 using Fsp.Combat;
 using Fsp.Core;
 using Fsp.Inventory;
+using Fsp.Lobby;
 using Fsp.Networking;
 using Fsp.Player;
+using Fsp.Presentation;
 using Fsp.UI;
 using Fsp.Vehicles;
 using UnityEngine;
@@ -47,6 +49,7 @@ namespace Fsp.BattleRoyale
 
             EnsureGameplayComponents(localParticipant.gameObject);
             EnsureStarterCombatLoadout(localParticipant.gameObject);
+            EnsureDropFlow(localParticipant.gameObject);
             StarterWorldGameplayInstaller.EnsureInstalled();
             AndroidMaterialRecovery.EnsureInstalled();
             MobileMatchControlsInstaller.Install();
@@ -118,10 +121,12 @@ namespace Fsp.BattleRoyale
                     material.color = new Color(0.19f, 0.28f, 0.18f, 1f);
                     renderer.sharedMaterial = material;
                 }
+                renderer.enabled = false;
             }
 
             MatchParticipant participant = player.AddComponent<MatchParticipant>();
             participant.ConfigureAsLocalPlayer("Player");
+            player.AddComponent<StarterProceduralCharacterVisual>();
 
             if (GameObject.Find("RuntimeSafetyGround") == null)
             {
@@ -140,6 +145,8 @@ namespace Fsp.BattleRoyale
             if (player.GetComponent<PlayerVitals>() == null) player.AddComponent<PlayerVitals>();
             if (player.GetComponent<ThirdPersonMotor>() == null) player.AddComponent<ThirdPersonMotor>();
             if (player.GetComponent<ParachuteController>() == null) player.AddComponent<ParachuteController>();
+            if (player.GetComponent<StarterParachuteVisual>() == null) player.AddComponent<StarterParachuteVisual>();
+            if (player.GetComponent<DropPlanePassenger>() == null) player.AddComponent<DropPlanePassenger>();
             if (player.GetComponent<PlayerInventory>() == null) player.AddComponent<PlayerInventory>();
             if (player.GetComponent<SafeZoneDamageApplier>() == null) player.AddComponent<SafeZoneDamageApplier>();
             if (player.GetComponent<StarterThirdPersonRig>() == null) player.AddComponent<StarterThirdPersonRig>();
@@ -175,20 +182,62 @@ namespace Fsp.BattleRoyale
 
             WeaponConfig config = ScriptableObject.CreateInstance<WeaponConfig>();
             config.weaponId = "runtime_rifle";
-            config.displayName = "Starter Rifle";
+            int loadout = LobbyGameplayProgress.LoadoutIndex;
+            config.displayName = loadout == 1 ? "Scout Rifle" : loadout == 2 ? "Heavy Rifle" : "Assault Rifle";
             config.weaponClass = WeaponClass.Assault;
             config.ammoClass = AmmoClass.Medium;
-            config.damage = 28f;
-            config.range = 180f;
-            config.roundsPerSecond = 9f;
-            config.magazineSize = 30;
-            config.reloadSeconds = 2.0f;
-            config.spreadDegrees = 0.8f;
+            config.damage = loadout == 1 ? 34f : loadout == 2 ? 31f : 28f;
+            config.range = loadout == 1 ? 240f : loadout == 2 ? 165f : 180f;
+            config.roundsPerSecond = loadout == 1 ? 6.5f : loadout == 2 ? 7.2f : 9f;
+            config.magazineSize = loadout == 2 ? 40 : 30;
+            config.reloadSeconds = loadout == 1 ? 1.7f : loadout == 2 ? 2.4f : 2.0f;
+            config.spreadDegrees = loadout == 1 ? 0.35f : loadout == 2 ? 1.0f : 0.8f;
 
             HitscanWeapon weapon = weaponObject.AddComponent<HitscanWeapon>();
             weapon.Configure(config, aimCamera, muzzleObject.transform, inventory);
-            inventory.ConfigureStarterLoadout(weapon, null, 90, 0, 2);
+            inventory.ConfigureStarterLoadout(weapon, null, loadout == 2 ? 120 : 90, 0, loadout == 1 ? 3 : 2);
             Debug.Log("FSP Match: runtime starter rifle and reserve ammo installed.");
+        }
+
+        private static void EnsureDropFlow(GameObject player)
+        {
+            if (player == null) return;
+            DropPlaneController plane = FindFirstObjectByType<DropPlaneController>();
+            Transform cabin;
+            if (plane == null)
+            {
+                GameObject planeObject = new("SunscarTransportPlane");
+                plane = planeObject.AddComponent<DropPlaneController>();
+                planeObject.AddComponent<StarterPlaneVisual>();
+                cabin = new GameObject("CabinAnchor").transform;
+                cabin.SetParent(planeObject.transform, false);
+                cabin.localPosition = new Vector3(0f, 0f, -1.5f);
+
+                Transform start = new GameObject("DropRouteStart").transform;
+                Transform end = new GameObject("DropRouteEnd").transform;
+                start.position = new Vector3(-270f, 145f, -240f);
+                // Forced jump at route end must still happen above the playable island,
+                // never over the non-collidable ocean.
+                end.position = new Vector3(170f, 145f, 170f);
+                Vector3 route = end.position - start.position;
+                start.rotation = Quaternion.LookRotation(route.normalized, Vector3.up);
+                end.rotation = start.rotation;
+                plane.ConfigureRoute(start, end, 65f, true);
+            }
+            else
+            {
+                cabin = plane.transform.Find("CabinAnchor");
+                if (cabin == null)
+                {
+                    cabin = new GameObject("CabinAnchor").transform;
+                    cabin.SetParent(plane.transform, false);
+                }
+            }
+
+            DropPlanePassenger passenger = player.GetComponent<DropPlanePassenger>();
+            passenger?.Configure(plane, cabin);
+            if (FindFirstObjectByType<DropPhaseCoordinator>() == null)
+                new GameObject("DropPhaseCoordinator").AddComponent<DropPhaseCoordinator>();
         }
 
         private static void EnsureOfflineOpponent(Vector3 playerPosition)

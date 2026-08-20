@@ -20,6 +20,12 @@ namespace Fsp.BattleRoyale
         public bool IsActive => active;
         public bool IsOpen => opened;
 
+        public void ConfigureVisual(GameObject visual)
+        {
+            parachuteVisual = visual;
+            if (parachuteVisual != null) parachuteVisual.SetActive(opened && active);
+        }
+
         private void Awake()
         {
             controller = GetComponent<CharacterController>();
@@ -46,7 +52,10 @@ namespace Fsp.BattleRoyale
         {
             if (!active || controller == null) return;
 
-            if (!opened && Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, autoOpenHeight, groundMask, QueryTriggerInteraction.Ignore))
+            // Open only when the ground is inside the configured safety height. The
+            // previous inverted check opened immediately while the player was still
+            // high above the island.
+            if (!opened && Physics.Raycast(transform.position, Vector3.down, out _, autoOpenHeight, groundMask, QueryTriggerInteraction.Ignore))
                 OpenParachute();
 
             float fallSpeed = opened ? parachuteFallSpeed : freeFallSpeed;

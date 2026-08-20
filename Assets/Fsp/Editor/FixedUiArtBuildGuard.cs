@@ -18,10 +18,17 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Art/Resources/Lobby/fsp_lobby_final.jpg",
             "Assets/Fsp/Art/Resources/UI/ui_panel_dark.png",
             "Assets/Fsp/Art/Resources/UI/ui_button_primary.png",
+            "Assets/Fsp/Art/Resources/UI/fsp_app_icon.png",
+            "Assets/Fsp/Art/Resources/UI/action_icons.png",
+            "Assets/Fsp/Art/Resources/UI/language_icons.png",
             "Assets/Fsp/Art/Resources/World/sand_ground.png",
             "Assets/Fsp/Art/Resources/World/rock_cliff.png",
             "Assets/Fsp/Art/Resources/World/road_dust.png",
-            "Assets/Fsp/Art/Resources/World/fortress_wall.png"
+            "Assets/Fsp/Art/Resources/World/fortress_wall.png",
+            "Assets/Fsp/Art/Resources/World/sand_ground_v2.png",
+            "Assets/Fsp/Art/Resources/World/rock_cliff_v2.png",
+            "Assets/Fsp/Art/Resources/World/road_dust_v2.png",
+            "Assets/Fsp/Art/Resources/World/fortress_wall_v2.png"
         };
 
         public void OnPreprocessBuild(BuildReport report)
@@ -70,6 +77,7 @@ namespace Fsp.EditorTools
             PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
             PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevel36;
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+            PlayerSettings.Android.forceInternetPermission = true;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
 
             Debug.Log("FSP CLOUD SETTINGS OK: Android ARM64/IL2CPP, landscape fullscreen, package " + AndroidApplicationId);

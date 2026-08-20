@@ -2,6 +2,7 @@ using Fsp.Backend;
 using Fsp.BattleRoyale;
 using UnityEngine;
 using UnityEngine.UI;
+using Fsp.Localization;
 
 namespace Fsp.UI
 {
@@ -42,18 +43,18 @@ namespace Fsp.UI
         private void HandleNetworkWinner(string winnerId)
         {
             bool localWon = SupabaseSession.IsSignedIn && !string.IsNullOrWhiteSpace(winnerId) && winnerId == SupabaseSession.UserId;
-            string winnerName = localWon ? "أنت" : ShortName(winnerId);
+            string winnerName = localWon ? FspLocalizationRuntime.T("PLAYER") : ShortName(winnerId);
             ShowResult(localWon, winnerName);
         }
 
         private void ShowResult(bool localWon, string winnerName)
         {
             if (panel != null) panel.SetActive(true);
-            if (titleText != null) titleText.text = localWon ? "الفوز لك!" : "انتهت المباراة";
+            if (titleText != null) titleText.text = localWon ? FspLocalizationRuntime.T("YOU WIN!") : FspLocalizationRuntime.T("MATCH COMPLETE");
             if (subtitleText == null) return;
-            if (localWon) subtitleText.text = "أنت آخر لاعب على قيد الحياة";
-            else if (!string.IsNullOrWhiteSpace(winnerName)) subtitleText.text = $"الفائز: {winnerName}";
-            else subtitleText.text = "لم يتبق لاعب حي";
+            if (localWon) subtitleText.text = FspLocalizationRuntime.T("You are the last player alive");
+            else if (!string.IsNullOrWhiteSpace(winnerName)) subtitleText.text = FspLocalizationRuntime.T("Winner:") + " " + winnerName;
+            else subtitleText.text = FspLocalizationRuntime.T("No player remains alive");
         }
 
         private static string ShortName(string id)

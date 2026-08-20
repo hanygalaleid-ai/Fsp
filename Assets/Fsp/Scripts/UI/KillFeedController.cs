@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Fsp.BattleRoyale;
 using UnityEngine;
 using UnityEngine.UI;
+using Fsp.Localization;
 
 namespace Fsp.UI
 {
@@ -38,7 +39,7 @@ namespace Fsp.UI
 
         private void OnKillReported(MatchParticipant killer, MatchParticipant victim)
         {
-            string killerName = killer != null ? killer.DisplayName : "المنطقة";
+            string killerName = killer != null ? killer.DisplayName : FspLocalizationRuntime.T("ZONE");
             string victimName = victim != null ? victim.DisplayName : "Player";
             AddEntry(killerName, victimName);
         }

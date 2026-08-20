@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Fsp.UI;
 
 namespace Fsp.Lobby
 {
@@ -33,6 +34,15 @@ namespace Fsp.Lobby
                 if (safeRoot == null)
                 {
                     if (Time.unscaledTime > retryUntil) enabled = false;
+                    return;
+                }
+
+                // ProductionLobbyUiInstaller already places SafeRoot below a MobileSafeArea
+                // viewport. Applying normalized screen insets again here would double-shrink the
+                // lobby on notched and rounded-corner devices.
+                if (safeRoot.GetComponentInParent<MobileSafeArea>() != null)
+                {
+                    enabled = false;
                     return;
                 }
             }

@@ -82,9 +82,10 @@ namespace Fsp.Bots
 
         private static GameObject CreatePlaceholderBot(int index, Vector3 position, Quaternion rotation)
         {
-            var go = AndroidSafeMesh.CreateBox($"Bot_{index + 1:00}_Placeholder");
+            var go = AndroidSafeMesh.CreateBox($"Bot_{index + 1:00}");
             go.transform.SetPositionAndRotation(position, rotation);
-            go.transform.localScale = new Vector3(0.7f, 1.8f, 0.7f);
+            MeshRenderer rootRenderer = go.GetComponent<MeshRenderer>();
+            if (rootRenderer != null) rootRenderer.enabled = false;
 
             var controller = go.AddComponent<CharacterController>();
             controller.height = 1.8f;

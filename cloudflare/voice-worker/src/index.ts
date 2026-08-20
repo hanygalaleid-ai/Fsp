@@ -80,6 +80,7 @@ async function handleSync(request: Request, env: Env, accessToken: string, userI
   const sessionId = clean(body.sessionId, 128);
   if (!squadId || !sessionId) return json({ error: "squadId and sessionId required" }, 400);
   if (!(await verifySquadMembership(env, accessToken, squadId, userId))) return json({ error: "Not a squad member" }, 403);
+  if (!(await ownsVoiceSession(env, squadId, userId, sessionId))) return json({ error: "Invalid voice session" }, 403);
 
   const pending = await roomCall<PendingResult>(env, squadId, "/pending", { userId, subscriberSessionId: sessionId });
   const remotes = pending.peers ?? [];
@@ -109,6 +110,7 @@ async function handleRenegotiate(request: Request, env: Env, accessToken: string
   const sdp = body.sdp?.trim() ?? "";
   if (!squadId || !sessionId || !sdp) return json({ error: "squadId, sessionId and sdp required" }, 400);
   if (!(await verifySquadMembership(env, accessToken, squadId, userId))) return json({ error: "Not a squad member" }, 403);
+  if (!(await ownsVoiceSession(env, squadId, userId, sessionId))) return json({ error: "Invalid voice session" }, 403);
 
   await sfu(env, `/sessions/${encodeURIComponent(sessionId)}/renegotiate`, "PUT", {
     sessionDescription: { type: "answer", sdp }
@@ -120,8 +122,9 @@ async function handleLeave(request: Request, env: Env, accessToken: string, user
   const body = await readJson<LeaveRequest>(request);
   const squadId = clean(body.squadId, 80);
   const sessionId = clean(body.sessionId, 128);
-  if (!squadId) return json({ error: "squadId required" }, 400);
+  if (!squadId || !sessionId) return json({ error: "squadId and sessionId required" }, 400);
   if (!(await verifySquadMembership(env, accessToken, squadId, userId))) return json({ error: "Not a squad member" }, 403);
+  if (!(await ownsVoiceSession(env, squadId, userId, sessionId))) return json({ error: "Invalid voice session" }, 403);
   await roomCall(env, squadId, "/leave", { userId, sessionId });
   return json({ ok: true });
 }
@@ -159,6 +162,11 @@ async function getSupabaseUser(env: Env, token: string): Promise<{ id: string } 
   });
   if (!res.ok) return null;
   return await res.json<{ id: string }>();
+}
+
+async function ownsVoiceSession(env: Env, squadId: string, userId: string, sessionId: string): Promise<boolean> {
+  const result = await roomCall<{ owned?: boolean }>(env, squadId, "/owns-session", { userId, sessionId });
+  return result.owned === true;
 }
 
 async function verifySquadMembership(env: Env, token: string, squadId: string, userId: string): Promise<boolean> {
@@ -214,6 +222,14 @@ export class VoiceRoomState extends DurableObject<Env> {
         keys.push(remoteKey);
       }
       return json({ peers, keys });
+    }
+
+    if (url.pathname === "/owns-session") {
+      const userId = clean(body.userId, 128);
+      const sessionId = clean(body.sessionId, 128);
+      if (!userId || !sessionId) return json({ owned: false });
+      const peer = await this.ctx.storage.get<RoomPeer>(`peer:${userId}`);
+      return json({ owned: peer?.sessionId === sessionId });
     }
 
     if (url.pathname === "/mark-subscribed") {

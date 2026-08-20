@@ -16,9 +16,10 @@ Shader "Fsp/MobileSafeLit"
             #pragma fragment frag
             #pragma target 2.0
             #include "UnityCG.cginc"
+            #include "Lighting.cginc"
 
-            struct appdata { float4 vertex : POSITION; float2 uv : TEXCOORD0; };
-            struct v2f { float2 uv : TEXCOORD0; float4 vertex : SV_POSITION; };
+            struct appdata { float4 vertex : POSITION; float3 normal : NORMAL; float2 uv : TEXCOORD0; };
+            struct v2f { float2 uv : TEXCOORD0; float3 worldNormal : TEXCOORD1; UNITY_FOG_COORDS(2) float4 vertex : SV_POSITION; };
             sampler2D _MainTex;
             float4 _MainTex_ST;
             fixed4 _Color;
@@ -28,12 +29,21 @@ Shader "Fsp/MobileSafeLit"
                 v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.worldNormal = UnityObjectToWorldNormal(v.normal);
+                UNITY_TRANSFER_FOG(o, o.vertex);
                 return o;
             }
 
             fixed4 frag(v2f i) : SV_Target
             {
-                return tex2D(_MainTex, i.uv) * _Color;
+                fixed3 normal = normalize(i.worldNormal);
+                fixed diffuse = saturate(dot(normal, normalize(_WorldSpaceLightPos0.xyz)));
+                fixed3 ambient = ShadeSH9(float4(normal, 1.0));
+                fixed3 lighting = max(ambient, fixed3(0.22, 0.24, 0.28)) + _LightColor0.rgb * diffuse * 0.72;
+                fixed4 baseColor = tex2D(_MainTex, i.uv) * _Color;
+                fixed4 result = fixed4(baseColor.rgb * lighting, baseColor.a);
+                UNITY_APPLY_FOG(i.fogCoord, result);
+                return result;
             }
             ENDCG
         }

@@ -29,6 +29,7 @@ namespace Fsp.Backend
             {
                 "head_default", "face_none", "torso_default", "legs_default", "backpack_default", "parachute_default"
             };
+            foreach (string starterId in StarterCosmeticCatalog.AllItemIds) owned.Add(starterId);
             if (!SupabaseSession.IsSignedIn) return owned;
 
             string url = SupabaseRuntimeConfig.ProjectUrl + "/rest/v1/player_cosmetics?user_id=eq." + UnityWebRequest.EscapeURL(SupabaseSession.UserId) + "&select=item_id";
@@ -45,7 +46,7 @@ namespace Fsp.Backend
 
         public async Task<CosmeticLoadout> LoadEquippedAsync()
         {
-            if (!SupabaseSession.IsSignedIn) return new CosmeticLoadout();
+            if (!SupabaseSession.IsSignedIn) return StarterWardrobeRuntime.LoadLocal();
             string select = "head_item_id,face_item_id,torso_item_id,legs_item_id,backpack_item_id,parachute_item_id";
             string url = SupabaseRuntimeConfig.ProjectUrl + "/rest/v1/profiles?user_id=eq." + UnityWebRequest.EscapeURL(SupabaseSession.UserId) + "&select=" + select;
             using var req = UnityWebRequest.Get(url);
@@ -53,9 +54,9 @@ namespace Fsp.Backend
             await SendAsync(req);
             if (req.result != UnityWebRequest.Result.Success) throw new Exception(req.downloadHandler.text);
             var rows = JsonUtility.FromJson<ProfileRows>("{\"items\":" + req.downloadHandler.text + "}");
-            if (rows?.items == null || rows.items.Length == 0) return new CosmeticLoadout();
+            if (rows?.items == null || rows.items.Length == 0) return StarterWardrobeRuntime.LoadLocal();
             var r = rows.items[0];
-            return new CosmeticLoadout
+            var result = new CosmeticLoadout
             {
                 headItemId = r.head_item_id,
                 faceItemId = r.face_item_id,
@@ -64,11 +65,15 @@ namespace Fsp.Backend
                 backpackItemId = r.backpack_item_id,
                 parachuteItemId = r.parachute_item_id
             };
+            StarterWardrobeRuntime.SaveLocal(result);
+            return result;
         }
 
         public async Task SaveEquippedAsync(CosmeticLoadout loadout)
         {
-            if (!SupabaseSession.IsSignedIn || loadout == null) return;
+            if (loadout == null) return;
+            StarterWardrobeRuntime.SaveLocal(loadout);
+            if (!SupabaseSession.IsSignedIn) return;
             var row = new ProfileCosmeticsRow
             {
                 head_item_id = loadout.headItemId,
