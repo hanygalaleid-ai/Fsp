@@ -18,15 +18,15 @@ namespace Fsp.Bots
 
         private readonly List<GameObject> spawnedBots = new();
         public int SpawnedCount => spawnedBots.Count;
+        public int EffectiveTargetPopulation => ResolveEffectiveTargetPopulation();
 
         public void ConfigureSpawnPoints(Transform[] points) => spawnPoints = points;
 
         public void FillToTarget(int humanPlayers = 1)
         {
-            // The checked-in Match scene intentionally supports a runtime safety path. Do not
-            // disable it on Android when an authored bot prefab is absent: TrySpawnOne() already
-            // creates an Android-safe lightweight placeholder with the required gameplay pieces.
-            int botsNeeded = Mathf.Max(0, targetPopulation - Mathf.Max(0, humanPlayers));
+            RemoveDestroyedBots();
+            int effectiveTarget = ResolveEffectiveTargetPopulation();
+            int botsNeeded = Mathf.Max(0, effectiveTarget - Mathf.Max(0, humanPlayers));
             while (spawnedBots.Count < botsNeeded)
                 if (!TrySpawnOne()) break;
         }
@@ -49,8 +49,9 @@ namespace Fsp.Bots
             }
             else
             {
+                int effectiveTarget = Mathf.Max(1, ResolveEffectiveTargetPopulation());
                 float angle = index * 137.508f * Mathf.Deg2Rad;
-                float radius = Mathf.Max(150f, fallbackRingRadius * Mathf.Sqrt((index + 1f) / Mathf.Max(1f, targetPopulation)));
+                float radius = Mathf.Max(150f, fallbackRingRadius * Mathf.Sqrt((index + 1f) / effectiveTarget));
                 candidate = transform.position + new Vector3(Mathf.Cos(angle) * radius, 1.05f, Mathf.Sin(angle) * radius);
             }
 
@@ -61,6 +62,23 @@ namespace Fsp.Bots
         }
 
         public void RemoveDestroyedBots() => spawnedBots.RemoveAll(x => x == null);
+
+        private int ResolveEffectiveTargetPopulation()
+        {
+            if (botPrefab != null) return Mathf.Max(1, targetPopulation);
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+            // Runtime placeholder bots are intentionally lighter than authored prefabs, but dozens
+            // of CharacterControllers + AI scans in one mobile match still create avoidable CPU/GC
+            // pressure. Scale only the fallback population; authored production bot prefabs keep the
+            // configured targetPopulation.
+            int ram = SystemInfo.systemMemorySize;
+            int mobileCap = ram > 0 && ram <= 3500 ? 10 : ram > 0 && ram < 6000 ? 14 : 18;
+            return Mathf.Clamp(targetPopulation, 2, mobileCap);
+#else
+            return Mathf.Min(Mathf.Max(1, targetPopulation), 24);
+#endif
+        }
 
         private static GameObject CreatePlaceholderBot(int index, Vector3 position, Quaternion rotation)
         {
