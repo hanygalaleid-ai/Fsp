@@ -7,6 +7,8 @@ namespace Fsp.Backend
 {
     public sealed class SupabaseMatchRoomClient : MonoBehaviour
     {
+        private const int RequestTimeoutSeconds = 6;
+
         [Serializable] private sealed class MatchInfo
         {
             public string id;
@@ -37,6 +39,7 @@ namespace Fsp.Backend
             using var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST);
             req.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes("{}"));
             req.downloadHandler = new DownloadHandlerBuffer();
+            req.timeout = RequestTimeoutSeconds;
             req.SetRequestHeader("Content-Type", "application/json");
             req.SetRequestHeader("apikey", SupabaseRuntimeConfig.PublishableKey);
             req.SetRequestHeader("Authorization", "Bearer " + SupabaseSession.AccessToken);
@@ -44,7 +47,7 @@ namespace Fsp.Backend
 
             if (req.result != UnityWebRequest.Result.Success)
             {
-                done?.Invoke(false, req.downloadHandler.text);
+                done?.Invoke(false, FriendlyError(req, "Matchmaking request failed."));
                 yield break;
             }
 
@@ -63,17 +66,17 @@ namespace Fsp.Backend
 
             if (response.status == "matched" && response.match != null)
             {
-                if (MatchRoomState.Instance != null)
-                {
-                    MatchRoomState.Instance.SetMatch(
-                        response.match.id,
-                        response.match.mode,
-                        response.match.region,
-                        response.match.max_players,
-                        response.member_count);
-                }
+                if (MatchRoomState.Instance == null)
+                    new GameObject("MatchRoomState").AddComponent<MatchRoomState>();
 
-                done?.Invoke(true, "matched");
+                MatchRoomState.Instance?.SetMatch(
+                    response.match.id,
+                    response.match.mode,
+                    response.match.region,
+                    response.match.max_players,
+                    response.member_count);
+
+                done?.Invoke(MatchRoomState.HasMatch, MatchRoomState.HasMatch ? "matched" : "Matched room could not be stored.");
                 yield break;
             }
 
@@ -90,11 +93,12 @@ namespace Fsp.Backend
 
             string memberUrl = SupabaseRuntimeConfig.ProjectUrl + "/rest/v1/match_room_members?user_id=eq." + UnityWebRequest.EscapeURL(SupabaseSession.UserId) + "&select=match_id&order=joined_at.desc&limit=1";
             using var memberReq = UnityWebRequest.Get(memberUrl);
+            memberReq.timeout = RequestTimeoutSeconds;
             ApplyHeaders(memberReq);
             yield return memberReq.SendWebRequest();
             if (memberReq.result != UnityWebRequest.Result.Success)
             {
-                done?.Invoke(false, memberReq.downloadHandler.text);
+                done?.Invoke(false, FriendlyError(memberReq, "Match lookup failed."));
                 yield break;
             }
 
@@ -109,11 +113,12 @@ namespace Fsp.Backend
             string matchId = members.items[0].match_id;
             string roomUrl = SupabaseRuntimeConfig.ProjectUrl + "/rest/v1/match_rooms?id=eq." + UnityWebRequest.EscapeURL(matchId) + "&select=id,mode,region,status,max_players&limit=1";
             using var roomReq = UnityWebRequest.Get(roomUrl);
+            roomReq.timeout = RequestTimeoutSeconds;
             ApplyHeaders(roomReq);
             yield return roomReq.SendWebRequest();
             if (roomReq.result != UnityWebRequest.Result.Success)
             {
-                done?.Invoke(false, roomReq.downloadHandler.text);
+                done?.Invoke(false, FriendlyError(roomReq, "Match room lookup failed."));
                 yield break;
             }
 
@@ -124,9 +129,12 @@ namespace Fsp.Backend
                 yield break;
             }
 
+            if (MatchRoomState.Instance == null)
+                new GameObject("MatchRoomState").AddComponent<MatchRoomState>();
+
             var room = rooms.items[0];
             MatchRoomState.Instance?.SetMatch(room.id, room.mode, room.region, room.max_players, 0);
-            done?.Invoke(true, "matched");
+            done?.Invoke(MatchRoomState.HasMatch, MatchRoomState.HasMatch ? "matched" : "Matched room could not be stored.");
         }
 
         [Serializable] private sealed class MemberRow { public string match_id; }
@@ -137,6 +145,15 @@ namespace Fsp.Backend
         {
             req.SetRequestHeader("apikey", SupabaseRuntimeConfig.PublishableKey);
             req.SetRequestHeader("Authorization", "Bearer " + SupabaseSession.AccessToken);
+        }
+
+        private static string FriendlyError(UnityWebRequest req, string fallback)
+        {
+            if (req == null) return fallback;
+            string body = req.downloadHandler != null ? req.downloadHandler.text : string.Empty;
+            if (!string.IsNullOrWhiteSpace(body)) return body;
+            if (!string.IsNullOrWhiteSpace(req.error)) return req.error;
+            return fallback;
         }
     }
 }
