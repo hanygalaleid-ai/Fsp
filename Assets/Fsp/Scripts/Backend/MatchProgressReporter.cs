@@ -16,6 +16,10 @@ namespace Fsp.Backend
         private bool saved;
         private bool saving;
         private bool subscribed;
+        private bool preservePendingSaveAcrossSceneExit;
+
+        public bool IsSaving => saving;
+        public bool IsSaved => saved;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void InstallAfterSceneLoad() => EnsureInstalled();
@@ -52,6 +56,14 @@ namespace Fsp.Backend
         }
 
         private void OnDisable() => Unsubscribe();
+
+        public void PreservePendingSaveForSceneExit()
+        {
+            if (!saving || saved || preservePendingSaveAcrossSceneExit) return;
+            preservePendingSaveAcrossSceneExit = true;
+            DontDestroyOnLoad(gameObject);
+            Debug.Log("FSP progress: preserving pending save while returning to Lobby.");
+        }
 
         private void ResolveRuntimeSources()
         {
@@ -122,16 +134,16 @@ namespace Fsp.Backend
                 using var timeout = new CancellationTokenSource();
                 timeout.CancelAfter(12000);
 
-                PlayerProfile profile = await profileStore.LoadAsync(SupabaseSession.UserId, timeout.Token);
-                if (profile == null)
-                {
-                    profile = new PlayerProfile(
-                        SupabaseSession.UserId,
-                        LobbyState.Instance != null ? LobbyState.Instance.DisplayName : "Player",
-                        LobbyState.Instance != null ? LobbyState.Instance.SelectedCharacterId : "soldier_01");
-                }
+                string userId = SupabaseSession.UserId;
+                int matchKills = KillFeedBus.LocalPlayerKills;
+                string displayName = LobbyState.Instance != null ? LobbyState.Instance.DisplayName : "Player";
+                string characterId = LobbyState.Instance != null ? LobbyState.Instance.SelectedCharacterId : "soldier_01";
 
-                profile.ApplyMatchResult(won, KillFeedBus.LocalPlayerKills, Mathf.Max(1, placement));
+                PlayerProfile profile = await profileStore.LoadAsync(userId, timeout.Token);
+                if (profile == null)
+                    profile = new PlayerProfile(userId, displayName, characterId);
+
+                profile.ApplyMatchResult(won, matchKills, Mathf.Max(1, placement));
                 await profileStore.SaveAsync(profile, timeout.Token);
                 saved = true;
                 Debug.Log("FSP progress: match result saved successfully.");
@@ -147,6 +159,11 @@ namespace Fsp.Backend
             finally
             {
                 saving = false;
+                if (preservePendingSaveAcrossSceneExit)
+                {
+                    preservePendingSaveAcrossSceneExit = false;
+                    Destroy(gameObject);
+                }
             }
         }
     }
