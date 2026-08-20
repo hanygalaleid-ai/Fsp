@@ -53,8 +53,7 @@ namespace Fsp.Voice
         public IEnumerator Leave(string squadId, string sessionId)
         {
             if (!IsConfigured || !SupabaseSession.IsSignedIn) yield break;
-            bool ignored = false;
-            yield return Post("/leave", new LeaveBody { squadId = squadId, sessionId = sessionId }, _ => ignored = true, _ => ignored = true);
+            yield return Post("/leave", new LeaveBody { squadId = squadId, sessionId = sessionId }, _ => { }, _ => { });
         }
 
         private IEnumerator Post<T>(string path, T body, Action<SignalResponse> success, Action<string> failed)
