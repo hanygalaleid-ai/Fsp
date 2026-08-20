@@ -2,8 +2,6 @@ using UnityEngine;
 
 namespace Fsp.Inventory
 {
-    public enum InventoryItemType { Weapon, Ammo, Medkit, Armor }
-
     [CreateAssetMenu(menuName = "Fsp/Inventory/Item")]
     public sealed class InventoryItem : ScriptableObject
     {
