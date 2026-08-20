@@ -31,7 +31,7 @@ namespace Fsp.Core
                 QualitySettings.shadows = ShadowQuality.Disable;
                 QualitySettings.shadowDistance = 20f;
                 QualitySettings.lodBias = 0.65f;
-                QualitySettings.masterTextureLimit = 1;
+                QualitySettings.globalTextureMipmapLimit = 1;
                 QualitySettings.anisotropicFiltering = AnisotropicFiltering.Disable;
                 QualitySettings.realtimeReflectionProbes = false;
                 QualitySettings.softParticles = false;
@@ -44,7 +44,7 @@ namespace Fsp.Core
                 QualitySettings.shadows = ShadowQuality.HardOnly;
                 QualitySettings.shadowDistance = 45f;
                 QualitySettings.lodBias = 1f;
-                QualitySettings.masterTextureLimit = 0;
+                QualitySettings.globalTextureMipmapLimit = 0;
                 QualitySettings.anisotropicFiltering = AnisotropicFiltering.Enable;
                 QualitySettings.realtimeReflectionProbes = false;
                 QualitySettings.softParticles = false;
@@ -57,7 +57,7 @@ namespace Fsp.Core
                 QualitySettings.shadows = ShadowQuality.All;
                 QualitySettings.shadowDistance = 75f;
                 QualitySettings.lodBias = 1.35f;
-                QualitySettings.masterTextureLimit = 0;
+                QualitySettings.globalTextureMipmapLimit = 0;
                 QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
                 QualitySettings.realtimeReflectionProbes = true;
                 QualitySettings.softParticles = true;

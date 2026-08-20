@@ -2,6 +2,7 @@ using System;
 using Fsp.Backend;
 using Fsp.Lobby;
 using Fsp.Localization;
+using Fsp.UI;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
