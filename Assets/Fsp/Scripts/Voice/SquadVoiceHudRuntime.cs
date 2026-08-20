@@ -15,10 +15,7 @@ namespace Fsp.Voice
         private Button talkButton;
         private SquadVoiceState boundState;
 
-        private void Awake()
-        {
-            BuildUi();
-        }
+        private void Awake() => BuildUi();
 
         private void OnEnable()
         {
@@ -37,8 +34,8 @@ namespace Fsp.Voice
         {
             EnsureStateBinding();
 #if ENABLE_LEGACY_INPUT_MANAGER
-            if (Input.GetKeyDown(KeyCode.V)) SquadVoiceState.Instance?.BeginTalking();
-            if (Input.GetKeyUp(KeyCode.V)) SquadVoiceState.Instance?.EndTalking();
+            if (UnityEngine.Input.GetKeyDown(KeyCode.V)) SquadVoiceState.Instance?.BeginTalking();
+            if (UnityEngine.Input.GetKeyUp(KeyCode.V)) SquadVoiceState.Instance?.EndTalking();
 #endif
         }
 
