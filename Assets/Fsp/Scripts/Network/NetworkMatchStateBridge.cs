@@ -53,15 +53,21 @@ namespace Fsp.Networking
     public static class NetworkMatchStateInstaller
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void Install()
+        private static void InstallAfterSceneLoad() => EnsureInstalled();
+
+        public static bool EnsureInstalled()
         {
             Scene scene = SceneManager.GetActiveScene();
-            if (!scene.IsValid() || !string.Equals(scene.name, "Match", StringComparison.OrdinalIgnoreCase)) return;
-            if (!SupabaseSession.IsSignedIn || !MatchRoomState.HasMatch) return;
+            if (!scene.IsValid() || !string.Equals(scene.name, "Match", StringComparison.OrdinalIgnoreCase)) return false;
+            if (!SupabaseSession.IsSignedIn || !MatchRoomState.HasMatch) return false;
+
             MatchManager manager = MatchManager.Instance ?? UnityEngine.Object.FindFirstObjectByType<MatchManager>();
-            manager?.SetNetworkAuthoritative(true);
+            if (manager == null) return false;
+
+            manager.SetNetworkAuthoritative(true);
             if (UnityEngine.Object.FindFirstObjectByType<NetworkMatchStateBridge>() == null)
                 new GameObject("NetworkMatchStateBridge").AddComponent<NetworkMatchStateBridge>();
+            return true;
         }
     }
 }
