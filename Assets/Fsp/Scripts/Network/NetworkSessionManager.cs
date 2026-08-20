@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Fsp.Backend;
 using Fsp.BattleRoyale;
+using Fsp.Bots;
 using Fsp.Player;
 using UnityEngine;
 
@@ -15,11 +16,15 @@ namespace Fsp.Networking
         [SerializeField] private ParachuteController parachute;
         [SerializeField] private GameObject remotePlayerPrefab;
         [SerializeField, Min(1f)] private float snapshotRate = 12f;
+        [SerializeField, Min(3f)] private float connectTimeoutSeconds = 10f;
 
         private INetworkTransport transport;
         private readonly Dictionary<string, RemotePlayerProxy> remotes = new();
         private float nextSnapshotTime;
+        private float connectStartedAt;
         private bool started;
+        private bool connectionObserved;
+        private bool fellBackOffline;
 
         private void Awake()
         {
@@ -85,7 +90,7 @@ namespace Fsp.Networking
 
         private void TryStartOnlineSession()
         {
-            if (started) return;
+            if (started || fellBackOffline) return;
             if (transport == null)
             {
                 Debug.LogError("FSP Network: no INetworkTransport found in Match scene.");
@@ -115,12 +120,29 @@ namespace Fsp.Networking
                 Debug.Log("FSP Network: dedicated remote prefab missing; authored local character visuals will be reused for remote players.");
 
             started = true;
+            connectionObserved = false;
+            connectStartedAt = Time.unscaledTime;
+            transport.SnapshotReceived -= HandleSnapshot;
             transport.SnapshotReceived += HandleSnapshot;
             transport.Connect(MatchRoomState.MatchId, SupabaseSession.UserId);
         }
 
         private void Update()
         {
+            if (started && !connectionObserved && transport != null)
+            {
+                if (transport.IsConnected)
+                {
+                    connectionObserved = true;
+                    Debug.Log("FSP Network: match relay connected.");
+                }
+                else if (Time.unscaledTime - connectStartedAt >= connectTimeoutSeconds)
+                {
+                    FallBackToOffline("match relay connection timed out");
+                    return;
+                }
+            }
+
             if (transport == null || !transport.IsConnected || localPlayer == null || Time.time < nextSnapshotTime) return;
             nextSnapshotTime = Time.time + 1f / Mathf.Max(1f, snapshotRate);
 
@@ -136,6 +158,41 @@ namespace Fsp.Networking
                 dropState = ResolveDropState(),
                 sentAt = Time.realtimeSinceStartupAsDouble
             });
+        }
+
+        private void FallBackToOffline(string reason)
+        {
+            if (fellBackOffline) return;
+            fellBackOffline = true;
+            started = false;
+
+            if (transport != null)
+            {
+                transport.SnapshotReceived -= HandleSnapshot;
+                transport.Disconnect();
+            }
+
+            MatchRoomState.Instance?.Clear();
+            EnsureOfflineOpponent();
+            Debug.LogWarning("FSP Network: " + reason + "; continuing as an offline playable match.");
+        }
+
+        private void EnsureOfflineOpponent()
+        {
+            if (localPlayer == null) return;
+            foreach (MatchParticipant participant in FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None))
+                if (participant != null && participant.IsBot) return;
+
+            GameObject spawnerObject = GameObject.Find("RuntimeOfflineBotSpawner") ?? new GameObject("RuntimeOfflineBotSpawner");
+            BotSpawner spawner = spawnerObject.GetComponent<BotSpawner>();
+            if (spawner == null) spawner = spawnerObject.AddComponent<BotSpawner>();
+
+            GameObject spawnObject = GameObject.Find("RuntimeOfflineBotSpawn") ?? new GameObject("RuntimeOfflineBotSpawn");
+            Vector3 spawn = localPlayer.position + new Vector3(18f, 0f, 22f);
+            spawn.y = Mathf.Max(1f, localPlayer.position.y);
+            spawnObject.transform.position = spawn;
+            spawner.ConfigureSpawnPoints(new[] { spawnObject.transform });
+            spawner.TrySpawnOne();
         }
 
         private NetworkDropState ResolveDropState()
