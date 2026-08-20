@@ -27,6 +27,7 @@ namespace Fsp.Input
 
             Instance = this;
             DontDestroyOnLoad(gameObject);
+            ResetAll();
         }
 
         private void LateUpdate()
@@ -37,6 +38,20 @@ namespace Fsp.Input
             ReloadPressed = false;
             HealPressed = false;
             Look = Vector2.zero;
+        }
+
+        public void ResetAll()
+        {
+            Move = Vector2.zero;
+            Look = Vector2.zero;
+            FireHeld = false;
+            AimHeld = false;
+            SprintHeld = false;
+            JumpPressed = false;
+            InteractPressed = false;
+            SwitchWeaponPressed = false;
+            ReloadPressed = false;
+            HealPressed = false;
         }
 
         public void SetMove(Vector2 value) => Move = Vector2.ClampMagnitude(value, 1f);
