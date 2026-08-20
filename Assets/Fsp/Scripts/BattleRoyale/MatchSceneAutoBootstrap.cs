@@ -1,4 +1,5 @@
 using System;
+using Fsp.Bots;
 using Fsp.Lobby;
 using Fsp.Input;
 using UnityEngine;
@@ -41,9 +42,8 @@ namespace Fsp.BattleRoyale
 
             if (!string.Equals(scene.name, "Match", StringComparison.OrdinalIgnoreCase)) return;
 
-            // The bridge survives scene loads. Remove any stale one-frame or held state before the
-            // new match creates its HUD and gameplay adapter.
             MobileInputBridge.Instance?.ResetAll();
+            FallbackBotAgent.ResetForNewMatch();
 
             if (UnityEngine.Object.FindFirstObjectByType<MatchSceneAssembler>() == null)
                 new GameObject("MatchSceneAssembler").AddComponent<MatchSceneAssembler>();
