@@ -20,12 +20,17 @@ namespace Fsp.Input
         [SerializeField] private float maxPitch = 65f;
         [SerializeField] private Vector3 followOffset = new Vector3(0f, 2.6f, -5.2f);
         [SerializeField] private float cameraFollow = 12f;
+        [SerializeField, Min(0.05f)] private float cameraCollisionRadius = 0.28f;
+        [SerializeField, Min(0.05f)] private float cameraSurfacePadding = 0.18f;
+        [SerializeField, Min(0.1f)] private float minimumCameraDistance = 0.8f;
+        [SerializeField] private LayerMask cameraCollisionMask = ~0;
         [SerializeField] private float vehicleInteractRadius = 3f;
         [SerializeField] private LayerMask vehicleMask = ~0;
 
         private float yaw;
         private float pitch;
         private VehicleSeat activeSeat;
+        private bool cameraInitialized;
 
         private void Awake()
         {
@@ -35,15 +40,12 @@ namespace Fsp.Input
             if (parachute == null) parachute = GetComponent<ParachuteController>();
             if (cameraPivot == null && Camera.main != null) cameraPivot = Camera.main.transform;
 
-            // The runtime-generated Match scene has no serialized ADS component. Ensure the AIM
-            // mobile action always changes gameplay FOV instead of becoming a visual-only button.
             if (GetComponent<AimDownSightsController>() == null)
                 gameObject.AddComponent<AimDownSightsController>();
 
             if (cameraPivot != null)
             {
-                Vector3 euler = cameraPivot.eulerAngles;
-                yaw = euler.y;
+                yaw = transform.eulerAngles.y;
                 pitch = 12f;
                 motor?.SetCamera(cameraPivot);
             }
@@ -104,15 +106,57 @@ namespace Fsp.Input
                 if (Camera.main == null) return;
                 cameraPivot = Camera.main.transform;
                 motor?.SetCamera(cameraPivot);
+                cameraInitialized = false;
             }
 
+            Vector3 lookPoint = transform.position + Vector3.up * 1.35f;
             Quaternion orbit = Quaternion.Euler(pitch, yaw, 0f);
             Vector3 desired = transform.position + orbit * followOffset;
-            cameraPivot.position = Vector3.Lerp(cameraPivot.position, desired, 1f - Mathf.Exp(-cameraFollow * Time.deltaTime));
-            Vector3 lookPoint = transform.position + Vector3.up * 1.35f;
+            desired = ResolveCameraCollision(lookPoint, desired);
+
+            if (!cameraInitialized)
+            {
+                cameraPivot.position = desired;
+                cameraInitialized = true;
+            }
+            else
+            {
+                float t = 1f - Mathf.Exp(-cameraFollow * Time.deltaTime);
+                cameraPivot.position = Vector3.Lerp(cameraPivot.position, desired, t);
+            }
+
             Vector3 direction = lookPoint - cameraPivot.position;
             if (direction.sqrMagnitude > 0.01f)
                 cameraPivot.rotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
+        }
+
+        private Vector3 ResolveCameraCollision(Vector3 origin, Vector3 desired)
+        {
+            Vector3 delta = desired - origin;
+            float fullDistance = delta.magnitude;
+            if (fullDistance <= 0.001f) return desired;
+
+            Vector3 direction = delta / fullDistance;
+            RaycastHit[] hits = Physics.SphereCastAll(
+                origin,
+                cameraCollisionRadius,
+                direction,
+                fullDistance,
+                cameraCollisionMask,
+                QueryTriggerInteraction.Ignore);
+
+            float allowedDistance = fullDistance;
+            foreach (RaycastHit hit in hits)
+            {
+                if (hit.collider == null) continue;
+                Transform hitTransform = hit.collider.transform;
+                if (hitTransform == transform || hitTransform.IsChildOf(transform)) continue;
+
+                float candidate = Mathf.Max(minimumCameraDistance, hit.distance - cameraSurfacePadding);
+                if (candidate < allowedDistance) allowedDistance = candidate;
+            }
+
+            return origin + direction * allowedDistance;
         }
 
         private void UpdateLook(Vector2 look)
