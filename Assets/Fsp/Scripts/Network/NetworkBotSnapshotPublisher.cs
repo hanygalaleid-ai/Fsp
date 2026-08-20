@@ -13,10 +13,12 @@ namespace Fsp.Networking
     public sealed class NetworkBotSnapshotPublisher : MonoBehaviour
     {
         [SerializeField, Min(2f)] private float sendRate = 10f;
+        [SerializeField, Min(0.1f)] private float botRegistryRefreshSeconds = 0.5f;
 
         private INetworkTransport transport;
         private bool isAuthority;
         private float nextSend;
+        private float nextBotRegistryRefresh;
         private readonly List<MatchParticipant> bots = new();
         private readonly Dictionary<BotCombat, string> botCombatIds = new();
         private readonly Dictionary<FallbackBotAgent, string> fallbackAgentIds = new();
@@ -29,7 +31,7 @@ namespace Fsp.Networking
             if (!isAuthority || transport == null || !transport.IsConnected || Time.unscaledTime < nextSend) return;
 
             nextSend = Time.unscaledTime + 1f / Mathf.Max(2f, sendRate);
-            RefreshBots();
+            RefreshBotsIfNeeded();
             for (int i = 0; i < bots.Count; i++)
             {
                 MatchParticipant bot = bots[i];
@@ -77,8 +79,9 @@ namespace Fsp.Networking
             {
                 UnbindBotAttackers();
                 bots.Clear();
+                nextBotRegistryRefresh = 0f;
             }
-            else RefreshBots();
+            else RefreshBotsIfNeeded(true);
         }
 
         private void HandleDamage(NetworkDamageEvent value)
@@ -135,15 +138,21 @@ namespace Fsp.Networking
         {
             bot = null;
             if (string.IsNullOrWhiteSpace(id) || id.Length < 5 || !int.TryParse(id.Substring(4), out int ordinal)) return false;
-            RefreshBots();
+            RefreshBotsIfNeeded();
             int index = ordinal - 1;
-            if (index < 0 || index >= bots.Count) return false;
+            if (index < 0 || index >= bots.Count)
+            {
+                RefreshBotsIfNeeded(true);
+                if (index < 0 || index >= bots.Count) return false;
+            }
             bot = bots[index];
             return bot != null;
         }
 
-        private void RefreshBots()
+        private void RefreshBotsIfNeeded(bool force = false)
         {
+            if (!force && Time.unscaledTime < nextBotRegistryRefresh) return;
+            nextBotRegistryRefresh = Time.unscaledTime + Mathf.Max(0.1f, botRegistryRefreshSeconds);
             bots.Clear();
             foreach (MatchParticipant participant in FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None))
                 if (participant != null && participant.IsBot) bots.Add(participant);
