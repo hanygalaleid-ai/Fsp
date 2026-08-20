@@ -97,6 +97,7 @@ namespace Fsp.UI
             text.resizeTextForBestFit = true;
             text.resizeTextMinSize = 14;
             text.resizeTextMaxSize = size;
+            text.raycastTarget = false;
             return text;
         }
 
@@ -112,6 +113,7 @@ namespace Fsp.UI
             Image image = go.AddComponent<Image>();
             image.color = FspFixedTheme.Accent;
             Button button = go.AddComponent<Button>();
+            button.targetGraphic = image;
             Text text = MakeText(go.transform, "Label", label, 20, Vector2.zero, FspFixedTheme.Text);
             RectTransform tr = text.rectTransform;
             tr.anchorMin = Vector2.zero;
