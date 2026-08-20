@@ -1,20 +1,50 @@
 using System;
+using Fsp.Lobby;
+using Fsp.Input;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Fsp.BattleRoyale
 {
     /// <summary>
-    /// Logic-only bootstrap for the checked-in Match scene.
-    /// The scene itself is source-controlled; this only guarantees gameplay systems exist.
+    /// Persistent scene lifecycle bootstrap. RuntimeInitializeOnLoadMethod only guarantees startup
+    /// initialization, so subscribe to SceneManager.sceneLoaded to rebuild runtime-only systems on
+    /// every Lobby <-> Match transition and on the second and later matches.
     /// </summary>
     public static class MatchSceneAutoBootstrap
     {
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void Install()
+        private static bool subscribed;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void RegisterSceneLifecycle()
         {
-            Scene scene = SceneManager.GetActiveScene();
-            if (!scene.IsValid() || !string.Equals(scene.name, "Match", StringComparison.OrdinalIgnoreCase)) return;
+            if (subscribed) return;
+            SceneManager.sceneLoaded += HandleSceneLoaded;
+            subscribed = true;
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void EnsureInitialScene()
+        {
+            HandleSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
+        }
+
+        private static void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (!scene.IsValid()) return;
+
+            if (string.Equals(scene.name, "Lobby", StringComparison.OrdinalIgnoreCase))
+            {
+                LobbyRuntimeGuard.EnsureInstalled();
+                return;
+            }
+
+            if (!string.Equals(scene.name, "Match", StringComparison.OrdinalIgnoreCase)) return;
+
+            // The bridge survives scene loads. Remove any stale one-frame or held state before the
+            // new match creates its HUD and gameplay adapter.
+            MobileInputBridge.Instance?.ResetAll();
+
             if (UnityEngine.Object.FindFirstObjectByType<MatchSceneAssembler>() == null)
                 new GameObject("MatchSceneAssembler").AddComponent<MatchSceneAssembler>();
         }
