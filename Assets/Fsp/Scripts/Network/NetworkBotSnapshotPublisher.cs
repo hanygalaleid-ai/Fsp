@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Fsp.AI;
 using Fsp.Backend;
 using Fsp.BattleRoyale;
+using Fsp.Bots;
 using Fsp.Player;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -18,6 +19,7 @@ namespace Fsp.Networking
         private float nextSend;
         private readonly List<MatchParticipant> bots = new();
         private readonly Dictionary<BotCombat, string> botCombatIds = new();
+        private readonly Dictionary<FallbackBotAgent, string> fallbackAgentIds = new();
 
         private void Start() => TryBind();
 
@@ -35,6 +37,7 @@ namespace Fsp.Networking
                 PlayerVitals vitals = bot.GetComponent<PlayerVitals>();
                 string id = $"bot:{i + 1:000}";
                 BindBotCombat(bot, id);
+                BindFallbackAgent(bot, id);
                 transport.SendBotSnapshot(new NetworkPlayerSnapshot
                 {
                     playerId = id,
@@ -57,7 +60,9 @@ namespace Fsp.Networking
             {
                 if (behaviour is not INetworkTransport candidate) continue;
                 transport = candidate;
+                transport.BotAuthorityReceived -= HandleAuthority;
                 transport.BotAuthorityReceived += HandleAuthority;
+                transport.DamageReceived -= HandleDamage;
                 transport.DamageReceived += HandleDamage;
                 return;
             }
@@ -68,7 +73,7 @@ namespace Fsp.Networking
             isAuthority = value != null && value.playerId == SupabaseSession.UserId;
             if (!isAuthority)
             {
-                UnbindBotCombats();
+                UnbindBotAttackers();
                 bots.Clear();
             }
             else RefreshBots();
@@ -91,10 +96,29 @@ namespace Fsp.Networking
             botCombatIds[combat] = botId;
         }
 
+        private void BindFallbackAgent(MatchParticipant bot, string botId)
+        {
+            FallbackBotAgent agent = bot != null ? bot.GetComponent<FallbackBotAgent>() : null;
+            if (agent == null) return;
+            if (!fallbackAgentIds.ContainsKey(agent)) agent.NetworkPlayerHit += HandleFallbackNetworkHit;
+            fallbackAgentIds[agent] = botId;
+        }
+
         private void HandleBotNetworkHit(BotCombat combat, string targetId, float damage, Vector3 hitPoint)
         {
-            if (!isAuthority || transport == null || !transport.IsConnected || combat == null || string.IsNullOrWhiteSpace(targetId)) return;
-            if (!botCombatIds.TryGetValue(combat, out string botId) || string.IsNullOrWhiteSpace(botId)) return;
+            if (combat == null || !botCombatIds.TryGetValue(combat, out string botId)) return;
+            SendBotDamage(botId, targetId, damage, hitPoint);
+        }
+
+        private void HandleFallbackNetworkHit(FallbackBotAgent agent, string targetId, float damage, Vector3 hitPoint)
+        {
+            if (agent == null || !fallbackAgentIds.TryGetValue(agent, out string botId)) return;
+            SendBotDamage(botId, targetId, damage, hitPoint);
+        }
+
+        private void SendBotDamage(string botId, string targetId, float damage, Vector3 hitPoint)
+        {
+            if (!isAuthority || transport == null || !transport.IsConnected || string.IsNullOrWhiteSpace(botId) || string.IsNullOrWhiteSpace(targetId)) return;
             transport.SendBotDamage(new NetworkDamageEvent
             {
                 attackerId = botId,
@@ -124,16 +148,20 @@ namespace Fsp.Networking
             bots.Sort((a, b) => a.GetInstanceID().CompareTo(b.GetInstanceID()));
         }
 
-        private void UnbindBotCombats()
+        private void UnbindBotAttackers()
         {
             foreach (BotCombat combat in botCombatIds.Keys)
                 if (combat != null) combat.NetworkPlayerHit -= HandleBotNetworkHit;
             botCombatIds.Clear();
+
+            foreach (FallbackBotAgent agent in fallbackAgentIds.Keys)
+                if (agent != null) agent.NetworkPlayerHit -= HandleFallbackNetworkHit;
+            fallbackAgentIds.Clear();
         }
 
         private void OnDestroy()
         {
-            UnbindBotCombats();
+            UnbindBotAttackers();
             if (transport != null)
             {
                 transport.BotAuthorityReceived -= HandleAuthority;
