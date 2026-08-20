@@ -84,9 +84,20 @@ namespace Fsp.UI
 
         private static void EnsureEventSystem()
         {
-            if (Object.FindFirstObjectByType<EventSystem>() != null) return;
-            GameObject go = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
-            Object.DontDestroyOnLoad(go);
+            EventSystem eventSystem = Object.FindFirstObjectByType<EventSystem>(FindObjectsInactive.Include);
+            if (eventSystem == null)
+            {
+                GameObject go = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+                Object.DontDestroyOnLoad(go);
+                return;
+            }
+
+            if (!eventSystem.gameObject.activeSelf)
+                eventSystem.gameObject.SetActive(true);
+            if (!eventSystem.enabled)
+                eventSystem.enabled = true;
+            if (eventSystem.GetComponent<BaseInputModule>() == null)
+                eventSystem.gameObject.AddComponent<StandaloneInputModule>();
         }
 
         private static MatchParticipant FindLocalParticipant()
