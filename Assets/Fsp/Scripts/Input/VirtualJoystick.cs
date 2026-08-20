@@ -13,6 +13,11 @@ namespace Fsp.Input
 
         private void Awake()
         {
+            ResolveReferences();
+        }
+
+        private void ResolveReferences()
+        {
             if (background == null) background = transform as RectTransform;
             if (handle == null)
             {
@@ -21,14 +26,16 @@ namespace Fsp.Input
             }
 
             Canvas canvas = GetComponentInParent<Canvas>();
-            if (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
-                uiCamera = canvas.worldCamera;
+            uiCamera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
         }
 
         public void OnPointerDown(PointerEventData eventData) => OnDrag(eventData);
 
         public void OnDrag(PointerEventData eventData)
         {
+            // The runtime HUD creates this component before its Handle child. Re-resolve here so
+            // the first real touch always binds both pieces even though Awake ran earlier.
+            if (background == null || handle == null) ResolveReferences();
             if (background == null || MobileInputBridge.Instance == null) return;
 
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(background, eventData.position, uiCamera, out Vector2 local))
@@ -48,6 +55,7 @@ namespace Fsp.Input
         public void OnPointerUp(PointerEventData eventData)
         {
             MobileInputBridge.Instance?.SetMove(Vector2.zero);
+            if (handle == null) ResolveReferences();
             if (handle != null) handle.anchoredPosition = Vector2.zero;
         }
     }
