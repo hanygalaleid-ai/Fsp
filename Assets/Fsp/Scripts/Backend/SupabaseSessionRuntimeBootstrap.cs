@@ -13,12 +13,21 @@ namespace Fsp.Backend
         private bool restoring;
         private bool attempted;
 
+        public bool IsRestoring => restoring;
+        public bool HasAttemptedRestore => attempted;
+
         public void Configure(SupabaseAuthClient client) => authClient = client;
 
         public void EnsureRestoreStarted()
         {
-            if (attempted || restoring || SupabaseSession.IsSignedIn) return;
+            if (attempted || restoring) return;
+
+            // Load cached credentials synchronously before the refresh coroutine starts. This avoids a
+            // first-frame race where START could incorrectly classify a returning signed-in player as a guest.
+            SupabaseSession.Load();
             attempted = true;
+
+            if (!SupabaseSession.IsSignedIn) return;
             StartCoroutine(RestoreRoutine());
         }
 
