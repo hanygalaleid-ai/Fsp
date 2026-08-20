@@ -28,10 +28,7 @@ namespace Fsp.Networking
                 gameObject.AddComponent<NetworkDamageReceiver>();
         }
 
-        private void Start()
-        {
-            TryWire();
-        }
+        private void Start() => TryWire();
 
         private void Update()
         {
@@ -40,7 +37,7 @@ namespace Fsp.Networking
 
         private void TryWire()
         {
-            if (!SupabaseSession.IsSignedIn || inventory == null) return;
+            if (!SupabaseSession.IsSignedIn || !MatchRoomState.HasMatch || inventory == null) return;
             transport = FindTransport();
             if (transport == null) return;
 
@@ -87,7 +84,7 @@ namespace Fsp.Networking
 
         private void OnShotFired(Vector3 origin, Vector3 direction)
         {
-            if (transport == null || !transport.IsConnected || !SupabaseSession.IsSignedIn) return;
+            if (transport == null || !transport.IsConnected || !SupabaseSession.IsSignedIn || !MatchRoomState.HasMatch) return;
             int slot = inventory != null && inventory.ActiveWeapon == inventory.SecondaryWeapon ? 1 : 0;
             transport.SendFire(new NetworkFireEvent
             {
@@ -101,7 +98,7 @@ namespace Fsp.Networking
 
         private void OnNetworkPlayerHit(string targetId, float damage, Vector3 hitPoint)
         {
-            if (transport == null || !transport.IsConnected || !SupabaseSession.IsSignedIn) return;
+            if (transport == null || !transport.IsConnected || !SupabaseSession.IsSignedIn || !MatchRoomState.HasMatch) return;
             if (string.IsNullOrWhiteSpace(targetId) || targetId == SupabaseSession.UserId) return;
 
             transport.SendDamage(new NetworkDamageEvent
@@ -131,19 +128,23 @@ namespace Fsp.Networking
     public static class NetworkCombatRuntimeInstaller
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void Install()
+        private static void InstallAfterSceneLoad() => EnsureInstalled();
+
+        public static bool EnsureInstalled()
         {
             Scene scene = SceneManager.GetActiveScene();
-            if (!scene.IsValid() || !string.Equals(scene.name, "Match", StringComparison.OrdinalIgnoreCase)) return;
-            if (!SupabaseSession.IsSignedIn || !MatchRoomState.HasMatch) return;
+            if (!scene.IsValid() || !string.Equals(scene.name, "Match", StringComparison.OrdinalIgnoreCase)) return false;
+            if (!SupabaseSession.IsSignedIn || !MatchRoomState.HasMatch) return false;
 
             foreach (MatchParticipant participant in UnityEngine.Object.FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None))
             {
                 if (participant == null || !participant.IsLocalPlayer) continue;
                 if (participant.GetComponent<NetworkCombatRuntimeBridge>() == null)
                     participant.gameObject.AddComponent<NetworkCombatRuntimeBridge>();
-                return;
+                return true;
             }
+
+            return false;
         }
     }
 }
