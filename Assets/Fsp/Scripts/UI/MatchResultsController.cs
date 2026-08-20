@@ -108,8 +108,6 @@ namespace Fsp.UI
                 if (!string.IsNullOrWhiteSpace(winnerId) && winnerId == SupabaseSession.UserId)
                     return 1;
 
-                // In authoritative online matches local MatchParticipant.Placement is not assigned by
-                // the local manager. Never default an online loser to #1 just because placement is 0.
                 if (localPlayer != null && localPlayer.Placement > 1)
                     return localPlayer.Placement;
                 return Mathf.Max(2, matchManager.AliveCount + 1);
@@ -147,7 +145,6 @@ namespace Fsp.UI
 
             GameObject mobileHud = GameObject.Find("MobileCombatHUD");
             if (mobileHud != null) mobileHud.SetActive(false);
-
             MobileInputBridge.Instance?.ResetAll();
         }
 
@@ -167,6 +164,9 @@ namespace Fsp.UI
         public void ReturnToLobby()
         {
             MobileInputBridge.Instance?.ResetAll();
+
+            MatchProgressReporter progress = FindFirstObjectByType<MatchProgressReporter>();
+            progress?.PreservePendingSaveForSceneExit();
 
             if (MatchRoomState.Instance != null)
                 MatchRoomState.Instance.Clear();
