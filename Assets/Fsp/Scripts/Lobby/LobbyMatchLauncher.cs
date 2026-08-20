@@ -10,6 +10,7 @@ namespace Fsp.Lobby
         [SerializeField] private string battleSceneName = "Match";
         [SerializeField, Min(1f)] private float onlineWaitSeconds = 8f;
         [SerializeField, Min(0.25f)] private float pollIntervalSeconds = 1.5f;
+        [SerializeField, Min(0f)] private float sessionRestoreWaitSeconds = 4f;
         private bool subscribed;
         private bool loading;
 
@@ -47,9 +48,17 @@ namespace Fsp.Lobby
                 yield break;
             }
 
+            // Returning players may press START immediately while the saved Supabase refresh is still
+            // completing. Give that refresh a short bounded window instead of misclassifying them as guests.
+            SupabaseSessionRuntimeBootstrap sessionBootstrap = FindFirstObjectByType<SupabaseSessionRuntimeBootstrap>();
+            if (sessionBootstrap != null && sessionBootstrap.IsRestoring)
+            {
+                float restoreDeadline = Time.unscaledTime + Mathf.Max(0f, sessionRestoreWaitSeconds);
+                while (sessionBootstrap != null && sessionBootstrap.IsRestoring && Time.unscaledTime < restoreDeadline)
+                    yield return null;
+            }
+
             // Guests and devices without a restored Supabase session must remain fully playable.
-            // Signed-in players get a short best-effort online matchmaking window; any backend or
-            // connectivity failure falls back to the local match instead of leaving START stuck.
             if (!SupabaseSession.IsSignedIn)
             {
                 LoadTarget(target, "offline/guest");
