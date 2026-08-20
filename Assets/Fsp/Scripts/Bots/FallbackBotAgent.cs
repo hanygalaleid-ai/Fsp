@@ -26,6 +26,9 @@ namespace Fsp.Bots
 
         private static bool localDropReleased;
         private static float nextDropCheck;
+        private static float nextSharedTargetRefresh;
+        private static MatchParticipant[] sharedParticipants = Array.Empty<MatchParticipant>();
+        private static RemotePlayerProxy[] sharedRemotes = Array.Empty<RemotePlayerProxy>();
 
         public event Action<FallbackBotAgent, string, float, Vector3> NetworkPlayerHit;
 
@@ -36,6 +39,9 @@ namespace Fsp.Bots
         {
             localDropReleased = false;
             nextDropCheck = 0f;
+            nextSharedTargetRefresh = 0f;
+            sharedParticipants = Array.Empty<MatchParticipant>();
+            sharedRemotes = Array.Empty<RemotePlayerProxy>();
         }
 
         private void Awake()
@@ -52,7 +58,7 @@ namespace Fsp.Bots
 
             if (Time.time >= nextScan)
             {
-                nextScan = Time.time + 0.4f + Random.Range(0f, 0.12f);
+                nextScan = Time.time + 0.45f + Random.Range(0f, 0.18f);
                 AcquireTarget();
             }
 
@@ -128,8 +134,8 @@ namespace Fsp.Bots
             if (Time.unscaledTime < nextDropCheck) return false;
             nextDropCheck = Time.unscaledTime + 0.25f;
 
-            MatchParticipant[] participants = FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None);
-            foreach (MatchParticipant participant in participants)
+            RefreshSharedTargetsIfNeeded();
+            foreach (MatchParticipant participant in sharedParticipants)
             {
                 if (participant == null || !participant.IsLocalPlayer) continue;
                 DropPlanePassenger passenger = participant.GetComponent<DropPlanePassenger>();
@@ -143,10 +149,11 @@ namespace Fsp.Bots
 
         private void AcquireTarget()
         {
+            RefreshSharedTargetsIfNeeded();
             float best = detectionRange * detectionRange;
             Transform bestTarget = null;
 
-            foreach (MatchParticipant participant in FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None))
+            foreach (MatchParticipant participant in sharedParticipants)
             {
                 if (participant == null || participant.gameObject == gameObject || !participant.IsAlive || participant.IsBot) continue;
                 float sqr = (participant.transform.position - transform.position).sqrMagnitude;
@@ -155,7 +162,7 @@ namespace Fsp.Bots
                 bestTarget = participant.transform;
             }
 
-            foreach (RemotePlayerProxy remote in FindObjectsByType<RemotePlayerProxy>(FindObjectsSortMode.None))
+            foreach (RemotePlayerProxy remote in sharedRemotes)
             {
                 if (remote == null || !remote.IsAlive || !remote.gameObject.activeInHierarchy) continue;
                 float sqr = (remote.transform.position - transform.position).sqrMagnitude;
@@ -165,6 +172,14 @@ namespace Fsp.Bots
             }
 
             target = bestTarget;
+        }
+
+        private static void RefreshSharedTargetsIfNeeded()
+        {
+            if (Time.unscaledTime < nextSharedTargetRefresh) return;
+            nextSharedTargetRefresh = Time.unscaledTime + 0.35f;
+            sharedParticipants = FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None);
+            sharedRemotes = FindObjectsByType<RemotePlayerProxy>(FindObjectsSortMode.None);
         }
     }
 }
