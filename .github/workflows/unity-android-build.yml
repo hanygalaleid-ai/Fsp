@@ -1,14 +1,6 @@
-name: Unity Android Build
+name: Unity Android Build (Manual Backup)
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'Assets/**'
-      - 'Packages/**'
-      - 'ProjectSettings/**'
-      - '.github/workflows/unity-android-build.yml'
   workflow_dispatch:
     inputs:
       build_type:
@@ -21,16 +13,16 @@ on:
           - aab
 
 concurrency:
-  group: unity-android-${{ github.ref }}
+  group: unity-android-manual-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   android:
-    name: Unity 6.3 Android
+    name: Unity 6.3 Android Manual Backup
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
-      contents: write
+      contents: read
     env:
       UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
       UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -53,12 +45,12 @@ jobs:
             fi
           done
           if [ "$missing" -ne 0 ]; then
-            echo "See Docs/UNITY_CI_SETUP.md for the Unity Personal setup flow."
+            echo "GitHub Actions is only a manual backup pipeline. The primary FSP build pipeline is Unity Cloud Build Automation."
             exit 1
           fi
 
       - name: Prepare Google Play signing
-        if: github.event_name == 'workflow_dispatch' && inputs.build_type == 'aab'
+        if: inputs.build_type == 'aab'
         shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.FSP_ANDROID_KEYSTORE_BASE64 }}
@@ -74,7 +66,6 @@ jobs:
             fi
           done
           if [ "$missing" -ne 0 ]; then
-            echo "See Docs/UNITY_CI_SETUP.md for Google Play upload-key setup."
             exit 1
           fi
 
@@ -96,7 +87,7 @@ jobs:
             Library-${{ runner.os }}-6000.3.17f1-Android-
 
       - name: Build Android APK
-        if: github.event_name == 'push' || inputs.build_type == 'apk'
+        if: inputs.build_type == 'apk'
         uses: game-ci/unity-builder@v5.0.0
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -110,7 +101,7 @@ jobs:
           allowDirtyBuild: true
 
       - name: Build Android AAB
-        if: github.event_name == 'workflow_dispatch' && inputs.build_type == 'aab'
+        if: inputs.build_type == 'aab'
         uses: game-ci/unity-builder@v5.0.0
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -128,14 +119,14 @@ jobs:
           allowDirtyBuild: true
 
       - name: Set up Java for bundle verification
-        if: github.event_name == 'workflow_dispatch' && inputs.build_type == 'aab'
+        if: inputs.build_type == 'aab'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Verify Google Play AAB
-        if: github.event_name == 'workflow_dispatch' && inputs.build_type == 'aab'
+        if: inputs.build_type == 'aab'
         shell: bash
         run: |
           set -euo pipefail
@@ -148,26 +139,19 @@ jobs:
             exit 1
           fi
 
-          echo "Verifying AAB: $AAB"
           jarsigner -verify -strict "$AAB"
-
           mkdir -p .ci
-          curl -fsSL \
-            https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar \
-            -o .ci/bundletool.jar
+          curl -fsSL https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar -o .ci/bundletool.jar
           java -jar .ci/bundletool.jar validate --bundle="$AAB"
 
           ALIGNMENT="$(java -jar .ci/bundletool.jar dump config --bundle="$AAB" | grep -Eo 'PAGE_ALIGNMENT_(4K|16K)' | head -n1 || true)"
-          echo "Bundle page alignment: ${ALIGNMENT:-UNKNOWN}"
           if [ "$ALIGNMENT" != "PAGE_ALIGNMENT_16K" ]; then
-            echo "::error::Google Play release rejected: expected PAGE_ALIGNMENT_16K, got ${ALIGNMENT:-UNKNOWN}."
+            echo "::error::Expected PAGE_ALIGNMENT_16K, got ${ALIGNMENT:-UNKNOWN}."
             exit 1
           fi
 
-          echo "AAB verification passed: signed, bundletool-valid, PAGE_ALIGNMENT_16K."
-
       - name: Remove temporary signing material
-        if: always() && github.event_name == 'workflow_dispatch' && inputs.build_type == 'aab'
+        if: always() && inputs.build_type == 'aab'
         shell: bash
         run: rm -rf .ci
 
@@ -179,36 +163,3 @@ jobs:
           path: Builds/Android/**
           if-no-files-found: error
           retention-days: 14
-
-      - name: Record latest Android CI outcome
-        if: always()
-        shell: bash
-        env:
-          BUILD_STATUS: ${{ job.status }}
-          EVENT_NAME: ${{ github.event_name }}
-          REQUESTED_BUILD_TYPE: ${{ inputs.build_type }}
-        run: |
-          set -euo pipefail
-          BUILD_TYPE="${REQUESTED_BUILD_TYPE:-apk}"
-          if [ "$EVENT_NAME" = "push" ]; then BUILD_TYPE="apk"; fi
-
-          mkdir -p BuildReports
-          cat > BuildReports/latest-android-build.txt <<EOF
-          FSP Android CI latest outcome
-          status=$BUILD_STATUS
-          build_type=$BUILD_TYPE
-          run_number=${{ github.run_number }}
-          run_id=${{ github.run_id }}
-          source_commit=${{ github.sha }}
-          event=$EVENT_NAME
-          utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          EOF
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add BuildReports/latest-android-build.txt
-          if git diff --cached --quiet; then
-            exit 0
-          fi
-          git commit -m "ci: record Android build outcome [skip ci]"
-          git push
