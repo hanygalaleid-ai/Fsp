@@ -1,16 +1,19 @@
+using System;
 using Fsp.Backend;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Fsp.Lobby
 {
-    /// <summary>Ensures generated Lobby scenes have squad and profile backend services.</summary>
+    /// <summary>Ensures Lobby scenes have squad, matchmaking and profile backend services on every entry.</summary>
     public static class LobbyBackendRuntimeInstaller
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void Install()
+        private static void InstallAfterSceneLoad() => EnsureInstalled();
+
+        public static bool EnsureInstalled()
         {
-            if (!string.Equals(SceneManager.GetActiveScene().name, "Lobby", System.StringComparison.OrdinalIgnoreCase)) return;
+            if (!string.Equals(SceneManager.GetActiveScene().name, "Lobby", StringComparison.OrdinalIgnoreCase)) return false;
 
             GameObject host = GameObject.Find("LobbyBackendRuntime");
             if (host == null) host = new GameObject("LobbyBackendRuntime");
@@ -38,6 +41,8 @@ namespace Fsp.Lobby
                 GameObject state = new GameObject("SquadLobbyState");
                 state.AddComponent<SquadLobbyState>();
             }
+
+            return true;
         }
     }
 }
