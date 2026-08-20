@@ -1,8 +1,8 @@
-FSP Android CI latest outcome
-status=failure
-build_type=apk
-run_number=281
-run_id=32294060051
-source_commit=e4e2ccf6242b93ff2956f18902d222cb05eeb54a
-event=push
-utc=2026-08-19T19:37:44Z
+FSP Android build pipeline status
+primary_pipeline=Unity Cloud Build Automation
+github_actions=manual_backup_only
+last_github_actions_run=281
+last_github_actions_status=blocked_before_unity
+last_github_actions_reason=missing Unity GitHub Actions secrets
+release_source_branch=main
+note=Use Unity Cloud build results as the authoritative Android build result.
