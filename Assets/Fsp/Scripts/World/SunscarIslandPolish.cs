@@ -19,7 +19,6 @@ namespace Fsp.World
             Transform root = new GameObject("GeneratedIslandPolish").transform;
             root.SetParent(transform, false);
 
-            // Use the checked-in production Resources rather than flat fallback colors whenever possible.
             sand = Mat(new Color(.48f, .40f, .28f), "World/sand_ground", new Vector2(18f, 18f));
             rock = Mat(new Color(.38f, .36f, .32f), "World/rock_cliff", new Vector2(5f, 5f));
             green = Mat(new Color(.24f, .31f, .20f), null, Vector2.one);
@@ -53,7 +52,8 @@ namespace Fsp.World
                 ridge.transform.localPosition = new Vector3(Mathf.Cos(a) * radius, -.6f, Mathf.Sin(a) * radius + 8f);
                 ridge.transform.localScale = new Vector3(22f + (i % 5) * 4f, 4f + (i % 3) * 2f, 16f + (i % 4) * 3f);
                 Renderer renderer = ridge.GetComponent<Renderer>();
-                if (renderer != null) renderer.sharedMaterial = i % 3 == 0 ? rock : sand;
+                if (renderer != null && (i % 3 == 0 ? rock : sand) != null)
+                    renderer.sharedMaterial = i % 3 == 0 ? rock : sand;
             }
         }
 
@@ -74,7 +74,7 @@ namespace Fsp.World
                     crown.transform.localPosition = new Vector3(x, 3.7f, z);
                     crown.transform.localScale = new Vector3(2.7f, 2.2f, 2.7f);
                     Renderer renderer = crown.GetComponent<Renderer>();
-                    if (renderer != null) renderer.sharedMaterial = green;
+                    if (renderer != null && green != null) renderer.sharedMaterial = green;
                 }
                 else
                 {
@@ -85,7 +85,7 @@ namespace Fsp.World
                     float s = .8f + (i % 5) * .3f;
                     stone.transform.localScale = new Vector3(s * 1.4f, s, s);
                     Renderer renderer = stone.GetComponent<Renderer>();
-                    if (renderer != null) renderer.sharedMaterial = rock;
+                    if (renderer != null && rock != null) renderer.sharedMaterial = rock;
                 }
             }
         }
@@ -120,7 +120,7 @@ namespace Fsp.World
             go.transform.localPosition = position;
             go.transform.localScale = scale;
             Renderer renderer = go.GetComponent<Renderer>();
-            if (renderer != null) renderer.sharedMaterial = material;
+            if (renderer != null && material != null) renderer.sharedMaterial = material;
             if (!collider)
             {
                 Collider existing = go.GetComponent<Collider>();
@@ -134,6 +134,11 @@ namespace Fsp.World
             Shader shader = Shader.Find("Standard");
             if (shader == null) shader = Shader.Find("Universal Render Pipeline/Lit");
             if (shader == null) shader = Shader.Find("Sprites/Default");
+            if (shader == null)
+            {
+                Debug.LogWarning("FSP world polish: no compatible runtime shader was found; keeping Unity default primitive materials.");
+                return null;
+            }
 
             Material material = new Material(shader);
             material.color = fallbackColor;
