@@ -1,16 +1,16 @@
-using Fsp.BattleRoyale;
 using Fsp.Core;
 using Fsp.Inventory;
 using Fsp.Player;
 using Fsp.UI;
+using Fsp.Vehicles;
 using UnityEngine;
 
 namespace Fsp.BattleRoyale
 {
     /// <summary>
-    /// Gameplay-only safety assembler for the checked-in Match scene.
-    /// Release builds must use authored scene art. This component never creates placeholder
-    /// characters, weapons, vehicles, aircraft, loot geometry, or fallback HUD visuals.
+    /// Gameplay safety assembler for the checked-in Match scene.
+    /// Prefer authored scene objects, but guarantee a usable local player on device builds
+    /// so the match cannot open as an empty, non-interactive scene.
     /// </summary>
     public sealed class MatchSceneAssembler : MonoBehaviour
     {
@@ -22,7 +22,13 @@ namespace Fsp.BattleRoyale
             localParticipant = FindLocalPlayer();
             if (localParticipant == null)
             {
-                Debug.LogError("FSP Match: no authored local MatchParticipant found. Runtime placeholder player creation is disabled.");
+                Debug.LogWarning("FSP Match: no authored local MatchParticipant found. Creating runtime safety player so the match remains playable.");
+                localParticipant = CreateRuntimeSafetyPlayer();
+            }
+
+            if (localParticipant == null)
+            {
+                Debug.LogError("FSP Match: failed to create a local player.");
                 return;
             }
 
@@ -46,6 +52,49 @@ namespace Fsp.BattleRoyale
             return null;
         }
 
+        private static MatchParticipant CreateRuntimeSafetyPlayer()
+        {
+            GameObject player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            player.name = "RuntimeLocalPlayer";
+            player.transform.position = new Vector3(0f, 2f, 0f);
+
+            CapsuleCollider primitiveCollider = player.GetComponent<CapsuleCollider>();
+            if (primitiveCollider != null) Destroy(primitiveCollider);
+
+            CharacterController controller = player.AddComponent<CharacterController>();
+            controller.height = 2f;
+            controller.radius = 0.45f;
+            controller.center = new Vector3(0f, 1f, 0f);
+
+            Renderer renderer = player.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                Shader shader = Shader.Find("Standard");
+                if (shader == null) shader = Shader.Find("Universal Render Pipeline/Lit");
+                if (shader != null)
+                {
+                    Material material = new Material(shader);
+                    material.color = new Color(0.19f, 0.28f, 0.18f, 1f);
+                    renderer.sharedMaterial = material;
+                }
+            }
+
+            MatchParticipant participant = player.AddComponent<MatchParticipant>();
+            participant.ConfigureAsLocalPlayer("Player");
+
+            // Give the emergency player a visible floor immediately around spawn so a valid
+            // device build never looks like a frozen empty camera while world systems initialize.
+            if (GameObject.Find("RuntimeSafetyGround") == null)
+            {
+                GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+                ground.name = "RuntimeSafetyGround";
+                ground.transform.position = Vector3.zero;
+                ground.transform.localScale = new Vector3(12f, 1f, 12f);
+            }
+
+            return participant;
+        }
+
         private static void EnsureGameplayComponents(GameObject player)
         {
             if (player == null) return;
@@ -54,6 +103,10 @@ namespace Fsp.BattleRoyale
             if (player.GetComponent<ThirdPersonMotor>() == null) player.AddComponent<ThirdPersonMotor>();
             if (player.GetComponent<ParachuteController>() == null) player.AddComponent<ParachuteController>();
             if (player.GetComponent<PlayerInventory>() == null) player.AddComponent<PlayerInventory>();
+            if (player.GetComponent<SafeZoneDamageApplier>() == null) player.AddComponent<SafeZoneDamageApplier>();
+            if (player.GetComponent<StarterThirdPersonRig>() == null) player.AddComponent<StarterThirdPersonRig>();
+            if (player.GetComponent<StarterVehicleInput>() == null) player.AddComponent<StarterVehicleInput>();
+            if (player.GetComponent<StarterInteractInput>() == null) player.AddComponent<StarterInteractInput>();
         }
 
         private static void WireExistingHud(GameObject player)
@@ -62,7 +115,7 @@ namespace Fsp.BattleRoyale
             BattleRoyaleHud hud = FindFirstObjectByType<BattleRoyaleHud>();
             if (hud == null)
             {
-                Debug.LogWarning("FSP Match: authored BattleRoyaleHud not found; fallback HUD generation is disabled.");
+                Debug.LogWarning("FSP Match: authored BattleRoyaleHud not found; gameplay continues without HUD rather than blocking the match.");
                 return;
             }
 
