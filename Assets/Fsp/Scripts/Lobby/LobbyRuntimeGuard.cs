@@ -68,11 +68,6 @@ namespace Fsp.Lobby
             Debug.Log("FSP lobby artwork recovered from Resources at runtime.");
         }
 
-        /// <summary>
-        /// Makes only the baked START button area functional. No replacement UI is generated.
-        /// Coordinates are normalized screen coordinates, origin at bottom-left, matched to
-        /// Assets/Fsp/Art/Resources/Lobby/fsp_lobby_final.jpg.
-        /// </summary>
         private sealed class FixedLobbyStartHitRegion : MonoBehaviour
         {
             private bool loading;
@@ -81,14 +76,14 @@ namespace Fsp.Lobby
             {
                 if (loading || Screen.width <= 0 || Screen.height <= 0) return;
 
-                for (int i = 0; i < Input.touchCount; i++)
+                for (int i = 0; i < UnityEngine.Input.touchCount; i++)
                 {
-                    Touch touch = Input.GetTouch(i);
+                    Touch touch = UnityEngine.Input.GetTouch(i);
                     if (touch.phase == TouchPhase.Ended) TryStart(touch.position);
                 }
 
 #if UNITY_EDITOR || UNITY_STANDALONE
-                if (Input.GetMouseButtonUp(0)) TryStart(Input.mousePosition);
+                if (UnityEngine.Input.GetMouseButtonUp(0)) TryStart(UnityEngine.Input.mousePosition);
 #endif
             }
 
@@ -96,17 +91,12 @@ namespace Fsp.Lobby
             {
                 float x = pixelPosition.x / Screen.width;
                 float y = pixelPosition.y / Screen.height;
-
-                // Gold START button baked into the approved lobby artwork.
                 if (x < 0.805f || x > 0.995f || y < 0.025f || y > 0.135f) return;
 
                 loading = true;
-
                 LobbyState state = LobbyState.Instance;
-                if (state != null && string.IsNullOrWhiteSpace(state.DisplayName))
-                    state.SetDisplayName("Player");
+                if (state != null && string.IsNullOrWhiteSpace(state.DisplayName)) state.SetDisplayName("Player");
 
-                // Load directly so a missed event subscription can never leave the lobby stuck.
                 if (Application.CanStreamedLevelBeLoaded("Match"))
                 {
                     Debug.Log("FSP loading battle scene directly from fixed lobby start region.");
