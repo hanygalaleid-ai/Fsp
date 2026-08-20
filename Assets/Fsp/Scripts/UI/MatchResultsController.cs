@@ -21,44 +21,64 @@ namespace Fsp.UI
         [SerializeField] private Button returnButton;
 
         private bool shown;
+        private bool subscribed;
 
         private void Awake()
         {
-            if (matchManager == null) matchManager = FindFirstObjectByType<MatchManager>();
-            if (localPlayer == null)
-            {
-                foreach (var participant in FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None))
-                {
-                    if (participant != null && participant.IsLocalPlayer)
-                    {
-                        localPlayer = participant;
-                        break;
-                    }
-                }
-            }
-
+            ResolveRuntimeSources();
             if (panel != null) panel.SetActive(false);
-            if (returnButton != null) returnButton.onClick.AddListener(ReturnToLobby);
         }
 
         private void OnEnable()
         {
             KillFeedBus.ResetForMatch();
+            ResolveRuntimeSources();
+            Subscribe();
+        }
+
+        private void OnDisable()
+        {
+            Unsubscribe();
+        }
+
+        private void ResolveRuntimeSources()
+        {
+            if (matchManager == null) matchManager = FindFirstObjectByType<MatchManager>();
+            if (localPlayer != null && localPlayer.IsLocalPlayer) return;
+
+            localPlayer = null;
+            foreach (MatchParticipant participant in FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None))
+            {
+                if (participant != null && participant.IsLocalPlayer)
+                {
+                    localPlayer = participant;
+                    break;
+                }
+            }
+        }
+
+        private void Subscribe()
+        {
+            if (subscribed) return;
             if (matchManager != null)
             {
                 matchManager.PhaseChanged += OnPhaseChanged;
                 matchManager.ParticipantEliminated += OnParticipantEliminated;
             }
+            if (returnButton != null) returnButton.onClick.AddListener(ReturnToLobby);
+            subscribed = true;
         }
 
-        private void OnDisable()
+        private void Unsubscribe()
         {
+            if (!subscribed) return;
             if (matchManager != null)
             {
                 matchManager.PhaseChanged -= OnPhaseChanged;
                 matchManager.ParticipantEliminated -= OnParticipantEliminated;
             }
             if (returnButton != null) returnButton.onClick.RemoveListener(ReturnToLobby);
+            subscribed = false;
         }
 
         private void OnParticipantEliminated(MatchParticipant participant, int placement)
@@ -70,6 +90,7 @@ namespace Fsp.UI
         private void OnPhaseChanged(MatchManager.MatchPhase phase)
         {
             if (phase != MatchManager.MatchPhase.Finished || shown) return;
+            ResolveRuntimeSources();
             int placement = localPlayer != null && localPlayer.Placement > 0 ? localPlayer.Placement : 1;
             Show(placement);
         }
@@ -93,6 +114,7 @@ namespace Fsp.UI
 
         private void DisableGameplayInput()
         {
+            ResolveRuntimeSources();
             if (localPlayer != null)
             {
                 SetEnabled(localPlayer.GetComponent<StarterCombatInput>(), false);
@@ -135,15 +157,19 @@ namespace Fsp.UI
 
         public void Configure(GameObject panelRoot, Text title, Text placement, Text kills, Text xp, Button returnToLobby)
         {
+            Unsubscribe();
             panel = panelRoot;
             titleText = title;
             placementText = placement;
             killsText = kills;
             xpText = xp;
-            if (returnButton != null) returnButton.onClick.RemoveListener(ReturnToLobby);
             returnButton = returnToLobby;
-            if (returnButton != null) returnButton.onClick.AddListener(ReturnToLobby);
             if (panel != null) panel.SetActive(false);
+
+            // Configure is called after AddComponent, so Awake/OnEnable may have run before the
+            // runtime MatchManager and local participant existed. Resolve and subscribe again now.
+            ResolveRuntimeSources();
+            if (isActiveAndEnabled) Subscribe();
         }
     }
 }
