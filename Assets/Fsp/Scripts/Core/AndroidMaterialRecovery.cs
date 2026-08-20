@@ -44,6 +44,7 @@ namespace Fsp.Core
             foreach (Renderer renderer in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
             {
                 if (renderer == null) continue;
+                if (renderer is SpriteRenderer || renderer is ParticleSystemRenderer) continue;
                 Material[] materials = renderer.sharedMaterials;
                 bool changed = false;
                 for (int i = 0; i < materials.Length; i++)
@@ -67,7 +68,16 @@ namespace Fsp.Core
         {
             if (material == null || material.shader == null || !material.shader.isSupported) return true;
             string shaderName = material.shader.name ?? string.Empty;
+            if (string.Equals(shaderName, "Fsp/MobileSafeLit", StringComparison.Ordinal)) return false;
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+            // Runtime-created Standard/URP materials can report isSupported=true after shader
+            // stripping while still rendering with Unity's magenta error pass on the device.
+            // All world mesh materials use the checked-in mobile-safe shader in Android players.
+            return true;
+#else
             return shaderName.IndexOf("InternalErrorShader", StringComparison.OrdinalIgnoreCase) >= 0;
+#endif
         }
     }
 }
