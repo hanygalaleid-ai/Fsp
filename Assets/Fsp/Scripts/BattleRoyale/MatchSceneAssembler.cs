@@ -12,11 +12,6 @@ using UnityEngine.SceneManagement;
 
 namespace Fsp.BattleRoyale
 {
-    /// <summary>
-    /// Gameplay safety assembler for the checked-in Match scene.
-    /// Prefer authored scene objects, but guarantee a usable local player on device builds
-    /// so the match cannot open as an empty, non-interactive scene.
-    /// </summary>
     public sealed class MatchSceneAssembler : MonoBehaviour
     {
         private MatchParticipant localParticipant;
@@ -27,7 +22,6 @@ namespace Fsp.BattleRoyale
             Scene scene = SceneManager.GetActiveScene();
             if (!scene.IsValid() || !string.Equals(scene.name, "Match", StringComparison.OrdinalIgnoreCase)) return;
             if (FindFirstObjectByType<MatchSceneAssembler>() != null) return;
-
             new GameObject("MatchSceneAssembler").AddComponent<MatchSceneAssembler>();
             Debug.Log("FSP Match: runtime safety assembler installed.");
         }
@@ -35,6 +29,8 @@ namespace Fsp.BattleRoyale
         private void Awake()
         {
             EnsureMatchManager();
+            EnsureSafeZone();
+
             localParticipant = FindLocalPlayer();
             if (localParticipant == null)
             {
@@ -50,16 +46,13 @@ namespace Fsp.BattleRoyale
 
             EnsureGameplayComponents(localParticipant.gameObject);
             EnsureStarterCombatLoadout(localParticipant.gameObject);
-
-            // Do these explicitly here instead of depending only on RuntimeInitialize ordering.
-            // Unity does not guarantee ordering between multiple AfterSceneLoad callbacks, so the
-            // world and Android controls must be installed after the local participant exists.
             StarterWorldGameplayInstaller.EnsureInstalled();
             MobileMatchControlsInstaller.Install();
             EnsureOfflineOpponent();
-
+            StarterResultsUiInstaller.EnsureInstalled();
             WireExistingHud(localParticipant.gameObject);
-            Debug.Log("FSP Match: runtime path ready (manager, player, starter weapon, world, mobile controls and offline opponent fallback).");
+
+            Debug.Log("FSP Match: runtime path ready (manager, safe zone, player, weapon, world, mobile controls, opponent and results).");
         }
 
         private static MatchManager EnsureMatchManager()
@@ -68,13 +61,23 @@ namespace Fsp.BattleRoyale
             return existing != null ? existing : new GameObject("MatchManager").AddComponent<MatchManager>();
         }
 
+        private static SafeZoneController EnsureSafeZone()
+        {
+            SafeZoneController existing = FindFirstObjectByType<SafeZoneController>();
+            if (existing != null) return existing;
+
+            GameObject zoneObject = new GameObject("RuntimeSafeZone");
+            SafeZoneController zone = zoneObject.AddComponent<SafeZoneController>();
+            SafeZonePlan plan = ScriptableObject.CreateInstance<SafeZonePlan>();
+            zone.ConfigurePlan(plan);
+            Debug.Log("FSP Match: runtime safe zone installed.");
+            return zone;
+        }
+
         private static MatchParticipant FindLocalPlayer()
         {
             foreach (MatchParticipant participant in FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None))
-            {
-                if (participant != null && participant.IsLocalPlayer)
-                    return participant;
-            }
+                if (participant != null && participant.IsLocalPlayer) return participant;
             return null;
         }
 
@@ -115,7 +118,6 @@ namespace Fsp.BattleRoyale
                 ground.transform.position = Vector3.zero;
                 ground.transform.localScale = new Vector3(12f, 1f, 12f);
             }
-
             return participant;
         }
 
@@ -137,10 +139,7 @@ namespace Fsp.BattleRoyale
         {
             if (player == null) return;
             PlayerInventory inventory = player.GetComponent<PlayerInventory>();
-            if (inventory == null) return;
-
-            // Preserve an authored loadout when one exists.
-            if (inventory.PrimaryWeapon != null || inventory.SecondaryWeapon != null) return;
+            if (inventory == null || inventory.PrimaryWeapon != null || inventory.SecondaryWeapon != null) return;
 
             Camera aimCamera = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
             if (aimCamera == null)
@@ -155,7 +154,6 @@ namespace Fsp.BattleRoyale
             weaponObject.transform.localPosition = new Vector3(0.42f, 1.25f, 0.42f);
             weaponObject.transform.localRotation = Quaternion.identity;
             weaponObject.transform.localScale = new Vector3(0.12f, 0.12f, 0.62f);
-
             Collider weaponCollider = weaponObject.GetComponent<Collider>();
             if (weaponCollider != null) Destroy(weaponCollider);
 
@@ -178,15 +176,12 @@ namespace Fsp.BattleRoyale
             HitscanWeapon weapon = weaponObject.AddComponent<HitscanWeapon>();
             weapon.Configure(config, aimCamera, muzzleObject.transform, inventory);
             inventory.ConfigureStarterLoadout(weapon, null, 90, 0, 2);
-
             Debug.Log("FSP Match: runtime starter rifle and reserve ammo installed.");
         }
 
         private static void EnsureOfflineOpponent()
         {
-            // Never synthesize opponents inside an online room; networking owns population there.
             if (MatchRoomState.HasMatch) return;
-
             MatchParticipant[] participants = FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None);
             foreach (MatchParticipant participant in participants)
                 if (participant != null && participant.IsBot) return;
@@ -194,13 +189,11 @@ namespace Fsp.BattleRoyale
             GameObject spawnerObject = GameObject.Find("RuntimeOfflineBotSpawner") ?? new GameObject("RuntimeOfflineBotSpawner");
             BotSpawner spawner = spawnerObject.GetComponent<BotSpawner>();
             if (spawner == null) spawner = spawnerObject.AddComponent<BotSpawner>();
-
             if (!spawner.TrySpawnOne())
             {
                 Debug.LogError("FSP Match: failed to create the offline opponent fallback.");
                 return;
             }
-
             Debug.Log("FSP Match: offline opponent fallback created; local match can leave Waiting state.");
         }
 
