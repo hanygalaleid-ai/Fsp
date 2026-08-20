@@ -1,4 +1,5 @@
 using System;
+using Fsp.Combat;
 using Fsp.Core;
 using Fsp.Inventory;
 using Fsp.Player;
@@ -46,6 +47,7 @@ namespace Fsp.BattleRoyale
             }
 
             EnsureGameplayComponents(localParticipant.gameObject);
+            EnsureStarterCombatLoadout(localParticipant.gameObject);
 
             // Do these explicitly here instead of depending only on RuntimeInitialize ordering.
             // Unity does not guarantee ordering between multiple AfterSceneLoad callbacks, so the
@@ -54,7 +56,7 @@ namespace Fsp.BattleRoyale
             MobileMatchControlsInstaller.Install();
 
             WireExistingHud(localParticipant.gameObject);
-            Debug.Log("FSP Match: runtime path ready (manager, player, world and mobile controls).");
+            Debug.Log("FSP Match: runtime path ready (manager, player, starter weapon, world and mobile controls).");
         }
 
         private static MatchManager EnsureMatchManager()
@@ -126,6 +128,55 @@ namespace Fsp.BattleRoyale
             if (player.GetComponent<StarterThirdPersonRig>() == null) player.AddComponent<StarterThirdPersonRig>();
             if (player.GetComponent<StarterVehicleInput>() == null) player.AddComponent<StarterVehicleInput>();
             if (player.GetComponent<StarterInteractInput>() == null) player.AddComponent<StarterInteractInput>();
+        }
+
+        private static void EnsureStarterCombatLoadout(GameObject player)
+        {
+            if (player == null) return;
+            PlayerInventory inventory = player.GetComponent<PlayerInventory>();
+            if (inventory == null) return;
+
+            // Preserve an authored loadout when one exists.
+            if (inventory.PrimaryWeapon != null || inventory.SecondaryWeapon != null) return;
+
+            Camera aimCamera = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
+            if (aimCamera == null)
+            {
+                Debug.LogError("FSP Match: starter weapon could not be created because no gameplay camera exists.");
+                return;
+            }
+
+            GameObject weaponObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            weaponObject.name = "RuntimeStarterRifle";
+            weaponObject.transform.SetParent(player.transform, false);
+            weaponObject.transform.localPosition = new Vector3(0.42f, 1.25f, 0.42f);
+            weaponObject.transform.localRotation = Quaternion.identity;
+            weaponObject.transform.localScale = new Vector3(0.12f, 0.12f, 0.62f);
+
+            Collider weaponCollider = weaponObject.GetComponent<Collider>();
+            if (weaponCollider != null) Destroy(weaponCollider);
+
+            GameObject muzzleObject = new GameObject("Muzzle");
+            muzzleObject.transform.SetParent(weaponObject.transform, false);
+            muzzleObject.transform.localPosition = new Vector3(0f, 0f, 0.58f);
+
+            WeaponConfig config = ScriptableObject.CreateInstance<WeaponConfig>();
+            config.weaponId = "runtime_rifle";
+            config.displayName = "Starter Rifle";
+            config.weaponClass = WeaponClass.Assault;
+            config.ammoClass = AmmoClass.Medium;
+            config.damage = 28f;
+            config.range = 180f;
+            config.roundsPerSecond = 9f;
+            config.magazineSize = 30;
+            config.reloadSeconds = 2.0f;
+            config.spreadDegrees = 0.8f;
+
+            HitscanWeapon weapon = weaponObject.AddComponent<HitscanWeapon>();
+            weapon.Configure(config, aimCamera, muzzleObject.transform, inventory);
+            inventory.ConfigureStarterLoadout(weapon, null, 90, 0, 2);
+
+            Debug.Log("FSP Match: runtime starter rifle and reserve ammo installed.");
         }
 
         private static void WireExistingHud(GameObject player)
