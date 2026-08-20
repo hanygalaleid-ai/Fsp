@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 
 namespace Fsp.Lobby
 {
-    /// <summary>Ensures Lobby scenes have squad, matchmaking and profile backend services on every entry.</summary>
+    /// <summary>Ensures Lobby scenes have squad, matchmaking, match-room and profile backend services on every entry.</summary>
     public static class LobbyBackendRuntimeInstaller
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -15,6 +15,8 @@ namespace Fsp.Lobby
         {
             if (!string.Equals(SceneManager.GetActiveScene().name, "Lobby", StringComparison.OrdinalIgnoreCase)) return false;
 
+            EnsurePersistentMatchRoomState();
+
             GameObject host = GameObject.Find("LobbyBackendRuntime");
             if (host == null) host = new GameObject("LobbyBackendRuntime");
 
@@ -23,6 +25,9 @@ namespace Fsp.Lobby
 
             SupabaseMatchmakingClient matchmaking = host.GetComponent<SupabaseMatchmakingClient>();
             if (matchmaking == null) matchmaking = host.AddComponent<SupabaseMatchmakingClient>();
+
+            SupabaseMatchRoomClient matchRoom = host.GetComponent<SupabaseMatchRoomClient>();
+            if (matchRoom == null) matchRoom = host.AddComponent<SupabaseMatchRoomClient>();
 
             SquadLobbyController controller = host.GetComponent<SquadLobbyController>();
             if (controller == null) controller = host.AddComponent<SquadLobbyController>();
@@ -43,6 +48,14 @@ namespace Fsp.Lobby
             }
 
             return true;
+        }
+
+        private static void EnsurePersistentMatchRoomState()
+        {
+            if (MatchRoomState.Instance != null) return;
+            GameObject state = GameObject.Find("MatchRoomState") ?? new GameObject("MatchRoomState");
+            if (state.GetComponent<MatchRoomState>() == null)
+                state.AddComponent<MatchRoomState>();
         }
     }
 }
