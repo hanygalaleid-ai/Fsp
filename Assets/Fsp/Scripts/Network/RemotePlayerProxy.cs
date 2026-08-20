@@ -45,7 +45,6 @@ namespace Fsp.Networking
 
         public void Apply(NetworkPlayerSnapshot snapshot)
         {
-            if (snapshot == null) return;
             if (!initialized) Initialize(snapshot.playerId);
 
             targetPosition = snapshot.position;
@@ -54,8 +53,6 @@ namespace Fsp.Networking
             Armor = snapshot.armor;
             DropState = snapshot.dropState;
 
-            // Once the authoritative elimination event arrives, do not resurrect the remote from a
-            // delayed pre-death snapshot that was already in transit.
             if (eliminated) return;
 
             IsAlive = snapshot.alive;
