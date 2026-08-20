@@ -22,6 +22,7 @@ namespace Fsp.Networking
         public bool IsConnected => socket != null && socket.State == WebSocketState.Open;
         public bool IsConfigured => !string.IsNullOrWhiteSpace(relayBaseUrl) && relayBaseUrl.StartsWith("wss://", StringComparison.OrdinalIgnoreCase) && !relayBaseUrl.Contains("YOUR_MATCH_RELAY", StringComparison.OrdinalIgnoreCase);
         public string RelayBaseUrl => relayBaseUrl;
+        public NetworkBotAuthorityEvent LastBotAuthority { get; private set; }
 
         public event Action<NetworkPlayerSnapshot> SnapshotReceived;
         public event Action<NetworkFireEvent> FireReceived;
@@ -55,6 +56,7 @@ namespace Fsp.Networking
             return;
 #else
             Disconnect();
+            LastBotAuthority = null;
             NetworkWorldClockCache.Clear();
             if (!IsConfigured) { Debug.LogWarning("CloudflareWebSocketTransport: relay URL is not configured yet; waiting for runtime config."); return; }
             if (string.IsNullOrWhiteSpace(matchId) || !SupabaseSession.IsSignedIn) return;
@@ -71,7 +73,7 @@ namespace Fsp.Networking
         {
             try { lifetime?.Cancel(); if (socket != null && socket.State == WebSocketState.Open) await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "leave", CancellationToken.None); }
             catch { }
-            finally { socket?.Dispose(); socket = null; lifetime?.Dispose(); lifetime = null; }
+            finally { socket?.Dispose(); socket = null; lifetime?.Dispose(); lifetime = null; LastBotAuthority = null; }
         }
 
         public void SendSnapshot(NetworkPlayerSnapshot v) => Send("snapshot", JsonUtility.ToJson(v));
@@ -128,7 +130,10 @@ namespace Fsp.Networking
                 case "appearance": AppearanceReceived?.Invoke(JsonUtility.FromJson<NetworkAppearanceEvent>(envelope.payload)); break;
                 case "match_state": MatchStateReceived?.Invoke(JsonUtility.FromJson<NetworkMatchState>(envelope.payload)); break;
                 case "elimination": EliminationReceived?.Invoke(JsonUtility.FromJson<NetworkEliminationEvent>(envelope.payload)); break;
-                case "bot_authority": BotAuthorityReceived?.Invoke(JsonUtility.FromJson<NetworkBotAuthorityEvent>(envelope.payload)); break;
+                case "bot_authority":
+                    LastBotAuthority = JsonUtility.FromJson<NetworkBotAuthorityEvent>(envelope.payload);
+                    BotAuthorityReceived?.Invoke(LastBotAuthority);
+                    break;
                 case "world_state":
                     NetworkWorldState world = JsonUtility.FromJson<NetworkWorldState>(envelope.payload);
                     NetworkWorldClockCache.Set(world);
