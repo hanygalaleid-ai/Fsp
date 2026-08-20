@@ -26,7 +26,9 @@ namespace Fsp.Bots
         private static float nextDropCheck;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        private static void ResetSceneGate()
+        private static void ResetStartupGate() => ResetForNewMatch();
+
+        public static void ResetForNewMatch()
         {
             localDropReleased = false;
             nextDropCheck = 0f;
