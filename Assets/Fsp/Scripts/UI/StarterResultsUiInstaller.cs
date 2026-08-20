@@ -23,10 +23,14 @@ namespace Fsp.UI
                 return;
             }
 
-            Canvas canvas = Object.FindFirstObjectByType<Canvas>();
-            if (canvas == null || canvas.gameObject.name == "MobileCombatHUD")
+            // Always keep results on their own canvas. The gameplay HUD is intentionally disabled
+            // when a match ends; parenting ResultsPanel under MobileCombatHUD would hide the result
+            // screen at the exact moment it is shown.
+            GameObject canvasObject = GameObject.Find("ResultsCanvas");
+            Canvas canvas;
+            if (canvasObject == null)
             {
-                GameObject canvasObject = new GameObject("ResultsCanvas");
+                canvasObject = new GameObject("ResultsCanvas");
                 canvas = canvasObject.AddComponent<Canvas>();
                 canvas.renderMode = RenderMode.ScreenSpaceOverlay;
                 canvas.overrideSorting = true;
@@ -36,6 +40,18 @@ namespace Fsp.UI
                 scaler.referenceResolution = new Vector2(1920f, 1080f);
                 scaler.matchWidthOrHeight = 0.5f;
                 canvasObject.AddComponent<GraphicRaycaster>();
+            }
+            else
+            {
+                canvas = canvasObject.GetComponent<Canvas>();
+                if (canvas == null) canvas = canvasObject.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.overrideSorting = true;
+                canvas.sortingOrder = 500;
+                if (canvasObject.GetComponent<CanvasScaler>() == null)
+                    canvasObject.AddComponent<CanvasScaler>();
+                if (canvasObject.GetComponent<GraphicRaycaster>() == null)
+                    canvasObject.AddComponent<GraphicRaycaster>();
             }
 
             GameObject host = new GameObject("MatchResultsController");
