@@ -9,18 +9,28 @@ namespace Fsp.UI
     public static class StarterResultsUiInstaller
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void Install()
+        private static void InstallAfterSceneLoad() => EnsureInstalled();
+
+        public static void EnsureInstalled()
         {
             bool isMatchScene = SceneManager.GetActiveScene().name == "Match";
             if (!isMatchScene && Object.FindFirstObjectByType<MatchManager>() == null) return;
-            if (Object.FindFirstObjectByType<MatchResultsController>() != null) return;
+
+            MatchResultsController existing = Object.FindFirstObjectByType<MatchResultsController>();
+            if (existing != null)
+            {
+                existing.RebindRuntime();
+                return;
+            }
 
             Canvas canvas = Object.FindFirstObjectByType<Canvas>();
-            if (canvas == null)
+            if (canvas == null || canvas.gameObject.name == "MobileCombatHUD")
             {
-                var canvasObject = new GameObject("ResultsCanvas");
+                GameObject canvasObject = new GameObject("ResultsCanvas");
                 canvas = canvasObject.AddComponent<Canvas>();
                 canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.overrideSorting = true;
+                canvas.sortingOrder = 500;
                 CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
                 scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
                 scaler.referenceResolution = new Vector2(1920f, 1080f);
@@ -28,16 +38,16 @@ namespace Fsp.UI
                 canvasObject.AddComponent<GraphicRaycaster>();
             }
 
-            var host = new GameObject("MatchResultsController");
-            var controller = host.AddComponent<MatchResultsController>();
+            GameObject host = new GameObject("MatchResultsController");
+            MatchResultsController controller = host.AddComponent<MatchResultsController>();
 
             GameObject panel = new GameObject("ResultsPanel");
             panel.transform.SetParent(canvas.transform, false);
-            var panelRect = panel.AddComponent<RectTransform>();
+            RectTransform panelRect = panel.AddComponent<RectTransform>();
             panelRect.anchorMin = panelRect.anchorMax = new Vector2(0.5f, 0.5f);
             panelRect.pivot = new Vector2(0.5f, 0.5f);
             panelRect.sizeDelta = new Vector2(560f, 430f);
-            var image = panel.AddComponent<Image>();
+            Image image = panel.AddComponent<Image>();
             image.color = FspFixedTheme.Panel;
 
             Text title = MakeText(panel.transform, "Title", "MATCH COMPLETE", 42, new Vector2(0f, 145f), FspFixedTheme.Text);
@@ -47,13 +57,14 @@ namespace Fsp.UI
             Button returnButton = MakeButton(panel.transform, "ReturnToLobby", "RETURN TO LOBBY", new Vector2(0f, -145f));
 
             controller.Configure(panel, title, placement, kills, xp, returnButton);
+            controller.RebindRuntime();
         }
 
         private static Text MakeText(Transform parent, string name, string value, int size, Vector2 position, Color color)
         {
-            var go = new GameObject(name);
+            GameObject go = new GameObject(name);
             go.transform.SetParent(parent, false);
-            var rect = go.AddComponent<RectTransform>();
+            RectTransform rect = go.AddComponent<RectTransform>();
             rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = position;
@@ -72,14 +83,14 @@ namespace Fsp.UI
 
         private static Button MakeButton(Transform parent, string name, string label, Vector2 position)
         {
-            var go = new GameObject(name);
+            GameObject go = new GameObject(name);
             go.transform.SetParent(parent, false);
-            var rect = go.AddComponent<RectTransform>();
+            RectTransform rect = go.AddComponent<RectTransform>();
             rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = position;
             rect.sizeDelta = new Vector2(330f, 72f);
-            var image = go.AddComponent<Image>();
+            Image image = go.AddComponent<Image>();
             image.color = FspFixedTheme.Accent;
             Button button = go.AddComponent<Button>();
             Text text = MakeText(go.transform, "Label", label, 20, Vector2.zero, FspFixedTheme.Text);
