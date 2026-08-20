@@ -1,1 +1,1 @@
-FSP Android release-candidate build requested after warning cleanup, release validation hardening, API 36 targeting, signing gate, corrected in-game lobby art validation, refreshed Unity Cloud GitHub authorization, and auto-build verification trigger.
+FSP Android release-candidate verification requested from current main after confirming Android min SDK 25, target API 36, ARM64 IL2CPP, release signing gate, warning cleanup, corrected lobby validation, and refreshed Unity Cloud GitHub authorization.
