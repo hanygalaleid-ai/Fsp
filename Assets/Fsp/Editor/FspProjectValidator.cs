@@ -64,6 +64,8 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Scripts/Backend/SupabaseAuthClient.cs",
             "Assets/Fsp/Scripts/Backend/SupabaseCosmeticsClient.cs",
             "Assets/Plugins/Android/FspAuth.androidlib/AndroidManifest.xml",
+            "Assets/Plugins/Android/FspAuth.androidlib/build.gradle",
+            "Assets/Plugins/Android/FspAuth.androidlib/proguard-rules.pro",
             "Assets/Fsp/Art/Resources/Shaders/FspMobileSafe.shader",
             "Packages/manifest.json",
             "ProjectSettings/ProjectVersion.txt"
@@ -110,6 +112,10 @@ namespace Fsp.EditorTools
             string authManifest = File.ReadAllText("Assets/Plugins/Android/FspAuth.androidlib/AndroidManifest.xml");
             if (!authManifest.Contains("com.hanygalaleid.fsp") || !authManifest.Contains("auth-callback"))
                 throw new BuildFailedException("Fsp Google OAuth requires the Android auth callback deep link manifest.");
+
+            string authGradle = File.ReadAllText("Assets/Plugins/Android/FspAuth.androidlib/build.gradle");
+            if (!authGradle.Contains("namespace \"com.hanygalaleid.fsp.auth\""))
+                throw new BuildFailedException("Fsp Google OAuth Android library requires its Gradle namespace.");
         }
 
         private static void ValidateLobbyScene()
