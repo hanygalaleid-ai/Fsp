@@ -36,10 +36,7 @@ namespace Fsp.UI
             Subscribe();
         }
 
-        private void OnDisable()
-        {
-            Unsubscribe();
-        }
+        private void OnDisable() => Unsubscribe();
 
         private void ResolveRuntimeSources()
         {
@@ -55,6 +52,15 @@ namespace Fsp.UI
                     break;
                 }
             }
+        }
+
+        public void RebindRuntime()
+        {
+            Unsubscribe();
+            matchManager = FindFirstObjectByType<MatchManager>();
+            localPlayer = null;
+            ResolveRuntimeSources();
+            if (isActiveAndEnabled) Subscribe();
         }
 
         private void Subscribe()
@@ -83,8 +89,7 @@ namespace Fsp.UI
 
         private void OnParticipantEliminated(MatchParticipant participant, int placement)
         {
-            if (participant != null && participant.IsLocalPlayer)
-                Show(placement);
+            if (participant != null && participant.IsLocalPlayer) Show(placement);
         }
 
         private void OnPhaseChanged(MatchManager.MatchPhase phase)
@@ -99,7 +104,6 @@ namespace Fsp.UI
         {
             if (shown) return;
             shown = true;
-
             int kills = KillFeedBus.LocalPlayerKills;
             int xp = CalculateXp(placement, kills);
 
@@ -108,7 +112,6 @@ namespace Fsp.UI
             if (placementText != null) placementText.text = $"PLACE #{placement}";
             if (killsText != null) killsText.text = $"KILLS {kills}";
             if (xpText != null) xpText.text = $"XP +{xp}";
-
             DisableGameplayInput();
         }
 
@@ -150,10 +153,7 @@ namespace Fsp.UI
             return 40 + kills * 25 + placementXp + (placement == 1 ? 200 : 0);
         }
 
-        public void ReturnToLobby()
-        {
-            SceneManager.LoadScene("Lobby");
-        }
+        public void ReturnToLobby() => SceneManager.LoadScene("Lobby");
 
         public void Configure(GameObject panelRoot, Text title, Text placement, Text kills, Text xp, Button returnToLobby)
         {
@@ -165,9 +165,6 @@ namespace Fsp.UI
             xpText = xp;
             returnButton = returnToLobby;
             if (panel != null) panel.SetActive(false);
-
-            // Configure is called after AddComponent, so Awake/OnEnable may have run before the
-            // runtime MatchManager and local participant existed. Resolve and subscribe again now.
             ResolveRuntimeSources();
             if (isActiveAndEnabled) Subscribe();
         }
