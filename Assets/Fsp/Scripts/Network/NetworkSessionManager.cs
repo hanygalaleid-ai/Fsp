@@ -177,9 +177,6 @@ namespace Fsp.Networking
             MatchRoomState.Instance?.Clear();
             EnsureOfflineOpponent();
 
-            // NetworkMatchStateBridge turns MatchManager authoritative as soon as an online room is
-            // present. Returning to offline mode must also return authority to the local manager,
-            // otherwise the fallback bot is registered but countdown/death/end conditions stay disabled.
             MatchManager manager = MatchManager.Instance ?? FindFirstObjectByType<MatchManager>();
             manager?.SetNetworkAuthoritative(false);
 
@@ -213,7 +210,7 @@ namespace Fsp.Networking
 
         private void HandleSnapshot(NetworkPlayerSnapshot snapshot)
         {
-            if (snapshot == null || string.IsNullOrWhiteSpace(snapshot.playerId) || snapshot.playerId == SupabaseSession.UserId) return;
+            if (string.IsNullOrWhiteSpace(snapshot.playerId) || snapshot.playerId == SupabaseSession.UserId) return;
             if (!remotes.TryGetValue(snapshot.playerId, out var proxy) || proxy == null)
             {
                 if (remotePlayerPrefab != null)
