@@ -48,7 +48,7 @@ namespace Fsp.BattleRoyale
             EnsureStarterCombatLoadout(localParticipant.gameObject);
             StarterWorldGameplayInstaller.EnsureInstalled();
             MobileMatchControlsInstaller.Install();
-            EnsureOfflineOpponent();
+            EnsureOfflineOpponent(localParticipant.transform.position);
             StarterResultsUiInstaller.EnsureInstalled();
             WireExistingHud(localParticipant.gameObject);
 
@@ -179,7 +179,7 @@ namespace Fsp.BattleRoyale
             Debug.Log("FSP Match: runtime starter rifle and reserve ammo installed.");
         }
 
-        private static void EnsureOfflineOpponent()
+        private static void EnsureOfflineOpponent(Vector3 playerPosition)
         {
             if (MatchRoomState.HasMatch) return;
             MatchParticipant[] participants = FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None);
@@ -189,12 +189,22 @@ namespace Fsp.BattleRoyale
             GameObject spawnerObject = GameObject.Find("RuntimeOfflineBotSpawner") ?? new GameObject("RuntimeOfflineBotSpawner");
             BotSpawner spawner = spawnerObject.GetComponent<BotSpawner>();
             if (spawner == null) spawner = spawnerObject.AddComponent<BotSpawner>();
+
+            // The generic fallback ring starts the first bot roughly 150m away while the fallback
+            // bot only detects targets within 65m. Give the offline smoke-test opponent an explicit
+            // nearby spawn so the first match is visibly interactive instead of appearing empty.
+            GameObject spawnObject = GameObject.Find("RuntimeOfflineBotSpawn") ?? new GameObject("RuntimeOfflineBotSpawn");
+            Vector3 spawn = playerPosition + new Vector3(18f, 0f, 22f);
+            spawn.y = Mathf.Max(1f, playerPosition.y);
+            spawnObject.transform.position = spawn;
+            spawner.ConfigureSpawnPoints(new[] { spawnObject.transform });
+
             if (!spawner.TrySpawnOne())
             {
                 Debug.LogError("FSP Match: failed to create the offline opponent fallback.");
                 return;
             }
-            Debug.Log("FSP Match: offline opponent fallback created; local match can leave Waiting state.");
+            Debug.Log("FSP Match: offline opponent fallback created inside opening combat range.");
         }
 
         private static void WireExistingHud(GameObject player)
