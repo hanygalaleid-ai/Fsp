@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 
 namespace Fsp.Lobby
 {
-    /// <summary>Ensures Lobby scenes have squad, matchmaking, match-room and profile backend services on every entry.</summary>
+    /// <summary>Ensures Lobby scenes have auth, squad, matchmaking, match-room and profile backend services on every entry.</summary>
     public static class LobbyBackendRuntimeInstaller
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -19,6 +19,14 @@ namespace Fsp.Lobby
 
             GameObject host = GameObject.Find("LobbyBackendRuntime");
             if (host == null) host = new GameObject("LobbyBackendRuntime");
+
+            SupabaseAuthClient auth = host.GetComponent<SupabaseAuthClient>();
+            if (auth == null) auth = host.AddComponent<SupabaseAuthClient>();
+
+            SupabaseSessionRuntimeBootstrap sessionBootstrap = host.GetComponent<SupabaseSessionRuntimeBootstrap>();
+            if (sessionBootstrap == null) sessionBootstrap = host.AddComponent<SupabaseSessionRuntimeBootstrap>();
+            sessionBootstrap.Configure(auth);
+            sessionBootstrap.EnsureRestoreStarted();
 
             SupabaseSquadClient squad = host.GetComponent<SupabaseSquadClient>();
             if (squad == null) squad = host.AddComponent<SupabaseSquadClient>();
