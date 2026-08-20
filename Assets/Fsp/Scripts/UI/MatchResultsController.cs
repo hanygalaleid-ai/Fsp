@@ -97,8 +97,25 @@ namespace Fsp.UI
         {
             if (phase != MatchManager.MatchPhase.Finished || shown) return;
             ResolveRuntimeSources();
-            int placement = localPlayer != null && localPlayer.Placement > 0 ? localPlayer.Placement : 1;
-            Show(placement);
+            Show(ResolveFinishedPlacement());
+        }
+
+        private int ResolveFinishedPlacement()
+        {
+            if (matchManager != null && matchManager.NetworkAuthoritative)
+            {
+                string winnerId = matchManager.AuthoritativeWinnerId;
+                if (!string.IsNullOrWhiteSpace(winnerId) && winnerId == SupabaseSession.UserId)
+                    return 1;
+
+                // In authoritative online matches local MatchParticipant.Placement is not assigned by
+                // the local manager. Never default an online loser to #1 just because placement is 0.
+                if (localPlayer != null && localPlayer.Placement > 1)
+                    return localPlayer.Placement;
+                return Mathf.Max(2, matchManager.AliveCount + 1);
+            }
+
+            return localPlayer != null && localPlayer.Placement > 0 ? localPlayer.Placement : 1;
         }
 
         private void Show(int placement)
@@ -131,14 +148,7 @@ namespace Fsp.UI
             GameObject mobileHud = GameObject.Find("MobileCombatHUD");
             if (mobileHud != null) mobileHud.SetActive(false);
 
-            MobileInputBridge input = MobileInputBridge.Instance;
-            if (input != null)
-            {
-                input.SetMove(Vector2.zero);
-                input.SetFire(false);
-                input.SetAim(false);
-                input.SetSprint(false);
-            }
+            MobileInputBridge.Instance?.ResetAll();
         }
 
         private static void SetEnabled(Behaviour behaviour, bool value)
@@ -156,14 +166,7 @@ namespace Fsp.UI
 
         public void ReturnToLobby()
         {
-            MobileInputBridge input = MobileInputBridge.Instance;
-            if (input != null)
-            {
-                input.SetMove(Vector2.zero);
-                input.SetFire(false);
-                input.SetAim(false);
-                input.SetSprint(false);
-            }
+            MobileInputBridge.Instance?.ResetAll();
 
             if (MatchRoomState.Instance != null)
                 MatchRoomState.Instance.Clear();
