@@ -11,6 +11,7 @@ namespace Fsp.Backend
 
         public PlayerProfile CurrentProfile { get; private set; }
         public bool IsLoaded => CurrentProfile != null;
+        public bool IsLoading { get; private set; }
 
         public void ConfigureRuntime(SupabaseProfileStore store)
         {
@@ -19,8 +20,11 @@ namespace Fsp.Backend
 
         public async void LoadRuntimeProfile()
         {
+            if (IsLoading) return;
+            IsLoading = true;
             try { await LoadIntoLobbyAsync(); }
             catch (Exception ex) { Debug.LogWarning("FSP profile load failed: " + ex.Message); }
+            finally { IsLoading = false; }
         }
 
         public async Task<bool> LoadIntoLobbyAsync()
