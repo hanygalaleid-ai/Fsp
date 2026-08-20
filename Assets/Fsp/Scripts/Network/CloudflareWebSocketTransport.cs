@@ -64,16 +64,47 @@ namespace Fsp.Networking
             socket = new ClientWebSocket();
             socket.Options.SetRequestHeader("Authorization", "Bearer " + SupabaseSession.AccessToken);
             string url = relayBaseUrl.TrimEnd('/') + "?matchId=" + Uri.EscapeDataString(matchId);
-            try { await socket.ConnectAsync(new Uri(url), lifetime.Token); _ = ReceiveLoop(lifetime.Token); }
-            catch (Exception e) { mainThread.Enqueue(() => Debug.LogError("Match relay connection failed: " + e.Message)); Disconnect(); }
+            ClientWebSocket connectingSocket = socket;
+            CancellationTokenSource connectingLifetime = lifetime;
+            try
+            {
+                await connectingSocket.ConnectAsync(new Uri(url), connectingLifetime.Token);
+                if (socket != connectingSocket || lifetime != connectingLifetime) return;
+                _ = ReceiveLoop(connectingSocket, connectingLifetime.Token);
+            }
+            catch (Exception e)
+            {
+                mainThread.Enqueue(() => Debug.LogError("Match relay connection failed: " + e.Message));
+                if (socket == connectingSocket) Disconnect();
+                else
+                {
+                    connectingSocket.Dispose();
+                    connectingLifetime.Dispose();
+                }
+            }
 #endif
         }
 
         public async void Disconnect()
         {
-            try { lifetime?.Cancel(); if (socket != null && socket.State == WebSocketState.Open) await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "leave", CancellationToken.None); }
+            ClientWebSocket closingSocket = socket;
+            CancellationTokenSource closingLifetime = lifetime;
+            socket = null;
+            lifetime = null;
+            LastBotAuthority = null;
+
+            try
+            {
+                closingLifetime?.Cancel();
+                if (closingSocket != null && closingSocket.State == WebSocketState.Open)
+                    await closingSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "leave", CancellationToken.None);
+            }
             catch { }
-            finally { socket?.Dispose(); socket = null; lifetime?.Dispose(); lifetime = null; LastBotAuthority = null; }
+            finally
+            {
+                closingSocket?.Dispose();
+                closingLifetime?.Dispose();
+            }
         }
 
         public void SendSnapshot(NetworkPlayerSnapshot v) => Send("snapshot", JsonUtility.ToJson(v));
@@ -89,25 +120,31 @@ namespace Fsp.Networking
 
         private async void Send(string type, string payload)
         {
-            if (!IsConnected) return;
+            ClientWebSocket activeSocket = socket;
+            CancellationTokenSource activeLifetime = lifetime;
+            if (activeSocket == null || activeLifetime == null || activeSocket.State != WebSocketState.Open) return;
             byte[] bytes = Encoding.UTF8.GetBytes(JsonUtility.ToJson(new Envelope { type = type, payload = payload }));
             if (bytes.Length > 12 * 1024) return;
             await sendLock.WaitAsync();
-            try { if (IsConnected) await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, lifetime.Token); }
+            try
+            {
+                if (socket == activeSocket && activeSocket.State == WebSocketState.Open)
+                    await activeSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, activeLifetime.Token);
+            }
             catch (Exception e) { mainThread.Enqueue(() => Debug.LogWarning("Match relay send failed: " + e.Message)); }
             finally { sendLock.Release(); }
         }
 
-        private async Task ReceiveLoop(CancellationToken token)
+        private async Task ReceiveLoop(ClientWebSocket activeSocket, CancellationToken token)
         {
             byte[] buffer = new byte[16 * 1024];
             var builder = new StringBuilder();
             try
             {
-                while (!token.IsCancellationRequested && socket != null && socket.State == WebSocketState.Open)
+                while (!token.IsCancellationRequested && socket == activeSocket && activeSocket.State == WebSocketState.Open)
                 {
                     builder.Clear(); WebSocketReceiveResult result;
-                    do { result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), token); if (result.MessageType == WebSocketMessageType.Close) return; builder.Append(Encoding.UTF8.GetString(buffer, 0, result.Count)); if (builder.Length > 16 * 1024) return; } while (!result.EndOfMessage);
+                    do { result = await activeSocket.ReceiveAsync(new ArraySegment<byte>(buffer), token); if (result.MessageType == WebSocketMessageType.Close) return; builder.Append(Encoding.UTF8.GetString(buffer, 0, result.Count)); if (builder.Length > 16 * 1024) return; } while (!result.EndOfMessage);
                     string json = builder.ToString(); mainThread.Enqueue(() => Dispatch(json));
                 }
             }
