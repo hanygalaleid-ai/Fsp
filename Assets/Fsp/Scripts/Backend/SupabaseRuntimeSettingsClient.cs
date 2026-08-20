@@ -32,13 +32,15 @@ namespace Fsp.Backend
                 + "&select=key,value&limit=1";
 
             using var req = UnityWebRequest.Get(url);
+            req.timeout = 8;
             req.SetRequestHeader("apikey", SupabaseRuntimeConfig.PublishableKey);
             req.SetRequestHeader("Authorization", "Bearer " + SupabaseSession.AccessToken);
             yield return req.SendWebRequest();
 
             if (req.result != UnityWebRequest.Result.Success)
             {
-                done?.Invoke(false, req.downloadHandler.text);
+                string error = !string.IsNullOrWhiteSpace(req.downloadHandler?.text) ? req.downloadHandler.text : req.error;
+                done?.Invoke(false, error ?? "Runtime settings request failed.");
                 yield break;
             }
 
