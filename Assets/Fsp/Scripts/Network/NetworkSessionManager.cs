@@ -172,9 +172,17 @@ namespace Fsp.Networking
                 transport.EliminationReceived -= HandleElimination;
                 transport.Disconnect();
             }
+
             ClearRemotePlayers();
             MatchRoomState.Instance?.Clear();
             EnsureOfflineOpponent();
+
+            // NetworkMatchStateBridge turns MatchManager authoritative as soon as an online room is
+            // present. Returning to offline mode must also return authority to the local manager,
+            // otherwise the fallback bot is registered but countdown/death/end conditions stay disabled.
+            MatchManager manager = MatchManager.Instance ?? FindFirstObjectByType<MatchManager>();
+            manager?.SetNetworkAuthoritative(false);
+
             Debug.LogWarning("FSP Network: " + reason + "; continuing as an offline playable match.");
         }
 
