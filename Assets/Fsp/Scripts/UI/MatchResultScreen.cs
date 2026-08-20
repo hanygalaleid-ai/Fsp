@@ -15,7 +15,7 @@ namespace Fsp.UI
 
         private void Awake()
         {
-            if (matchManager == null) matchManager = FindObjectOfType<MatchManager>();
+            if (matchManager == null) matchManager = FindFirstObjectByType<MatchManager>();
             if (panel != null) panel.SetActive(false);
         }
 
