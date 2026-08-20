@@ -4,6 +4,7 @@ using Fsp.Bots;
 using Fsp.Combat;
 using Fsp.Core;
 using Fsp.Inventory;
+using Fsp.Networking;
 using Fsp.Player;
 using Fsp.UI;
 using Fsp.Vehicles;
@@ -49,10 +50,16 @@ namespace Fsp.BattleRoyale
             StarterWorldGameplayInstaller.EnsureInstalled();
             MobileMatchControlsInstaller.Install();
             EnsureOfflineOpponent(localParticipant.transform.position);
+
+            // Online networking must be installed only after the local participant definitely exists.
+            // This removes another RuntimeInitialize ordering race that could leave an authenticated
+            // match with no transport/session on device builds.
+            MatchNetworkRuntimeInstaller.EnsureInstalled();
+
             StarterResultsUiInstaller.EnsureInstalled();
             WireExistingHud(localParticipant.gameObject);
 
-            Debug.Log("FSP Match: runtime path ready (manager, safe zone, player, weapon, world, mobile controls, opponent and results).");
+            Debug.Log("FSP Match: runtime path ready (manager, safe zone, player, weapon, world, mobile controls, opponent/network and results).");
         }
 
         private static MatchManager EnsureMatchManager()
@@ -190,9 +197,6 @@ namespace Fsp.BattleRoyale
             BotSpawner spawner = spawnerObject.GetComponent<BotSpawner>();
             if (spawner == null) spawner = spawnerObject.AddComponent<BotSpawner>();
 
-            // The generic fallback ring starts the first bot roughly 150m away while the fallback
-            // bot only detects targets within 65m. Give the offline smoke-test opponent an explicit
-            // nearby spawn so the first match is visibly interactive instead of appearing empty.
             GameObject spawnObject = GameObject.Find("RuntimeOfflineBotSpawn") ?? new GameObject("RuntimeOfflineBotSpawn");
             Vector3 spawn = playerPosition + new Vector3(18f, 0f, 22f);
             spawn.y = Mathf.Max(1f, playerPosition.y);
