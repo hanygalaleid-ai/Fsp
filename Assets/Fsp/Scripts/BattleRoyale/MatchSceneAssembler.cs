@@ -59,10 +59,11 @@ namespace Fsp.BattleRoyale
             NetworkBotSnapshotPublisherInstaller.EnsureInstalled();
 
             StarterResultsUiInstaller.EnsureInstalled();
+            RuntimeStatusHudInstaller.EnsureInstalled();
             MatchProgressReporter.EnsureInstalled();
             WireExistingHud(localParticipant.gameObject);
 
-            Debug.Log("FSP Match: runtime path ready (manager, safe zone, player, weapon, world, mobile controls, authoritative network combat, bot replication, results and progress saving).");
+            Debug.Log("FSP Match: runtime path ready (manager, safe zone, player, weapon, world, mobile controls, authoritative network combat, bot replication, status HUD, results and progress saving).");
         }
 
         private static MatchManager EnsureMatchManager()
