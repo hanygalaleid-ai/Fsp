@@ -126,8 +126,7 @@ namespace Fsp.Voice
         public IEnumerator CreateLocalOffer(Action<string> success, Action<string> failed)
         {
             if (!IsInitialized) { failed?.Invoke("Voice runtime is not initialized."); yield break; }
-            RTCOfferOptions options = default;
-            var offer = peer.CreateOffer(ref options);
+            var offer = peer.CreateOffer();
             yield return offer;
             if (offer.IsError) { failed?.Invoke(offer.Error.message); yield break; }
             RTCSessionDescription description = offer.Desc;
@@ -145,8 +144,7 @@ namespace Fsp.Voice
             string remoteError = null;
             yield return ApplyRemoteDescription(sdp, RTCSdpType.Offer, () => remoteApplied = true, e => remoteError = e);
             if (!remoteApplied) { failed?.Invoke(remoteError ?? "Remote offer failed."); yield break; }
-            RTCAnswerOptions options = default;
-            var answer = peer.CreateAnswer(ref options);
+            var answer = peer.CreateAnswer();
             yield return answer;
             if (answer.IsError) { failed?.Invoke(answer.Error.message); yield break; }
             RTCSessionDescription description = answer.Desc;
