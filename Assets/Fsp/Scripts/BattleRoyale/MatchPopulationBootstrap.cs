@@ -66,6 +66,9 @@ namespace Fsp.BattleRoyale
             }
 
             transport.BotAuthorityReceived += HandleAuthority;
+            if (transport is CloudflareWebSocketTransport cloudflare && cloudflare.LastBotAuthority != null)
+                HandleAuthority(cloudflare.LastBotAuthority);
+
             while (!spawned && Time.realtimeSinceStartup < deadline)
             {
                 TrySpawnIfAuthority();
