@@ -33,11 +33,14 @@ namespace Fsp.UI
         private float nextResolve;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void InstallAfterSceneLoad()
+        private static void InstallAfterSceneLoad() => EnsureInstalled();
+
+        public static bool EnsureInstalled()
         {
-            if (!string.Equals(SceneManager.GetActiveScene().name, "Match", StringComparison.OrdinalIgnoreCase)) return;
-            if (FindFirstObjectByType<RuntimeStatusHudInstaller>() != null) return;
+            if (!string.Equals(SceneManager.GetActiveScene().name, "Match", StringComparison.OrdinalIgnoreCase)) return false;
+            if (FindFirstObjectByType<RuntimeStatusHudInstaller>() != null) return true;
             new GameObject("Fsp_RuntimeStatusHudInstaller").AddComponent<RuntimeStatusHudInstaller>();
+            return true;
         }
 
         private void Awake()
