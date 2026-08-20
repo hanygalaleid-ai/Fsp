@@ -11,6 +11,8 @@ namespace Fsp.EditorTools
     {
         public int callbackOrder => -950;
 
+        private const string AndroidApplicationId = "com.hanygalaleid.fsp";
+
         private static readonly string[] RequiredArt =
         {
             "Assets/Fsp/Art/Resources/Lobby/fsp_lobby_final.jpg",
@@ -24,6 +26,8 @@ namespace Fsp.EditorTools
 
         public void OnPreprocessBuild(BuildReport report)
         {
+            ApplyDeterministicPlayerSettings(report.summary.platform);
+
             // Release builds must use checked-in production art only.
             // No placeholder/procedural art generation is allowed here.
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
@@ -50,6 +54,25 @@ namespace Fsp.EditorTools
 
             AssetDatabase.SaveAssets();
             Debug.Log("FSP PRODUCTION ART GATE PASSED: fixed checked-in art preserved; no art generation executed.");
+        }
+
+        private static void ApplyDeterministicPlayerSettings(BuildTarget platform)
+        {
+            PlayerSettings.companyName = "Fsp Studio";
+            PlayerSettings.productName = "Fsp";
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;
+            PlayerSettings.fullScreenMode = FullScreenMode.FullScreenWindow;
+            PlayerSettings.runInBackground = false;
+
+            if (platform != BuildTarget.Android) return;
+
+            PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, AndroidApplicationId);
+            PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
+            PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevel36;
+            PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
+
+            Debug.Log("FSP CLOUD SETTINGS OK: Android ARM64/IL2CPP, landscape fullscreen, package " + AndroidApplicationId);
         }
     }
 }
