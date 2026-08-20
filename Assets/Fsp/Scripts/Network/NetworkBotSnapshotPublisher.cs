@@ -145,13 +145,16 @@ namespace Fsp.Networking
     public static class NetworkBotSnapshotPublisherInstaller
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void Install()
+        private static void InstallAfterSceneLoad() => EnsureInstalled();
+
+        public static bool EnsureInstalled()
         {
             Scene scene = SceneManager.GetActiveScene();
-            if (!scene.IsValid() || !string.Equals(scene.name, "Match", StringComparison.OrdinalIgnoreCase)) return;
-            if (!MatchRoomState.HasMatch || !SupabaseSession.IsSignedIn) return;
-            if (UnityEngine.Object.FindFirstObjectByType<NetworkBotSnapshotPublisher>() != null) return;
+            if (!scene.IsValid() || !string.Equals(scene.name, "Match", StringComparison.OrdinalIgnoreCase)) return false;
+            if (!MatchRoomState.HasMatch || !SupabaseSession.IsSignedIn) return false;
+            if (UnityEngine.Object.FindFirstObjectByType<NetworkBotSnapshotPublisher>() != null) return true;
             new GameObject("NetworkBotSnapshotPublisher").AddComponent<NetworkBotSnapshotPublisher>();
+            return true;
         }
     }
 }
