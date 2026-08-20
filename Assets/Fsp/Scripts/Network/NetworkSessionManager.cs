@@ -26,10 +26,7 @@ namespace Fsp.Networking
         private bool connectionObserved;
         private bool fellBackOffline;
 
-        private void Awake()
-        {
-            AutoWireRuntimeDependencies();
-        }
+        private void Awake() => AutoWireRuntimeDependencies();
 
         public void ConfigureRuntime(MonoBehaviour transportSource, Transform player, GameObject remotePrefab)
         {
@@ -44,6 +41,12 @@ namespace Fsp.Networking
         {
             AutoWireRuntimeDependencies();
             TryStartOnlineSession();
+        }
+
+        public void FallbackOffline(string reason)
+        {
+            AutoWireRuntimeDependencies();
+            FallBackToOffline(string.IsNullOrWhiteSpace(reason) ? "online session unavailable" : reason);
         }
 
         private void AutoWireRuntimeDependencies()
@@ -83,10 +86,7 @@ namespace Fsp.Networking
             }
         }
 
-        private void Start()
-        {
-            TryStartOnlineSession();
-        }
+        private void Start() => TryStartOnlineSession();
 
         private void TryStartOnlineSession()
         {
@@ -145,7 +145,6 @@ namespace Fsp.Networking
 
             if (transport == null || !transport.IsConnected || localPlayer == null || Time.time < nextSnapshotTime) return;
             nextSnapshotTime = Time.time + 1f / Mathf.Max(1f, snapshotRate);
-
             transport.SendSnapshot(new NetworkPlayerSnapshot
             {
                 playerId = SupabaseSession.UserId,
@@ -165,13 +164,11 @@ namespace Fsp.Networking
             if (fellBackOffline) return;
             fellBackOffline = true;
             started = false;
-
             if (transport != null)
             {
                 transport.SnapshotReceived -= HandleSnapshot;
                 transport.Disconnect();
             }
-
             MatchRoomState.Instance?.Clear();
             EnsureOfflineOpponent();
             Debug.LogWarning("FSP Network: " + reason + "; continuing as an offline playable match.");
@@ -186,7 +183,6 @@ namespace Fsp.Networking
             GameObject spawnerObject = GameObject.Find("RuntimeOfflineBotSpawner") ?? new GameObject("RuntimeOfflineBotSpawner");
             BotSpawner spawner = spawnerObject.GetComponent<BotSpawner>();
             if (spawner == null) spawner = spawnerObject.AddComponent<BotSpawner>();
-
             GameObject spawnObject = GameObject.Find("RuntimeOfflineBotSpawn") ?? new GameObject("RuntimeOfflineBotSpawn");
             Vector3 spawn = localPlayer.position + new Vector3(18f, 0f, 22f);
             spawn.y = Mathf.Max(1f, localPlayer.position.y);
@@ -218,13 +214,11 @@ namespace Fsp.Networking
                 {
                     proxy = RemotePlayerRuntimeFactory.CreateFromLocalVisual(localPlayer, snapshot.position, snapshot.rotation);
                 }
-
                 if (proxy == null)
                 {
                     Debug.LogError("FSP Network: failed to create remote player visual for " + snapshot.playerId);
                     return;
                 }
-
                 proxy.Initialize(snapshot.playerId);
                 remotes[snapshot.playerId] = proxy;
             }
