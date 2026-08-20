@@ -18,19 +18,23 @@ namespace Fsp.BattleRoyale
 
         private void Awake()
         {
+            ResolveRuntimeReferences();
+            TryResolveTransport();
+        }
+
+        private void ResolveRuntimeReferences()
+        {
             if (zone == null) zone = FindFirstObjectByType<SafeZoneController>();
             if (vitals == null) vitals = GetComponent<PlayerVitals>();
             if (matchManager == null) matchManager = FindFirstObjectByType<MatchManager>();
             if (planePassenger == null) planePassenger = GetComponent<DropPlanePassenger>();
-            TryResolveTransport();
         }
 
         private void Update()
         {
+            ResolveRuntimeReferences();
             if (zone == null || vitals == null || !vitals.IsAlive) return;
-            if (matchManager == null) matchManager = FindFirstObjectByType<MatchManager>();
             if (matchManager != null && matchManager.Phase != MatchManager.MatchPhase.Active) return;
-            if (planePassenger == null) planePassenger = GetComponent<DropPlanePassenger>();
             if (planePassenger != null && planePassenger.IsAboard) return;
             if (Time.time < nextTick) return;
 
