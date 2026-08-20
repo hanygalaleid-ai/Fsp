@@ -35,6 +35,15 @@ namespace Fsp.BattleRoyale
             MatchManager.Register(this);
         }
 
+        private void Start()
+        {
+            // Runtime safety players can receive PlayerVitals after this component's Awake/OnEnable.
+            // Re-resolve once all scene/runtime Awake calls have completed so deaths always reach MatchManager.
+            EnsureVitals();
+            SubscribeDeath();
+            MatchManager.Register(this);
+        }
+
         private void OnDisable()
         {
             UnsubscribeDeath();
