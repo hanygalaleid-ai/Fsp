@@ -7,6 +7,8 @@ namespace Fsp.Backend
 {
     public sealed class SupabaseAuthClient : MonoBehaviour
     {
+        private const int RequestTimeoutSeconds = 8;
+
         [Serializable] private sealed class AuthUser { public string id; }
         [Serializable] private sealed class AuthResponse
         {
@@ -56,13 +58,16 @@ namespace Fsp.Backend
             using var req = new UnityWebRequest(SupabaseRuntimeConfig.ProjectUrl + path, UnityWebRequest.kHttpVerbPOST);
             req.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
             req.downloadHandler = new DownloadHandlerBuffer();
+            req.timeout = RequestTimeoutSeconds;
             req.SetRequestHeader("Content-Type", "application/json");
             req.SetRequestHeader("apikey", SupabaseRuntimeConfig.PublishableKey);
             yield return req.SendWebRequest();
 
             if (req.result != UnityWebRequest.Result.Success)
             {
-                done?.Invoke(false, req.downloadHandler.text);
+                string error = req.downloadHandler != null ? req.downloadHandler.text : string.Empty;
+                if (string.IsNullOrWhiteSpace(error)) error = req.error;
+                done?.Invoke(false, string.IsNullOrWhiteSpace(error) ? "Supabase authentication request failed." : error);
                 yield break;
             }
 
