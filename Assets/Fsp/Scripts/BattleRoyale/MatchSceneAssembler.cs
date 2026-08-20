@@ -46,7 +46,15 @@ namespace Fsp.BattleRoyale
             }
 
             EnsureGameplayComponents(localParticipant.gameObject);
+
+            // Do these explicitly here instead of depending only on RuntimeInitialize ordering.
+            // Unity does not guarantee ordering between multiple AfterSceneLoad callbacks, so the
+            // world and Android controls must be installed after the local participant exists.
+            StarterWorldGameplayInstaller.EnsureInstalled();
+            MobileMatchControlsInstaller.Install();
+
             WireExistingHud(localParticipant.gameObject);
+            Debug.Log("FSP Match: runtime path ready (manager, player, world and mobile controls).");
         }
 
         private static MatchManager EnsureMatchManager()
@@ -126,7 +134,7 @@ namespace Fsp.BattleRoyale
             BattleRoyaleHud hud = FindFirstObjectByType<BattleRoyaleHud>();
             if (hud == null)
             {
-                Debug.LogWarning("FSP Match: authored BattleRoyaleHud not found; gameplay continues without HUD rather than blocking the match.");
+                Debug.LogWarning("FSP Match: authored BattleRoyaleHud not found; mobile combat controls remain active and gameplay continues.");
                 return;
             }
 
