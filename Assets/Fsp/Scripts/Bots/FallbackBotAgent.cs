@@ -58,7 +58,7 @@ namespace Fsp.Bots
 
             if (Time.time >= nextScan)
             {
-                nextScan = Time.time + 0.45f + Random.Range(0f, 0.18f);
+                nextScan = Time.time + 0.45f + UnityEngine.Random.Range(0f, 0.18f);
                 AcquireTarget();
             }
 
@@ -87,7 +87,7 @@ namespace Fsp.Bots
                     else if (Time.time >= nextShot)
                     {
                         nextShot = Time.time + 1f / Mathf.Max(0.1f, shotsPerSecond);
-                        if (Random.value <= 0.72f)
+                        if (UnityEngine.Random.value <= 0.72f)
                             ApplyAttack(target);
                     }
                 }
