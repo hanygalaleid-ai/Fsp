@@ -321,6 +321,7 @@ namespace Fsp.Lobby
             accountPasswordInput = CreateInput(panel, "Password", "PASSWORD", new Vector2(0.10f, 0.44f), new Vector2(0.90f, 0.55f), InputField.ContentType.Password, 72);
             accountStatusText = Label(panel, "", 14, new Vector2(0.10f, 0.37f), new Vector2(0.90f, 0.43f), TextAnchor.MiddleCenter);
             accountGoogleButton = Button(panel, "GoogleSignIn", "CONTINUE WITH GOOGLE", new Vector2(0.18f, 0.27f), new Vector2(0.82f, 0.36f), Color.white, SignInWithGoogle, 16);
+            CreateGoogleSignInIcon(accountGoogleButton.transform);
             Text googleText = accountGoogleButton.GetComponentInChildren<Text>();
             if (googleText != null) googleText.color = new Color(.08f, .10f, .12f, 1f);
             accountSignInButton = Button(panel, "SignIn", "SIGN IN", new Vector2(0.08f, 0.14f), new Vector2(0.36f, 0.24f), Orange, SignInAccount, 17);
@@ -328,6 +329,33 @@ namespace Fsp.Lobby
             accountSignOutButton = Button(panel, "SignOut", "SIGN OUT", new Vector2(0.70f, 0.14f), new Vector2(0.92f, 0.24f), new Color(0.55f, 0.08f, 0.06f, 0.95f), SignOutAccount, 15);
             Button(panel, "Close", "SAVE & CLOSE", new Vector2(0.31f, 0.02f), new Vector2(0.69f, 0.11f), NavySoft, CloseAccountPanel, 17);
             authPanel.SetActive(false);
+        }
+
+        private static void CreateGoogleSignInIcon(Transform parent)
+        {
+            Texture2D texture = Resources.Load<Texture2D>("UI/google_signin_square");
+            if (texture == null)
+            {
+                Debug.LogError("Official Google sign-in icon is missing from Resources/UI.");
+                return;
+            }
+
+            GameObject iconObject = new("GoogleG", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
+            iconObject.transform.SetParent(parent, false);
+            RectTransform rect = iconObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.025f, 0.12f);
+            rect.anchorMax = new Vector2(0.16f, 0.88f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            RawImage image = iconObject.GetComponent<RawImage>();
+            image.texture = texture;
+            image.color = Color.white;
+            image.raycastTarget = false;
+
+            AspectRatioFitter fitter = iconObject.GetComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fitter.aspectRatio = 1f;
         }
 
         private static InputField CreateInput(Transform parent, string name, string placeholderValue, Vector2 min, Vector2 max, InputField.ContentType contentType, int limit)

@@ -88,7 +88,9 @@ namespace Fsp.EditorTools
                     errors.Add("Google Play AAB must use a positive Android versionCode.");
 
                 if (!File.Exists(FspAndroidIconSetup.IconPath))
-                    errors.Add("Google Play AAB requires the checked-in FSP launcher icon: " + FspAndroidIconSetup.IconPath);
+                    errors.Add("Google Play AAB requires the checked-in BMG launcher icon: " + FspAndroidIconSetup.IconPath);
+                if (!File.Exists(FspAndroidIconSetup.AdaptiveForegroundPath) || !File.Exists(FspAndroidIconSetup.AdaptiveBackgroundPath))
+                    errors.Add("Google Play AAB requires both BMG Android adaptive icon layers.");
 
                 if ((PlayerSettings.Android.targetArchitectures & AndroidArchitecture.ARM64) == 0)
                     errors.Add("Google Play AAB must include ARM64.");
