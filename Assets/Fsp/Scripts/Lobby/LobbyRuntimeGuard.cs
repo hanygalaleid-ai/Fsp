@@ -17,7 +17,9 @@ namespace Fsp.Lobby
         private const string FixedLobbyResourcePath = "Lobby/fsp_lobby_final";
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void EnsureLobbyRuntime()
+        private static void EnsureAfterInitialSceneLoad() => EnsureInstalled();
+
+        public static void EnsureInstalled()
         {
             Scene scene = SceneManager.GetActiveScene();
             if (!scene.IsValid() || !string.Equals(scene.name, "Lobby", StringComparison.OrdinalIgnoreCase)) return;
@@ -34,20 +36,13 @@ namespace Fsp.Lobby
 
         private static void ResetTransientMatchState()
         {
-            // A match can end through victory, death, Android back navigation or an interrupted
-            // scene transition. Lobby must always be a clean re-entry point so START works on the
-            // second and later matches exactly like it did on the first one.
+            // Lobby is a hard reset boundary for every transient match state. MobileInputBridge is
+            // DontDestroyOnLoad, so clear held and one-shot actions here rather than relying on the
+            // previous frame's LateUpdate to have happened before the scene transition.
             if (MatchRoomState.Instance != null && MatchRoomState.HasMatch)
                 MatchRoomState.Instance.Clear();
 
-            MobileInputBridge input = MobileInputBridge.Instance;
-            if (input != null)
-            {
-                input.SetMove(Vector2.zero);
-                input.SetFire(false);
-                input.SetAim(false);
-                input.SetSprint(false);
-            }
+            MobileInputBridge.Instance?.ResetAll();
         }
 
         private static void EnsureState()
@@ -124,10 +119,6 @@ namespace Fsp.Lobby
                 }
 
                 if (string.IsNullOrWhiteSpace(state.DisplayName)) state.SetDisplayName("Player");
-
-                // Route every START path through LobbyMatchLauncher instead of loading Match here
-                // as well. This prevents two independent handlers from attempting LoadScene on the
-                // same touch and makes repeated Lobby -> Match -> Lobby cycles deterministic.
                 state.RequestStartMatch();
             }
         }
