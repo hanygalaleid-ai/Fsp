@@ -1,7 +1,9 @@
+using System.Threading;
 using Fsp.BattleRoyale;
 using Fsp.Lobby;
 using Fsp.UI;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Fsp.Backend
 {
@@ -12,40 +14,79 @@ namespace Fsp.Backend
         [SerializeField] private SupabaseProfileStore profileStore;
 
         private bool saved;
+        private bool saving;
+        private bool subscribed;
 
-        private void Awake()
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void InstallAfterSceneLoad() => EnsureInstalled();
+
+        public static MatchProgressReporter EnsureInstalled()
         {
-            if (matchManager == null) matchManager = FindFirstObjectByType<MatchManager>();
-            if (profileStore == null) profileStore = FindFirstObjectByType<SupabaseProfileStore>();
-            if (profileStore == null) profileStore = gameObject.AddComponent<SupabaseProfileStore>();
+            Scene scene = SceneManager.GetActiveScene();
+            if (!scene.IsValid() || !string.Equals(scene.name, "Match", System.StringComparison.OrdinalIgnoreCase)) return null;
 
-            if (localParticipant == null)
+            MatchProgressReporter existing = FindFirstObjectByType<MatchProgressReporter>();
+            if (existing != null)
             {
-                foreach (var participant in FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None))
-                {
-                    if (participant != null && participant.IsLocalPlayer)
-                    {
-                        localParticipant = participant;
-                        break;
-                    }
-                }
+                existing.ResolveRuntimeSources();
+                existing.Subscribe();
+                return existing;
             }
+
+            GameObject host = GameObject.Find("MatchProgressReporter") ?? new GameObject("MatchProgressReporter");
+            return host.AddComponent<MatchProgressReporter>();
+        }
+
+        private void Awake() => ResolveRuntimeSources();
+
+        private void Start()
+        {
+            ResolveRuntimeSources();
+            Subscribe();
         }
 
         private void OnEnable()
         {
+            ResolveRuntimeSources();
+            Subscribe();
+        }
+
+        private void OnDisable() => Unsubscribe();
+
+        private void ResolveRuntimeSources()
+        {
+            if (matchManager == null) matchManager = MatchManager.Instance ?? FindFirstObjectByType<MatchManager>();
+            if (profileStore == null) profileStore = GetComponent<SupabaseProfileStore>();
+            if (profileStore == null) profileStore = gameObject.AddComponent<SupabaseProfileStore>();
+
+            if (localParticipant != null && localParticipant.IsLocalPlayer) return;
+            localParticipant = null;
+            foreach (MatchParticipant participant in FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None))
+            {
+                if (participant == null || !participant.IsLocalPlayer) continue;
+                localParticipant = participant;
+                break;
+            }
+        }
+
+        private void Subscribe()
+        {
+            if (subscribed) return;
+            ResolveRuntimeSources();
             if (matchManager == null) return;
             matchManager.ParticipantEliminated += HandleParticipantEliminated;
             matchManager.MatchWon += HandleMatchWon;
             matchManager.NetworkWinnerDeclared += HandleNetworkWinner;
+            subscribed = true;
         }
 
-        private void OnDisable()
+        private void Unsubscribe()
         {
-            if (matchManager == null) return;
+            if (!subscribed || matchManager == null) return;
             matchManager.ParticipantEliminated -= HandleParticipantEliminated;
             matchManager.MatchWon -= HandleMatchWon;
             matchManager.NetworkWinnerDeclared -= HandleNetworkWinner;
+            subscribed = false;
         }
 
         private void HandleParticipantEliminated(MatchParticipant participant, int placement)
@@ -71,12 +112,17 @@ namespace Fsp.Backend
 
         private async void SaveResult(bool won, int placement)
         {
-            if (saved || !SupabaseSession.IsSignedIn || profileStore == null || localParticipant == null) return;
-            saved = true;
+            if (saved || saving || !SupabaseSession.IsSignedIn) return;
+            ResolveRuntimeSources();
+            if (profileStore == null || localParticipant == null) return;
 
+            saving = true;
             try
             {
-                PlayerProfile profile = await profileStore.LoadAsync(SupabaseSession.UserId);
+                using var timeout = new CancellationTokenSource();
+                timeout.CancelAfter(12000);
+
+                PlayerProfile profile = await profileStore.LoadAsync(SupabaseSession.UserId, timeout.Token);
                 if (profile == null)
                 {
                     profile = new PlayerProfile(
@@ -86,12 +132,21 @@ namespace Fsp.Backend
                 }
 
                 profile.ApplyMatchResult(won, KillFeedBus.LocalPlayerKills, Mathf.Max(1, placement));
-                await profileStore.SaveAsync(profile);
+                await profileStore.SaveAsync(profile, timeout.Token);
+                saved = true;
+                Debug.Log("FSP progress: match result saved successfully.");
+            }
+            catch (System.OperationCanceledException)
+            {
+                Debug.LogWarning("FSP progress: save timed out; gameplay will continue without blocking the results screen.");
             }
             catch (System.Exception ex)
             {
-                saved = false;
                 Debug.LogError("Failed to save match progress: " + ex.Message);
+            }
+            finally
+            {
+                saving = false;
             }
         }
     }
