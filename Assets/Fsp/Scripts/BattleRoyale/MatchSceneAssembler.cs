@@ -48,6 +48,7 @@ namespace Fsp.BattleRoyale
             EnsureGameplayComponents(localParticipant.gameObject);
             EnsureStarterCombatLoadout(localParticipant.gameObject);
             StarterWorldGameplayInstaller.EnsureInstalled();
+            AndroidMaterialRecovery.EnsureInstalled();
             MobileMatchControlsInstaller.Install();
             EnsureOfflineOpponent(localParticipant.transform.position);
 
