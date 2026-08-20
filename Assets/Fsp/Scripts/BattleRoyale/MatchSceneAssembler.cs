@@ -1,4 +1,6 @@
 using System;
+using Fsp.Backend;
+using Fsp.Bots;
 using Fsp.Combat;
 using Fsp.Core;
 using Fsp.Inventory;
@@ -54,9 +56,10 @@ namespace Fsp.BattleRoyale
             // world and Android controls must be installed after the local participant exists.
             StarterWorldGameplayInstaller.EnsureInstalled();
             MobileMatchControlsInstaller.Install();
+            EnsureOfflineOpponent();
 
             WireExistingHud(localParticipant.gameObject);
-            Debug.Log("FSP Match: runtime path ready (manager, player, starter weapon, world and mobile controls).");
+            Debug.Log("FSP Match: runtime path ready (manager, player, starter weapon, world, mobile controls and offline opponent fallback).");
         }
 
         private static MatchManager EnsureMatchManager()
@@ -177,6 +180,28 @@ namespace Fsp.BattleRoyale
             inventory.ConfigureStarterLoadout(weapon, null, 90, 0, 2);
 
             Debug.Log("FSP Match: runtime starter rifle and reserve ammo installed.");
+        }
+
+        private static void EnsureOfflineOpponent()
+        {
+            // Never synthesize opponents inside an online room; networking owns population there.
+            if (MatchRoomState.HasMatch) return;
+
+            MatchParticipant[] participants = FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None);
+            foreach (MatchParticipant participant in participants)
+                if (participant != null && participant.IsBot) return;
+
+            GameObject spawnerObject = GameObject.Find("RuntimeOfflineBotSpawner") ?? new GameObject("RuntimeOfflineBotSpawner");
+            BotSpawner spawner = spawnerObject.GetComponent<BotSpawner>();
+            if (spawner == null) spawner = spawnerObject.AddComponent<BotSpawner>();
+
+            if (!spawner.TrySpawnOne())
+            {
+                Debug.LogError("FSP Match: failed to create the offline opponent fallback.");
+                return;
+            }
+
+            Debug.Log("FSP Match: offline opponent fallback created; local match can leave Waiting state.");
         }
 
         private static void WireExistingHud(GameObject player)
