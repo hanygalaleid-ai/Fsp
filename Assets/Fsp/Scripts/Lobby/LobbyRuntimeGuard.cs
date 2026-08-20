@@ -1,4 +1,6 @@
 using System;
+using Fsp.Backend;
+using Fsp.Input;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -20,6 +22,7 @@ namespace Fsp.Lobby
             Scene scene = SceneManager.GetActiveScene();
             if (!scene.IsValid() || !string.Equals(scene.name, "Lobby", StringComparison.OrdinalIgnoreCase)) return;
 
+            ResetTransientMatchState();
             EnsureState();
             EnsureFixedLobbyArtwork();
 
@@ -27,6 +30,24 @@ namespace Fsp.Lobby
             if (host.GetComponent<LobbyController>() == null) host.AddComponent<LobbyController>();
             if (host.GetComponent<LobbyMatchLauncher>() == null) host.AddComponent<LobbyMatchLauncher>();
             if (host.GetComponent<FixedLobbyStartHitRegion>() == null) host.AddComponent<FixedLobbyStartHitRegion>();
+        }
+
+        private static void ResetTransientMatchState()
+        {
+            // A match can end through victory, death, Android back navigation or an interrupted
+            // scene transition. Lobby must always be a clean re-entry point so START works on the
+            // second and later matches exactly like it did on the first one.
+            if (MatchRoomState.Instance != null && MatchRoomState.HasMatch)
+                MatchRoomState.Instance.Clear();
+
+            MobileInputBridge input = MobileInputBridge.Instance;
+            if (input != null)
+            {
+                input.SetMove(Vector2.zero);
+                input.SetFire(false);
+                input.SetAim(false);
+                input.SetSprint(false);
+            }
         }
 
         private static void EnsureState()
@@ -95,18 +116,19 @@ namespace Fsp.Lobby
 
                 loading = true;
                 LobbyState state = LobbyState.Instance;
-                if (state != null && string.IsNullOrWhiteSpace(state.DisplayName)) state.SetDisplayName("Player");
-
-                if (Application.CanStreamedLevelBeLoaded("Match"))
+                if (state == null)
                 {
-                    Debug.Log("FSP loading battle scene directly from fixed lobby start region.");
-                    SceneManager.LoadScene("Match", LoadSceneMode.Single);
-                }
-                else
-                {
-                    Debug.LogError("FSP release launch blocked: Match scene is not present in Build Settings.");
+                    Debug.LogError("FSP lobby start blocked: LobbyState is unavailable.");
                     loading = false;
+                    return;
                 }
+
+                if (string.IsNullOrWhiteSpace(state.DisplayName)) state.SetDisplayName("Player");
+
+                // Route every START path through LobbyMatchLauncher instead of loading Match here
+                // as well. This prevents two independent handlers from attempting LoadScene on the
+                // same touch and makes repeated Lobby -> Match -> Lobby cycles deterministic.
+                state.RequestStartMatch();
             }
         }
     }
