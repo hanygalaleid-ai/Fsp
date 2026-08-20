@@ -23,10 +23,9 @@ namespace Fsp.Bots
 
         public void FillToTarget(int humanPlayers = 1)
         {
-#if UNITY_ANDROID && !UNITY_EDITOR
-            // Keep Android release stable until authored bot prefabs replace procedural fallbacks.
-            if (botPrefab == null) return;
-#endif
+            // The checked-in Match scene intentionally supports a runtime safety path. Do not
+            // disable it on Android when an authored bot prefab is absent: TrySpawnOne() already
+            // creates an Android-safe lightweight placeholder with the required gameplay pieces.
             int botsNeeded = Mathf.Max(0, targetPopulation - Mathf.Max(0, humanPlayers));
             while (spawnedBots.Count < botsNeeded)
                 if (!TrySpawnOne()) break;
