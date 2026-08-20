@@ -71,13 +71,36 @@ namespace Fsp.BattleRoyale
 
         public void SetNetworkAuthoritative(bool enabled)
         {
+            if (networkAuthoritative == enabled) return;
             networkAuthoritative = enabled;
-            if (enabled && Phase == MatchPhase.Finished)
+
+            if (enabled)
             {
-                Phase = MatchPhase.Active;
-                AuthoritativeWinnerId = string.Empty;
-                PhaseChanged?.Invoke(Phase);
+                if (Phase == MatchPhase.Finished)
+                {
+                    Phase = MatchPhase.Active;
+                    AuthoritativeWinnerId = string.Empty;
+                    PhaseChanged?.Invoke(Phase);
+                }
+                return;
             }
+
+            // An online match can deliberately fall back to local play when relay/config fails.
+            // Clear server-only state and immediately rebuild local participant counts so the
+            // fallback bot can start and finish the match normally.
+            authoritativeClockSeen = false;
+            AuthoritativeWinnerId = string.Empty;
+            if (Phase == MatchPhase.Finished || Phase == MatchPhase.Active || Phase == MatchPhase.Countdown)
+            {
+                Phase = MatchPhase.Waiting;
+                CountdownRemaining = 0f;
+                PhaseChanged?.Invoke(Phase);
+                CountdownChanged?.Invoke(0f);
+            }
+
+            RecountAlive();
+            if (autoStart && Phase == MatchPhase.Waiting && participants.Count >= minimumParticipantsToStart)
+                BeginCountdown();
         }
 
         public void ApplyAuthoritativeClock(float worldElapsed, float countdownSeconds)
