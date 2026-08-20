@@ -3,6 +3,7 @@ using Fsp.Backend;
 using Fsp.Bots;
 using Fsp.Networking;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Fsp.BattleRoyale
 {
@@ -15,6 +16,29 @@ namespace Fsp.BattleRoyale
         private INetworkTransport transport;
         private string authorityPlayerId = string.Empty;
         private bool spawned;
+
+        public static bool EnsureInstalled()
+        {
+            Scene scene = SceneManager.GetActiveScene();
+            if (!scene.IsValid() || !string.Equals(scene.name, "Match", System.StringComparison.OrdinalIgnoreCase)) return false;
+            if (!SupabaseSession.IsSignedIn || !MatchRoomState.HasMatch) return false;
+
+            MatchPopulationBootstrap existing = FindFirstObjectByType<MatchPopulationBootstrap>();
+            if (existing != null) return true;
+
+            GameObject host = GameObject.Find("MatchPopulationBootstrap") ?? new GameObject("MatchPopulationBootstrap");
+            BotSpawner spawner = FindFirstObjectByType<BotSpawner>();
+            if (spawner == null)
+            {
+                GameObject spawnerObject = GameObject.Find("RuntimeOnlineBotSpawner") ?? new GameObject("RuntimeOnlineBotSpawner");
+                spawner = spawnerObject.GetComponent<BotSpawner>();
+                if (spawner == null) spawner = spawnerObject.AddComponent<BotSpawner>();
+            }
+
+            MatchPopulationBootstrap bootstrap = host.AddComponent<MatchPopulationBootstrap>();
+            bootstrap.botSpawner = spawner;
+            return true;
+        }
 
         private IEnumerator Start()
         {
