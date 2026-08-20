@@ -13,17 +13,21 @@ namespace Fsp.Networking
     public static class MatchNetworkRuntimeInstaller
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void Install()
+        private static void InstallAfterSceneLoad() => EnsureInstalled();
+
+        public static bool EnsureInstalled()
         {
             Scene scene = SceneManager.GetActiveScene();
-            if (!scene.IsValid() || !string.Equals(scene.name, "Match", StringComparison.OrdinalIgnoreCase)) return;
-            if (!SupabaseSession.IsSignedIn || !MatchRoomState.HasMatch) return;
+            if (!scene.IsValid() || !string.Equals(scene.name, "Match", StringComparison.OrdinalIgnoreCase)) return false;
+            if (!SupabaseSession.IsSignedIn || !MatchRoomState.HasMatch) return false;
 
             MatchParticipant local = FindLocalParticipant();
             if (local == null)
             {
-                Debug.LogError("FSP Network installer: no local MatchParticipant found.");
-                return;
+                // MatchSceneAssembler calls us again after it has guaranteed the local participant,
+                // so RuntimeInitialize ordering cannot permanently skip networking.
+                Debug.LogWarning("FSP Network installer: local MatchParticipant is not ready yet; install will retry after match assembly.");
+                return false;
             }
 
             CloudflareWebSocketTransport transport = UnityEngine.Object.FindFirstObjectByType<CloudflareWebSocketTransport>();
@@ -44,6 +48,8 @@ namespace Fsp.Networking
 
             if (remotePrefab == null)
                 Debug.Log("FSP Network installer: dedicated RemotePlayer prefab not found; runtime visual clone fallback is enabled.");
+
+            return true;
         }
 
         private static MatchParticipant FindLocalParticipant()
