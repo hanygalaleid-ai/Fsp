@@ -15,6 +15,7 @@ namespace Fsp.Networking
         private Quaternion targetRotation;
         private bool initialized;
         private bool seated;
+        private bool eliminated;
         private Transform worldParent;
 
         public string PlayerId { get; private set; }
@@ -32,6 +33,7 @@ namespace Fsp.Networking
             targetRotation = transform.rotation;
             worldParent = transform.parent;
             initialized = true;
+            eliminated = false;
 
             NetworkPlayerIdentity identity = GetComponent<NetworkPlayerIdentity>();
             if (identity == null) identity = gameObject.AddComponent<NetworkPlayerIdentity>();
@@ -43,24 +45,46 @@ namespace Fsp.Networking
 
         public void Apply(NetworkPlayerSnapshot snapshot)
         {
+            if (snapshot == null) return;
             if (!initialized) Initialize(snapshot.playerId);
+
             targetPosition = snapshot.position;
             targetRotation = snapshot.rotation;
             Health = snapshot.health;
             Armor = snapshot.armor;
-            IsAlive = snapshot.alive;
             DropState = snapshot.dropState;
-            gameObject.SetActive(snapshot.alive);
 
+            // Once the authoritative elimination event arrives, do not resurrect the remote from a
+            // delayed pre-death snapshot that was already in transit.
+            if (eliminated) return;
+
+            IsAlive = snapshot.alive;
+            if (!snapshot.alive)
+            {
+                MarkEliminated();
+                return;
+            }
+
+            if (!gameObject.activeSelf) gameObject.SetActive(true);
             if (parachuteVisual != null)
-                parachuteVisual.SetActive(snapshot.alive && snapshot.dropState == NetworkDropState.Parachute);
+                parachuteVisual.SetActive(snapshot.dropState == NetworkDropState.Parachute);
+            if (bodyVisual != null) bodyVisual.SetActive(true);
+        }
 
-            if (bodyVisual != null)
-                bodyVisual.SetActive(snapshot.alive);
+        public void MarkEliminated()
+        {
+            eliminated = true;
+            IsAlive = false;
+            Health = 0f;
+            seated = false;
+            if (parachuteVisual != null) parachuteVisual.SetActive(false);
+            if (bodyVisual != null) bodyVisual.SetActive(false);
+            gameObject.SetActive(false);
         }
 
         public void SetVehicleSeat(Transform seatPoint, bool isSeated)
         {
+            if (eliminated) return;
             seated = isSeated && seatPoint != null;
             if (seated)
             {
@@ -76,7 +100,7 @@ namespace Fsp.Networking
 
         private void Update()
         {
-            if (!initialized || seated) return;
+            if (!initialized || seated || eliminated) return;
             transform.position = Vector3.Lerp(transform.position, targetPosition, 1f - Mathf.Exp(-positionLerp * Time.deltaTime));
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 1f - Mathf.Exp(-rotationLerp * Time.deltaTime));
         }
