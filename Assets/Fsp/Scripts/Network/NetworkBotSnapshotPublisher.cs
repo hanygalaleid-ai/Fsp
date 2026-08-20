@@ -64,6 +64,8 @@ namespace Fsp.Networking
                 transport.BotAuthorityReceived += HandleAuthority;
                 transport.DamageReceived -= HandleDamage;
                 transport.DamageReceived += HandleDamage;
+                if (transport is CloudflareWebSocketTransport cloudflare && cloudflare.LastBotAuthority != null)
+                    HandleAuthority(cloudflare.LastBotAuthority);
                 return;
             }
         }
