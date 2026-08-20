@@ -1,4 +1,6 @@
+using System;
 using Fsp.BattleRoyale;
+using Fsp.Networking;
 using Fsp.Player;
 using UnityEngine;
 
@@ -24,6 +26,8 @@ namespace Fsp.Bots
 
         private static bool localDropReleased;
         private static float nextDropCheck;
+
+        public event Action<FallbackBotAgent, string, float, Vector3> NetworkPlayerHit;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void ResetStartupGate() => ResetForNewMatch();
@@ -55,8 +59,7 @@ namespace Fsp.Bots
             Vector3 planar = Vector3.zero;
             if (target != null)
             {
-                PlayerVitals targetVitals = target.GetComponent<PlayerVitals>();
-                if (targetVitals == null || !targetVitals.IsAlive)
+                if (!TargetIsAlive(target))
                 {
                     target = null;
                 }
@@ -79,11 +82,7 @@ namespace Fsp.Bots
                     {
                         nextShot = Time.time + 1f / Mathf.Max(0.1f, shotsPerSecond);
                         if (Random.value <= 0.72f)
-                        {
-                            PlayerDamageable damageable = target.GetComponent<PlayerDamageable>();
-                            if (damageable != null)
-                                damageable.ApplyDamage(damage, target.position + Vector3.up, Vector3.up, gameObject);
-                        }
+                            ApplyAttack(target);
                     }
                 }
             }
@@ -91,6 +90,33 @@ namespace Fsp.Bots
             if (controller.isGrounded && verticalVelocity < 0f) verticalVelocity = -2f;
             verticalVelocity -= 22f * Time.deltaTime;
             controller.Move((planar * moveSpeed + Vector3.up * verticalVelocity) * Time.deltaTime);
+        }
+
+        private void ApplyAttack(Transform victim)
+        {
+            if (victim == null) return;
+
+            NetworkPlayerIdentity identity = victim.GetComponentInParent<NetworkPlayerIdentity>();
+            if (identity != null && !string.IsNullOrWhiteSpace(identity.PlayerId) && NetworkPlayerHit != null)
+            {
+                NetworkPlayerHit.Invoke(this, identity.PlayerId, damage, victim.position + Vector3.up);
+                return;
+            }
+
+            PlayerDamageable damageable = victim.GetComponent<PlayerDamageable>();
+            if (damageable != null)
+                damageable.ApplyDamage(damage, victim.position + Vector3.up, Vector3.up, gameObject);
+        }
+
+        private static bool TargetIsAlive(Transform candidate)
+        {
+            if (candidate == null || !candidate.gameObject.activeInHierarchy) return false;
+
+            MatchParticipant participant = candidate.GetComponent<MatchParticipant>();
+            if (participant != null) return participant.IsAlive;
+
+            RemotePlayerProxy remote = candidate.GetComponent<RemotePlayerProxy>();
+            return remote != null && remote.IsAlive;
         }
 
         private bool CombatMayStart()
@@ -117,17 +143,25 @@ namespace Fsp.Bots
 
         private void AcquireTarget()
         {
-            MatchParticipant[] participants = FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None);
             float best = detectionRange * detectionRange;
             Transform bestTarget = null;
 
-            foreach (MatchParticipant participant in participants)
+            foreach (MatchParticipant participant in FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None))
             {
-                if (participant == null || participant.gameObject == gameObject || !participant.IsAlive) continue;
+                if (participant == null || participant.gameObject == gameObject || !participant.IsAlive || participant.IsBot) continue;
                 float sqr = (participant.transform.position - transform.position).sqrMagnitude;
                 if (sqr >= best) continue;
                 best = sqr;
                 bestTarget = participant.transform;
+            }
+
+            foreach (RemotePlayerProxy remote in FindObjectsByType<RemotePlayerProxy>(FindObjectsSortMode.None))
+            {
+                if (remote == null || !remote.IsAlive || !remote.gameObject.activeInHierarchy) continue;
+                float sqr = (remote.transform.position - transform.position).sqrMagnitude;
+                if (sqr >= best) continue;
+                best = sqr;
+                bestTarget = remote.transform;
             }
 
             target = bestTarget;
