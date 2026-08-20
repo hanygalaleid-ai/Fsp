@@ -124,6 +124,8 @@ namespace Fsp.Networking
             connectStartedAt = Time.unscaledTime;
             transport.SnapshotReceived -= HandleSnapshot;
             transport.SnapshotReceived += HandleSnapshot;
+            transport.EliminationReceived -= HandleElimination;
+            transport.EliminationReceived += HandleElimination;
             transport.Connect(MatchRoomState.MatchId, SupabaseSession.UserId);
         }
 
@@ -167,8 +169,10 @@ namespace Fsp.Networking
             if (transport != null)
             {
                 transport.SnapshotReceived -= HandleSnapshot;
+                transport.EliminationReceived -= HandleElimination;
                 transport.Disconnect();
             }
+            ClearRemotePlayers();
             MatchRoomState.Instance?.Clear();
             EnsureOfflineOpponent();
             Debug.LogWarning("FSP Network: " + reason + "; continuing as an offline playable match.");
@@ -201,7 +205,7 @@ namespace Fsp.Networking
 
         private void HandleSnapshot(NetworkPlayerSnapshot snapshot)
         {
-            if (string.IsNullOrWhiteSpace(snapshot.playerId) || snapshot.playerId == SupabaseSession.UserId) return;
+            if (snapshot == null || string.IsNullOrWhiteSpace(snapshot.playerId) || snapshot.playerId == SupabaseSession.UserId) return;
             if (!remotes.TryGetValue(snapshot.playerId, out var proxy) || proxy == null)
             {
                 if (remotePlayerPrefab != null)
@@ -225,13 +229,29 @@ namespace Fsp.Networking
             proxy.Apply(snapshot);
         }
 
+        private void HandleElimination(NetworkEliminationEvent evt)
+        {
+            if (evt == null || string.IsNullOrWhiteSpace(evt.victimId) || evt.victimId == SupabaseSession.UserId) return;
+            if (!remotes.TryGetValue(evt.victimId, out RemotePlayerProxy proxy) || proxy == null) return;
+            proxy.MarkEliminated();
+        }
+
+        private void ClearRemotePlayers()
+        {
+            foreach (RemotePlayerProxy proxy in remotes.Values)
+                if (proxy != null) Destroy(proxy.gameObject);
+            remotes.Clear();
+        }
+
         private void OnDestroy()
         {
             if (transport != null)
             {
                 transport.SnapshotReceived -= HandleSnapshot;
+                transport.EliminationReceived -= HandleElimination;
                 transport.Disconnect();
             }
+            ClearRemotePlayers();
         }
     }
 }
