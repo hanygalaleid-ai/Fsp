@@ -147,6 +147,12 @@ namespace Fsp.Backend
                 await profileStore.SaveAsync(profile, timeout.Token);
                 saved = true;
                 Debug.Log("FSP progress: match result saved successfully.");
+
+                if (string.Equals(SceneManager.GetActiveScene().name, "Lobby", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    LobbyProfileSync lobbySync = FindFirstObjectByType<LobbyProfileSync>();
+                    lobbySync?.LoadRuntimeProfile();
+                }
             }
             catch (System.OperationCanceledException)
             {
