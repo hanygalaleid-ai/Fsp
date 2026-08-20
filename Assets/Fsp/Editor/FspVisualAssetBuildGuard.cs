@@ -17,6 +17,7 @@ namespace Fsp.EditorTools
         private const string LobbyArt = "Assets/Fsp/Art/Resources/Lobby/fsp_lobby_final.jpg";
         private const int MinWidth = 512;
         private const int MinHeight = 256;
+        private const int MinEncodedBytes = 64 * 1024;
         public int callbackOrder => -900;
 
         public void OnPreprocessBuild(BuildReport report)
@@ -25,8 +26,11 @@ namespace Fsp.EditorTools
                 throw new BuildFailedException("Required fixed FSP lobby art is missing: " + LobbyArt);
 
             FileInfo info = new FileInfo(LobbyArt);
-            if (info.Length < 4 * 1024)
-                throw new BuildFailedException("FSP lobby art looks invalid/empty: " + LobbyArt);
+            if (info.Length < MinEncodedBytes)
+                throw new BuildFailedException($"FSP lobby art is suspiciously small/truncated ({info.Length} bytes): {LobbyArt}");
+
+            if (!HasJpegEndMarker(LobbyArt))
+                throw new BuildFailedException("FSP lobby art is truncated (missing JPEG end marker): " + LobbyArt);
 
             if (!TryReadJpegSize(LobbyArt, out int width, out int height))
                 throw new BuildFailedException("FSP lobby art is not a readable JPEG: " + LobbyArt);
@@ -97,6 +101,23 @@ namespace Fsp.EditorTools
             int high = reader.ReadByte();
             int low = reader.ReadByte();
             return (high << 8) | low;
+        }
+
+        private static bool HasJpegEndMarker(string path)
+        {
+            try
+            {
+                using (FileStream stream = File.OpenRead(path))
+                {
+                    if (stream.Length < 2) return false;
+                    stream.Seek(-2, SeekOrigin.End);
+                    return stream.ReadByte() == 0xFF && stream.ReadByte() == 0xD9;
+                }
+            }
+            catch (IOException)
+            {
+                return false;
+            }
         }
     }
 }
