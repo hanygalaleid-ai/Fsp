@@ -27,7 +27,7 @@ namespace Fsp.EditorTools
             PrepareAndroidSettings(false);
             EditorUserBuildSettings.buildAppBundle = false;
             EditorUserBuildSettings.development = false;
-            Build(BuildTarget.Android, "Builds/Android/BMG-test.apk", requireZeroWarnings: false);
+            Build(BuildTarget.Android, "Builds/Android/hanybmg.apk", requireZeroWarnings: false);
         }
 
         [MenuItem("Fsp/Build/Android/Build AAB (Google Play)")]
@@ -39,11 +39,7 @@ namespace Fsp.EditorTools
             PrepareAndroidSettings(true);
             EditorUserBuildSettings.buildAppBundle = true;
             EditorUserBuildSettings.development = false;
-            // Unity/IL2CPP can emit package/toolchain informational warnings (for example
-            // large TextMeshPro methods) even when game scripts compile with zero warnings.
-            // The compile audit remains the source-code gate; reviewed toolchain warnings
-            // must not turn a valid signed AAB into a false build failure.
-            Build(BuildTarget.Android, "Builds/Android/BMG-release.aab", requireZeroWarnings: false);
+            Build(BuildTarget.Android, "Builds/Android/hanybmg.aab", requireZeroWarnings: false);
         }
 
         [MenuItem("Fsp/Build/Windows/Build x64")]
@@ -149,15 +145,15 @@ namespace Fsp.EditorTools
                 options = BuildOptions.CompressWithLz4HC
             };
 
-            Debug.Log($"Fsp build starting: target={target}, output={outputPath}, scenes={string.Join(", ", Scenes)}");
+            Debug.Log($"BMG build starting: target={target}, output={outputPath}, scenes={string.Join(", ", Scenes)}");
             BuildReport report = BuildPipeline.BuildPlayer(options);
             if (report.summary.result != BuildResult.Succeeded)
-                throw new BuildFailedException($"Fsp build failed: {report.summary.result} ({report.summary.totalErrors} errors, {report.summary.totalWarnings} warnings)");
+                throw new BuildFailedException($"BMG build failed: {report.summary.result} ({report.summary.totalErrors} errors, {report.summary.totalWarnings} warnings)");
 
             if (requireZeroWarnings && report.summary.totalWarnings > 0)
-                throw new BuildFailedException($"Fsp release build rejected: {report.summary.totalWarnings} warning(s) remain. Google Play AAB release requires 0 warnings.");
+                throw new BuildFailedException($"BMG release build rejected: {report.summary.totalWarnings} warning(s) remain.");
 
-            Debug.Log($"Fsp build succeeded: {outputPath} | {report.summary.totalSize / (1024f * 1024f):0.0} MB | {report.summary.totalWarnings} warning(s)");
+            Debug.Log($"BMG build succeeded: {outputPath} | {report.summary.totalSize / (1024f * 1024f):0.0} MB | {report.summary.totalWarnings} warning(s)");
         }
 
         private static void EnsureOutputDirectory(string outputPath, bool pathIsDirectory)
