@@ -1,0 +1,1 @@
+Build only the cleaned BMG branch with approved BMG realistic assets. Legacy FSP lobby/action/panel artwork has been removed or blocked.
