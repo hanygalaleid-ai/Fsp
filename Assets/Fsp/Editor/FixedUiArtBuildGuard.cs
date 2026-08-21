@@ -15,7 +15,6 @@ namespace Fsp.EditorTools
 
         private static readonly string[] RequiredArt =
         {
-            "Assets/Fsp/Art/Resources/BMG/Brand/bmg_logo.jpg",
             "Assets/Fsp/Art/Resources/BMG/Atlases/bmg_characters_atlas.jpg",
             "Assets/Fsp/Art/Resources/BMG/Atlases/bmg_weapons_atlas.jpg",
             "Assets/Fsp/Art/Resources/BMG/UI/bmg_menu_icons_3d.jpg",
