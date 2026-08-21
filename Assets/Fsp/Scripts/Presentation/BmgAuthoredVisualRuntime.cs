@@ -6,209 +6,26 @@ using UnityEngine.SceneManagement;
 
 namespace Fsp.Presentation
 {
-    /// <summary>Build 149 authored-art bridge. Authored Resources meshes are authoritative; generated art is fallback only.</summary>
     public sealed class BmgAuthoredVisualRuntime : MonoBehaviour
     {
-        private const string RiflePath = "Models/BMG/bmg_assault_rifle_mk1";
-        private const string SmgPath = "Models/BMG/bmg_smg_mk1";
-        private const string SniperPath = "Models/BMG/bmg_sniper_mk1";
-        private const string ShotgunPath = "Models/BMG/bmg_shotgun_mk1";
-        private const string HelmetPath = "Models/BMG/bmg_helmet_mk1";
-        private const string FaceMaskPath = "Models/BMG/bmg_face_mask_mk1";
-        private const string BackpackPath = "Models/BMG/bmg_backpack_mk1";
-        private const string VestPath = "Models/BMG/bmg_tactical_vest_mk1";
-        private const string BootPath = "Models/BMG/bmg_combat_boot_mk1";
-        private const string BuggyPath = "Models/BMG/bmg_buggy_mk1";
-        private const string DesertCarPath = "Models/BMG/bmg_desert_car_mk1";
-        private const string PlanePath = "Models/BMG/bmg_transport_plane_mk1";
-        private const string MaleTorsoPath = "Models/BMG/bmg_male_torso_mk1";
-        private const string FemaleTorsoPath = "Models/BMG/bmg_female_torso_mk1";
-        private const string HeadPath = "Models/BMG/bmg_head_mk1";
-        private const string ArmPath = "Models/BMG/bmg_arm_mk1";
-        private const string LegPath = "Models/BMG/bmg_leg_mk1";
+        private const string RiflePath="Models/BMG/bmg_assault_rifle_mk1",SmgPath="Models/BMG/bmg_smg_mk1",SniperPath="Models/BMG/bmg_sniper_mk1",ShotgunPath="Models/BMG/bmg_shotgun_mk1";
+        private const string HelmetPath="Models/BMG/bmg_helmet_mk1",FaceMaskPath="Models/BMG/bmg_face_mask_mk1",BackpackPath="Models/BMG/bmg_backpack_mk1",VestPath="Models/BMG/bmg_tactical_vest_mk1",BootPath="Models/BMG/bmg_combat_boot_mk1";
+        private const string BuggyPath="Models/BMG/bmg_buggy_mk1",DesertCarPath="Models/BMG/bmg_desert_car_mk1",WheelPath="Models/BMG/bmg_vehicle_wheel_mk1",BumperPath="Models/BMG/bmg_vehicle_bumper_mk1",PlanePath="Models/BMG/bmg_transport_plane_mk1";
+        private const string MaleTorsoPath="Models/BMG/bmg_male_torso_mk1",FemaleTorsoPath="Models/BMG/bmg_female_torso_mk1",HeadPath="Models/BMG/bmg_head_mk1",ArmPath="Models/BMG/bmg_arm_mk1",LegPath="Models/BMG/bmg_leg_mk1";
         private static BmgAuthoredVisualRuntime instance;
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void Bootstrap()
-        {
-            if (instance != null) return;
-            GameObject host = new("BMG_AuthoredVisualRuntime");
-            DontDestroyOnLoad(host);
-            instance = host.AddComponent<BmgAuthoredVisualRuntime>();
-            SceneManager.sceneLoaded += instance.OnSceneLoaded;
-            instance.StartCoroutine(instance.ApplyWhenReady());
-        }
-
-        private void OnDestroy()
-        {
-            if (instance != this) return;
-            SceneManager.sceneLoaded -= OnSceneLoaded;
-            instance = null;
-        }
-
-        private void OnSceneLoaded(Scene scene, LoadSceneMode mode) => StartCoroutine(ApplyWhenReady());
-
-        private IEnumerator ApplyWhenReady()
-        {
-            yield return null;
-            yield return null;
-            UpgradeCharacters();
-            UpgradeVehicles();
-            UpgradePlanes();
-        }
-
-        private static void UpgradeCharacters()
-        {
-            StarterProceduralCharacterVisual[] characters = FindObjectsByType<StarterProceduralCharacterVisual>(FindObjectsSortMode.None);
-            for (int i = 0; i < characters.Length; i++)
-            {
-                StarterProceduralCharacterVisual character = characters[i];
-                if (character == null) continue;
-                Transform visualRoot = character.transform.Find("FSP_CharacterVisual");
-                if (visualRoot == null) continue;
-
-                MatchParticipant participant = character.GetComponent<MatchParticipant>();
-                bool bot = participant != null && participant.IsBot;
-                string selected = Fsp.Lobby.LobbyState.Instance != null ? Fsp.Lobby.LobbyState.Instance.SelectedCharacterId : "soldier_01";
-                bool female = bot ? (character.GetInstanceID() & 1) == 0 : selected == "soldier_03";
-                string torsoPath = female ? FemaleTorsoPath : MaleTorsoPath;
-                Color uniform = female ? new Color(.24f, .34f, .28f) : new Color(.26f, .31f, .23f);
-                Color skin = female ? new Color(.58f, .38f, .27f) : new Color(.47f, .31f, .22f);
-                Color armor = new(.15f, .19f, .16f);
-
-                ReplaceWithAuthored(FindRecursive(visualRoot, "Torso"), torsoPath, "BMG_Torso_Authored", Vector3.one * .78f, uniform);
-                ReplaceWithAuthored(FindRecursive(visualRoot, "Vest"), VestPath, "BMG_Vest_Authored", Vector3.one * 1.02f, armor);
-                ReplaceWithAuthored(FindRecursive(visualRoot, "Head"), HeadPath, "BMG_Head_Authored", Vector3.one * .58f, skin);
-                ReplaceWithAuthored(FindRecursive(visualRoot, "FaceMask"), FaceMaskPath, "BMG_FaceMask_Authored", Vector3.one * 1.05f, armor);
-                ReplaceWithAuthored(FindRecursive(visualRoot, "LeftArm"), ArmPath, "BMG_LeftArm_Authored", Vector3.one * 1.65f, uniform);
-                ReplaceWithAuthored(FindRecursive(visualRoot, "RightArm"), ArmPath, "BMG_RightArm_Authored", Vector3.one * 1.65f, uniform);
-                ReplaceWithAuthored(FindRecursive(visualRoot, "LeftLeg"), LegPath, "BMG_LeftLeg_Authored", Vector3.one * 1.80f, uniform);
-                ReplaceWithAuthored(FindRecursive(visualRoot, "RightLeg"), LegPath, "BMG_RightLeg_Authored", Vector3.one * 1.80f, uniform);
-                ReplaceWithAuthored(FindRecursive(visualRoot, "LeftBoot"), BootPath, "BMG_LeftBoot_Authored", Vector3.one * 1.20f, new Color(.08f,.09f,.08f));
-                ReplaceWithAuthored(FindRecursive(visualRoot, "RightBoot"), BootPath, "BMG_RightBoot_Authored", Vector3.one * 1.20f, new Color(.08f,.09f,.08f));
-                ReplaceWithAuthored(FindRecursive(visualRoot, "Helmet"), HelmetPath, "BMG_Helmet_Authored", Vector3.one * 1.08f, armor);
-                ReplaceWithAuthored(FindRecursive(visualRoot, "Backpack"), BackpackPath, "BMG_Backpack_Authored", Vector3.one * .95f, new Color(.20f, .24f, .18f));
-
-                HitscanWeapon activeWeapon = FindActiveWeapon(character);
-                string weaponPath = PathFor(activeWeapon != null ? activeWeapon.Config : null);
-                ReplaceWithAuthored(FindRecursive(visualRoot, "RifleVisual"), weaponPath, "BMG_Weapon_Authored", ScaleFor(activeWeapon != null ? activeWeapon.Config : null), new Color(.10f, .11f, .11f));
-            }
-        }
-
-        private static HitscanWeapon FindActiveWeapon(Component owner)
-        {
-            HitscanWeapon[] weapons = owner.GetComponentsInChildren<HitscanWeapon>(true);
-            for (int i = 0; i < weapons.Length; i++)
-                if (weapons[i] != null && weapons[i].gameObject.activeInHierarchy && weapons[i].enabled) return weapons[i];
-            return weapons.Length > 0 ? weapons[0] : null;
-        }
-
-        private static string PathFor(WeaponConfig config)
-        {
-            if (config == null) return RiflePath;
-            return config.weaponClass switch
-            {
-                WeaponClass.SMG => SmgPath,
-                WeaponClass.Marksman => SniperPath,
-                WeaponClass.Shotgun => ShotgunPath,
-                _ => RiflePath
-            };
-        }
-
-        private static Vector3 ScaleFor(WeaponConfig config)
-        {
-            if (config == null) return Vector3.one * .72f;
-            return config.weaponClass switch
-            {
-                WeaponClass.SMG => Vector3.one * .66f,
-                WeaponClass.Marksman => Vector3.one * .76f,
-                WeaponClass.Shotgun => Vector3.one * .74f,
-                _ => Vector3.one * .72f
-            };
-        }
-
-        private static void UpgradeVehicles()
-        {
-            StarterProceduralVehicleVisual[] vehicles = FindObjectsByType<StarterProceduralVehicleVisual>(FindObjectsSortMode.None);
-            for (int i = 0; i < vehicles.Length; i++)
-            {
-                StarterProceduralVehicleVisual vehicle = vehicles[i];
-                if (vehicle == null || vehicle.transform.Find("BMG_Vehicle_Authored") != null) continue;
-                string path = (i & 1) == 0 ? BuggyPath : DesertCarPath;
-                GameObject authored = Resources.Load<GameObject>(path);
-                if (authored == null) authored = Resources.Load<GameObject>(BuggyPath);
-                if (authored == null) continue;
-
-                Transform old = vehicle.transform.Find("FSP_ScoutVehicleVisual");
-                if (old != null) old.gameObject.SetActive(false);
-                GameObject model = Instantiate(authored, vehicle.transform, false);
-                model.name = "BMG_Vehicle_Authored";
-                model.transform.localPosition = Vector3.zero;
-                model.transform.localRotation = Quaternion.identity;
-                model.transform.localScale = Vector3.one * .92f;
-                ApplyMobileMaterial(model, (i & 1) == 0 ? new Color(.18f, .24f, .13f) : new Color(.31f, .27f, .19f));
-            }
-        }
-
-        private static void UpgradePlanes()
-        {
-            StarterPlaneVisual[] planes = FindObjectsByType<StarterPlaneVisual>(FindObjectsSortMode.None);
-            GameObject authored = Resources.Load<GameObject>(PlanePath);
-            if (authored == null) return;
-            for (int i = 0; i < planes.Length; i++)
-            {
-                StarterPlaneVisual plane = planes[i];
-                if (plane == null || plane.transform.Find("BMG_TransportPlane_Authored") != null) continue;
-                Transform old = plane.transform.Find("FSP_TransportPlaneVisual");
-                if (old != null) old.gameObject.SetActive(false);
-                GameObject model = Instantiate(authored, plane.transform, false);
-                model.name = "BMG_TransportPlane_Authored";
-                model.transform.localPosition = Vector3.zero;
-                model.transform.localRotation = Quaternion.identity;
-                model.transform.localScale = Vector3.one;
-                ApplyMobileMaterial(model, new Color(.34f, .40f, .35f));
-            }
-        }
-
-        private static void ReplaceWithAuthored(Transform oldVisual, string resourcePath, string newName, Vector3 scale, Color color)
-        {
-            if (oldVisual == null || oldVisual.parent == null) return;
-            if (oldVisual.parent.Find(newName) != null) return;
-            GameObject authored = Resources.Load<GameObject>(resourcePath);
-            if (authored == null) return;
-            Transform parent = oldVisual.parent;
-            Vector3 position = oldVisual.localPosition;
-            Quaternion rotation = oldVisual.localRotation;
-            oldVisual.gameObject.SetActive(false);
-            GameObject model = Instantiate(authored, parent, false);
-            model.name = newName;
-            model.transform.localPosition = position;
-            model.transform.localRotation = rotation;
-            model.transform.localScale = scale;
-            ApplyMobileMaterial(model, color);
-        }
-
-        private static Transform FindRecursive(Transform root, string name)
-        {
-            if (root == null) return null;
-            if (root.name == name) return root;
-            for (int i = 0; i < root.childCount; i++)
-            {
-                Transform found = FindRecursive(root.GetChild(i), name);
-                if (found != null) return found;
-            }
-            return null;
-        }
-
-        private static void ApplyMobileMaterial(GameObject root, Color color)
-        {
-            Shader shader = Resources.Load<Shader>("Shaders/FspMobileSafe");
-            if (shader == null) shader = Shader.Find("Fsp/MobileSafeLit");
-            if (shader == null) shader = Shader.Find("Standard");
-            if (shader == null) return;
-            Material material = new(shader) { color = color, hideFlags = HideFlags.DontSave };
-            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
-            for (int i = 0; i < renderers.Length; i++) if (renderers[i] != null) renderers[i].sharedMaterial = material;
-        }
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] private static void Bootstrap(){if(instance!=null)return;var host=new GameObject("BMG_AuthoredVisualRuntime");DontDestroyOnLoad(host);instance=host.AddComponent<BmgAuthoredVisualRuntime>();SceneManager.sceneLoaded+=instance.OnSceneLoaded;instance.StartCoroutine(instance.ApplyWhenReady());}
+        private void OnDestroy(){if(instance!=this)return;SceneManager.sceneLoaded-=OnSceneLoaded;instance=null;}
+        private void OnSceneLoaded(Scene s,LoadSceneMode m)=>StartCoroutine(ApplyWhenReady());
+        private IEnumerator ApplyWhenReady(){yield return null;yield return null;UpgradeCharacters();UpgradeVehicles();UpgradePlanes();}
+        private static void UpgradeCharacters(){var characters=FindObjectsByType<StarterProceduralCharacterVisual>(FindObjectsSortMode.None);foreach(var character in characters){if(character==null)continue;var root=character.transform.Find("FSP_CharacterVisual");if(root==null)continue;var participant=character.GetComponent<MatchParticipant>();bool bot=participant!=null&&participant.IsBot;string selected=Fsp.Lobby.LobbyState.Instance!=null?Fsp.Lobby.LobbyState.Instance.SelectedCharacterId:"soldier_01";bool female=bot?(character.GetInstanceID()&1)==0:selected=="soldier_03";Color uniform=female?new Color(.24f,.34f,.28f):new Color(.26f,.31f,.23f),skin=female?new Color(.58f,.38f,.27f):new Color(.47f,.31f,.22f),armor=new(.15f,.19f,.16f);Replace(FindRecursive(root,"Torso"),female?FemaleTorsoPath:MaleTorsoPath,"BMG_Torso_Authored",Vector3.one*.78f,uniform);Replace(FindRecursive(root,"Vest"),VestPath,"BMG_Vest_Authored",Vector3.one*1.02f,armor);Replace(FindRecursive(root,"Head"),HeadPath,"BMG_Head_Authored",Vector3.one*.58f,skin);Replace(FindRecursive(root,"FaceMask"),FaceMaskPath,"BMG_FaceMask_Authored",Vector3.one*1.05f,armor);Replace(FindRecursive(root,"LeftArm"),ArmPath,"BMG_LeftArm_Authored",Vector3.one*1.65f,uniform);Replace(FindRecursive(root,"RightArm"),ArmPath,"BMG_RightArm_Authored",Vector3.one*1.65f,uniform);Replace(FindRecursive(root,"LeftLeg"),LegPath,"BMG_LeftLeg_Authored",Vector3.one*1.80f,uniform);Replace(FindRecursive(root,"RightLeg"),LegPath,"BMG_RightLeg_Authored",Vector3.one*1.80f,uniform);Replace(FindRecursive(root,"LeftBoot"),BootPath,"BMG_LeftBoot_Authored",Vector3.one*1.20f,new Color(.08f,.09f,.08f));Replace(FindRecursive(root,"RightBoot"),BootPath,"BMG_RightBoot_Authored",Vector3.one*1.20f,new Color(.08f,.09f,.08f));Replace(FindRecursive(root,"Helmet"),HelmetPath,"BMG_Helmet_Authored",Vector3.one*1.08f,armor);Replace(FindRecursive(root,"Backpack"),BackpackPath,"BMG_Backpack_Authored",Vector3.one*.95f,new Color(.20f,.24f,.18f));var active=FindActiveWeapon(character);Replace(FindRecursive(root,"RifleVisual"),PathFor(active!=null?active.Config:null),"BMG_Weapon_Authored",ScaleFor(active!=null?active.Config:null),new Color(.10f,.11f,.11f));}}
+        private static HitscanWeapon FindActiveWeapon(Component owner){var w=owner.GetComponentsInChildren<HitscanWeapon>(true);foreach(var x in w)if(x!=null&&x.gameObject.activeInHierarchy&&x.enabled)return x;return w.Length>0?w[0]:null;}
+        private static string PathFor(WeaponConfig c)=>c==null?RiflePath:c.weaponClass switch{WeaponClass.SMG=>SmgPath,WeaponClass.Marksman=>SniperPath,WeaponClass.Shotgun=>ShotgunPath,_=>RiflePath};
+        private static Vector3 ScaleFor(WeaponConfig c)=>Vector3.one*(c==null?.72f:c.weaponClass switch{WeaponClass.SMG=>.66f,WeaponClass.Marksman=>.76f,WeaponClass.Shotgun=>.74f,_=>.72f});
+        private static void UpgradeVehicles(){var vehicles=FindObjectsByType<StarterProceduralVehicleVisual>(FindObjectsSortMode.None);for(int i=0;i<vehicles.Length;i++){var v=vehicles[i];if(v==null||v.transform.Find("BMG_Vehicle_Authored")!=null)continue;string path=(i&1)==0?BuggyPath:DesertCarPath;var authored=Resources.Load<GameObject>(path)??Resources.Load<GameObject>(BuggyPath);if(authored==null)continue;var old=v.transform.Find("FSP_ScoutVehicleVisual");if(old!=null)old.gameObject.SetActive(false);var model=Instantiate(authored,v.transform,false);model.name="BMG_Vehicle_Authored";model.transform.localScale=Vector3.one*.92f;Color body=(i&1)==0?new Color(.18f,.24f,.13f):new Color(.31f,.27f,.19f);ApplyMaterial(model,body);AddVehicleDetails(model);}}
+        private static void AddVehicleDetails(GameObject vehicle){var wheel=Resources.Load<GameObject>(WheelPath);if(wheel!=null){Vector3[] p={new(-1.02f,.46f,1.35f),new(1.02f,.46f,1.35f),new(-1.02f,.46f,-1.35f),new(1.02f,.46f,-1.35f)};for(int i=0;i<p.Length;i++){var w=Instantiate(wheel,vehicle.transform,false);w.name="BMG_Wheel_Authored_"+i;w.transform.localPosition=p[i];w.transform.localRotation=Quaternion.Euler(0,90,0);w.transform.localScale=Vector3.one*.82f;ApplyMaterial(w,new Color(.055f,.055f,.05f));}}var bumper=Resources.Load<GameObject>(BumperPath);if(bumper!=null){var b=Instantiate(bumper,vehicle.transform,false);b.name="BMG_Bumper_Authored";b.transform.localPosition=new Vector3(0,.55f,2.05f);b.transform.localScale=Vector3.one*.82f;ApplyMaterial(b,new Color(.10f,.11f,.10f));}}
+        private static void UpgradePlanes(){var planes=FindObjectsByType<StarterPlaneVisual>(FindObjectsSortMode.None);var authored=Resources.Load<GameObject>(PlanePath);if(authored==null)return;foreach(var p in planes){if(p==null||p.transform.Find("BMG_TransportPlane_Authored")!=null)continue;var old=p.transform.Find("FSP_TransportPlaneVisual");if(old!=null)old.gameObject.SetActive(false);var m=Instantiate(authored,p.transform,false);m.name="BMG_TransportPlane_Authored";ApplyMaterial(m,new Color(.34f,.40f,.35f));}}
+        private static void Replace(Transform old,string path,string name,Vector3 scale,Color color){if(old==null||old.parent==null||old.parent.Find(name)!=null)return;var prefab=Resources.Load<GameObject>(path);if(prefab==null)return;var parent=old.parent;Vector3 pos=old.localPosition;Quaternion rot=old.localRotation;old.gameObject.SetActive(false);var model=Instantiate(prefab,parent,false);model.name=name;model.transform.localPosition=pos;model.transform.localRotation=rot;model.transform.localScale=scale;ApplyMaterial(model,color);}
+        private static Transform FindRecursive(Transform r,string n){if(r==null)return null;if(r.name==n)return r;for(int i=0;i<r.childCount;i++){var f=FindRecursive(r.GetChild(i),n);if(f!=null)return f;}return null;}
+        private static void ApplyMaterial(GameObject root,Color color){Shader s=Resources.Load<Shader>("Shaders/FspMobileSafe");if(s==null)s=Shader.Find("Fsp/MobileSafeLit");if(s==null)s=Shader.Find("Standard");if(s==null)return;var m=new Material(s){color=color,hideFlags=HideFlags.DontSave};foreach(var r in root.GetComponentsInChildren<Renderer>(true))if(r!=null)r.sharedMaterial=m;}
     }
 }
