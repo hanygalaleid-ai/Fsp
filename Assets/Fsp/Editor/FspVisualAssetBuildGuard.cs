@@ -8,116 +8,41 @@ using UnityEngine;
 namespace Fsp.EditorTools
 {
     /// <summary>
-    /// Visual integrity gate for the checked-in final lobby artwork.
-    /// This validates the in-game asset itself; Google Play store-listing graphic sizes
-    /// are managed separately in Play Console and must not block the game build.
+    /// Visual integrity gate for the clean BMG Android build.
+    /// Legacy FSP lobby artwork is intentionally not required.
     /// </summary>
     public sealed class FspVisualAssetBuildGuard : IPreprocessBuildWithReport
     {
-        private const string LobbyArt = "Assets/Fsp/Art/Resources/Lobby/fsp_lobby_final.jpg";
-        private const int MinWidth = 512;
-        private const int MinHeight = 256;
-        private const int MinEncodedBytes = 64 * 1024;
+        private static readonly string[] RequiredVisuals =
+        {
+            "Assets/Fsp/Art/Resources/UI/bmg_app_icon.png",
+            "Assets/Fsp/Art/Resources/UI/bmg_adaptive_foreground.png",
+            "Assets/Fsp/Art/Resources/UI/bmg_adaptive_background.png",
+            "Assets/Fsp/Art/Resources/UI/mobile_joystick.png",
+            "Assets/Fsp/Art/Resources/World/bmg_desert_ground_v3.png",
+            "Assets/Fsp/Art/Resources/World/bmg_fortress_wall_v3.png",
+            "Assets/Fsp/Art/Resources/World/bmg_wood_floor_v3.png"
+        };
+
         public int callbackOrder => -900;
 
         public void OnPreprocessBuild(BuildReport report)
         {
-            if (!File.Exists(LobbyArt))
-                throw new BuildFailedException("Required fixed FSP lobby art is missing: " + LobbyArt);
-
-            FileInfo info = new FileInfo(LobbyArt);
-            if (info.Length < MinEncodedBytes)
-                throw new BuildFailedException($"FSP lobby art is suspiciously small/truncated ({info.Length} bytes): {LobbyArt}");
-
-            if (!HasJpegEndMarker(LobbyArt))
-                throw new BuildFailedException("FSP lobby art is truncated (missing JPEG end marker): " + LobbyArt);
-
-            if (!TryReadJpegSize(LobbyArt, out int width, out int height))
-                throw new BuildFailedException("FSP lobby art is not a readable JPEG: " + LobbyArt);
-
-            Texture2D imported = AssetDatabase.LoadAssetAtPath<Texture2D>(LobbyArt);
-            if (imported != null && imported.width > 0 && imported.height > 0)
+            foreach (string path in RequiredVisuals)
             {
-                width = imported.width;
-                height = imported.height;
-            }
-            else
-            {
-                Debug.LogWarning("FSP final lobby art has not been imported yet; using validated JPEG dimensions for this check.");
+                if (!File.Exists(path))
+                    throw new BuildFailedException("Required clean BMG visual asset is missing: " + path);
+
+                if (new FileInfo(path).Length < 256)
+                    throw new BuildFailedException("Required clean BMG visual asset is empty or invalid: " + path);
+
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                if (texture == null || texture.width <= 0 || texture.height <= 0)
+                    throw new BuildFailedException("Unity failed to import required clean BMG visual asset: " + path);
             }
 
-            if (width < MinWidth || height < MinHeight)
-                throw new BuildFailedException($"FSP lobby art is too small for the in-game release asset: {width}x{height}. Minimum integrity size is {MinWidth}x{MinHeight}.");
-
-            float aspect = width / (float)height;
-            if (aspect < 1.5f || aspect > 2.5f)
-                throw new BuildFailedException($"FSP lobby art has an unexpected aspect ratio ({width}x{height}). Expected a landscape lobby image.");
-
-            Debug.Log($"FSP FINAL LOBBY ART OK: {LobbyArt} ({width}x{height}, {info.Length / 1024f:0.0} KB). Store-listing assets are validated separately in Play Console.");
-        }
-
-        private static bool TryReadJpegSize(string path, out int width, out int height)
-        {
-            width = 0;
-            height = 0;
-            try
-            {
-                using (FileStream stream = File.OpenRead(path))
-                using (BinaryReader reader = new BinaryReader(stream))
-                {
-                    if (reader.ReadByte() != 0xFF || reader.ReadByte() != 0xD8) return false;
-                    while (stream.Position + 4 < stream.Length)
-                    {
-                        byte prefix = reader.ReadByte();
-                        if (prefix != 0xFF) continue;
-                        byte marker;
-                        do { marker = reader.ReadByte(); } while (marker == 0xFF && stream.Position < stream.Length);
-                        if (marker == 0xD8 || marker == 0xD9 || (marker >= 0xD0 && marker <= 0xD7)) continue;
-                        if (stream.Position + 2 > stream.Length) return false;
-                        int segmentLength = ReadBigEndianUInt16(reader);
-                        if (segmentLength < 2 || stream.Position + segmentLength - 2 > stream.Length) return false;
-                        bool isStartOfFrame = marker >= 0xC0 && marker <= 0xCF && marker != 0xC4 && marker != 0xC8 && marker != 0xCC;
-                        if (isStartOfFrame)
-                        {
-                            if (segmentLength < 7) return false;
-                            reader.ReadByte();
-                            height = ReadBigEndianUInt16(reader);
-                            width = ReadBigEndianUInt16(reader);
-                            return width > 0 && height > 0;
-                        }
-                        stream.Seek(segmentLength - 2, SeekOrigin.Current);
-                    }
-                }
-            }
-            catch (IOException)
-            {
-                return false;
-            }
-            return false;
-        }
-
-        private static int ReadBigEndianUInt16(BinaryReader reader)
-        {
-            int high = reader.ReadByte();
-            int low = reader.ReadByte();
-            return (high << 8) | low;
-        }
-
-        private static bool HasJpegEndMarker(string path)
-        {
-            try
-            {
-                using (FileStream stream = File.OpenRead(path))
-                {
-                    if (stream.Length < 2) return false;
-                    stream.Seek(-2, SeekOrigin.End);
-                    return stream.ReadByte() == 0xFF && stream.ReadByte() == 0xD9;
-                }
-            }
-            catch (IOException)
-            {
-                return false;
-            }
+            Debug.Log("BMG CLEAN VISUAL GATE PASSED: no legacy FSP lobby bitmap dependency.");
         }
     }
 }
