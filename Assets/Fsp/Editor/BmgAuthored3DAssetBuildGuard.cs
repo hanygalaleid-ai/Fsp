@@ -52,7 +52,12 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_rock_cluster_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_warehouse_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_quarry_crusher_mk1.obj",
-            "Assets/Fsp/Art/Resources/Models/BMG/bmg_aircraft_wreck_mk1.obj"
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_aircraft_wreck_mk1.obj",
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_port_crane_mk1.obj",
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_water_tower_mk1.obj",
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_lighthouse_mk1.obj",
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_coast_hut_mk1.obj",
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_barn_mk1.obj"
         };
         public int callbackOrder => -850;
         public void OnPreprocessBuild(BuildReport report)
