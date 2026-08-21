@@ -9,6 +9,8 @@ namespace Fsp.Presentation
     {
         private const string BarricadePath = "Models/BMG/bmg_barricade_mk1";
         private const string CratePath = "Models/BMG/bmg_loot_crate_mk1";
+        private const string RockPath = "Models/BMG/bmg_rock_cluster_mk1";
+        private const string WarehousePath = "Models/BMG/bmg_warehouse_mk1";
         private static BmgEnvironmentVisualRuntime instance;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -22,6 +24,13 @@ namespace Fsp.Presentation
             instance.StartCoroutine(instance.ApplyDelayed());
         }
 
+        private void OnDestroy()
+        {
+            if (instance != this) return;
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            instance = null;
+        }
+
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode) => StartCoroutine(ApplyDelayed());
 
         private IEnumerator ApplyDelayed()
@@ -31,6 +40,8 @@ namespace Fsp.Presentation
             yield return null;
             ApplyNamed("Barrier", BarricadePath, "BMG_Barricade_Authored", Vector3.one, new Color(.28f,.25f,.19f));
             ApplyNamed("Crate", CratePath, "BMG_Crate_Authored", Vector3.one * .85f, new Color(.32f,.20f,.12f));
+            ApplyNamed("QuarryRock", RockPath, "BMG_Rock_Authored", Vector3.one, new Color(.42f,.40f,.36f));
+            ApplyNamed("Office", WarehousePath, "BMG_QuarryOffice_Authored", Vector3.one * .58f, new Color(.29f,.31f,.30f));
         }
 
         private static void ApplyNamed(string objectName, string resourcePath, string authoredName, Vector3 scale, Color color)
