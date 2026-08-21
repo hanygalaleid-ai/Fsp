@@ -15,6 +15,8 @@ namespace Fsp.Presentation
         private const string ShotgunPath = "Models/BMG/bmg_shotgun_mk1";
         private const string HelmetPath = "Models/BMG/bmg_helmet_mk1";
         private const string BackpackPath = "Models/BMG/bmg_backpack_mk1";
+        private const string VestPath = "Models/BMG/bmg_tactical_vest_mk1";
+        private const string BootPath = "Models/BMG/bmg_combat_boot_mk1";
         private const string BuggyPath = "Models/BMG/bmg_buggy_mk1";
         private const string DesertCarPath = "Models/BMG/bmg_desert_car_mk1";
         private const string PlanePath = "Models/BMG/bmg_transport_plane_mk1";
@@ -71,14 +73,18 @@ namespace Fsp.Presentation
                 string torsoPath = female ? FemaleTorsoPath : MaleTorsoPath;
                 Color uniform = female ? new Color(.24f, .34f, .28f) : new Color(.26f, .31f, .23f);
                 Color skin = female ? new Color(.58f, .38f, .27f) : new Color(.47f, .31f, .22f);
+                Color armor = new(.15f, .19f, .16f);
 
                 ReplaceWithAuthored(FindRecursive(visualRoot, "Torso"), torsoPath, "BMG_Torso_Authored", Vector3.one * .78f, uniform);
+                ReplaceWithAuthored(FindRecursive(visualRoot, "Vest"), VestPath, "BMG_Vest_Authored", Vector3.one * 1.02f, armor);
                 ReplaceWithAuthored(FindRecursive(visualRoot, "Head"), HeadPath, "BMG_Head_Authored", Vector3.one * .58f, skin);
                 ReplaceWithAuthored(FindRecursive(visualRoot, "LeftArm"), ArmPath, "BMG_LeftArm_Authored", Vector3.one * 1.65f, uniform);
                 ReplaceWithAuthored(FindRecursive(visualRoot, "RightArm"), ArmPath, "BMG_RightArm_Authored", Vector3.one * 1.65f, uniform);
                 ReplaceWithAuthored(FindRecursive(visualRoot, "LeftLeg"), LegPath, "BMG_LeftLeg_Authored", Vector3.one * 1.80f, uniform);
                 ReplaceWithAuthored(FindRecursive(visualRoot, "RightLeg"), LegPath, "BMG_RightLeg_Authored", Vector3.one * 1.80f, uniform);
-                ReplaceWithAuthored(FindRecursive(visualRoot, "Helmet"), HelmetPath, "BMG_Helmet_Authored", Vector3.one * 1.08f, new Color(.16f, .20f, .17f));
+                ReplaceWithAuthored(FindRecursive(visualRoot, "LeftBoot"), BootPath, "BMG_LeftBoot_Authored", Vector3.one * 1.20f, new Color(.08f,.09f,.08f));
+                ReplaceWithAuthored(FindRecursive(visualRoot, "RightBoot"), BootPath, "BMG_RightBoot_Authored", Vector3.one * 1.20f, new Color(.08f,.09f,.08f));
+                ReplaceWithAuthored(FindRecursive(visualRoot, "Helmet"), HelmetPath, "BMG_Helmet_Authored", Vector3.one * 1.08f, armor);
                 ReplaceWithAuthored(FindRecursive(visualRoot, "Backpack"), BackpackPath, "BMG_Backpack_Authored", Vector3.one * .95f, new Color(.20f, .24f, .18f));
 
                 HitscanWeapon activeWeapon = FindActiveWeapon(character);
