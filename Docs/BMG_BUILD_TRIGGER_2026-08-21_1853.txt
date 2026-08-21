@@ -1,0 +1,3 @@
+Trigger Unity Cloud Build for cleaned BMG production branch only.
+Branch: bmg/build149-authored-3d
+Purpose: build latest cleaned BMG UI/audio/art source with approved 3D icons as production default.
