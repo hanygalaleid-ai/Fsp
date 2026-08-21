@@ -11,6 +11,8 @@ namespace Fsp.Presentation
         private const string CratePath = "Models/BMG/bmg_loot_crate_mk1";
         private const string RockPath = "Models/BMG/bmg_rock_cluster_mk1";
         private const string WarehousePath = "Models/BMG/bmg_warehouse_mk1";
+        private const string CrusherPath = "Models/BMG/bmg_quarry_crusher_mk1";
+        private const string WreckPath = "Models/BMG/bmg_aircraft_wreck_mk1";
         private static BmgEnvironmentVisualRuntime instance;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -42,6 +44,8 @@ namespace Fsp.Presentation
             ApplyNamed("Crate", CratePath, "BMG_Crate_Authored", Vector3.one * .85f, new Color(.32f,.20f,.12f));
             ApplyNamed("QuarryRock", RockPath, "BMG_Rock_Authored", Vector3.one, new Color(.42f,.40f,.36f));
             ApplyNamed("Office", WarehousePath, "BMG_QuarryOffice_Authored", Vector3.one * .58f, new Color(.29f,.31f,.30f));
+            ApplyNamed("Crusher", CrusherPath, "BMG_Crusher_Authored", Vector3.one * .82f, new Color(.31f,.30f,.27f));
+            ApplyNamed("AircraftWreck", WreckPath, "BMG_AircraftWreck_Authored", Vector3.one, new Color(.24f,.26f,.25f));
         }
 
         private static void ApplyNamed(string objectName, string resourcePath, string authoredName, Vector3 scale, Color color)
