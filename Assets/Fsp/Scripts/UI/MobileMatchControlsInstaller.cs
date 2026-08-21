@@ -62,7 +62,7 @@ namespace Fsp.UI
             CreateLookArea(root);
             CreateJoystick(root);
 
-            // action_icons.png is a 4x2 atlas: FIRE, AIM, JUMP, RELOAD / HEAL, USE, SWAP, SPRINT.
+            // Approved BMG 3D atlas: FIRE, AIM, JUMP, RELOAD / HEAL, USE, SWAP, SPRINT.
             CreateActionButton(root, "Fire", "FIRE", new Vector2(0.875f, 0.13f), new Vector2(150f, 150f), Accent, MobileButtonActionType.Fire, 28, 0);
             CreateActionButton(root, "Aim", "AIM", new Vector2(0.765f, 0.34f), new Vector2(118f, 82f), PanelStrong, MobileButtonActionType.Aim, 18, 1);
             CreateActionButton(root, "Jump", "JUMP", new Vector2(0.755f, 0.20f), new Vector2(112f, 112f), PanelStrong, MobileButtonActionType.Jump, 19, 2);
@@ -72,9 +72,9 @@ namespace Fsp.UI
             CreateActionButton(root, "Switch", "SWAP", new Vector2(0.895f, 0.405f), new Vector2(110f, 68f), PanelStrong, MobileButtonActionType.SwitchWeapon, 16, 6);
             CreateActionButton(root, "Sprint", "SPRINT", new Vector2(0.12f, 0.39f), new Vector2(118f, 72f), PanelStrong, MobileButtonActionType.Sprint, 16, 7);
 
-            CreateTopBadge(root, "FSP // SUNSCAR", new Vector2(0.5f, 0.955f));
+            CreateTopBadge(root, "BMG // BATTLE ROYALE", new Vector2(0.5f, 0.955f));
             canvasObject.AddComponent<MobileMatchHudPhaseVisibility>().Configure(local);
-            Debug.Log("FSP mobile combat HUD installed successfully.");
+            Debug.Log("BMG mobile combat HUD installed successfully.");
             return true;
         }
 
@@ -168,14 +168,18 @@ namespace Fsp.UI
 
         private static void CreateActionIcon(Transform parent, int iconIndex)
         {
-            if (actionAtlas == null) actionAtlas = Resources.Load<Texture2D>("UI/action_icons");
+            if (actionAtlas == null)
+            {
+                actionAtlas = Resources.Load<Texture2D>("BMG/UI/bmg_action_icons_3d");
+                if (actionAtlas == null) actionAtlas = Resources.Load<Texture2D>("UI/action_icons");
+            }
             if (actionAtlas == null || iconIndex < 0 || iconIndex > 7) return;
 
             GameObject icon = new GameObject("Icon", typeof(RectTransform), typeof(RawImage));
             icon.transform.SetParent(parent, false);
             RectTransform rt = icon.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0.25f, 0.39f);
-            rt.anchorMax = new Vector2(0.75f, 0.91f);
+            rt.anchorMin = new Vector2(0.18f, 0.20f);
+            rt.anchorMax = new Vector2(0.82f, 0.93f);
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
 
@@ -290,7 +294,7 @@ namespace Fsp.UI
 
             if (Time.unscaledTime > stopAt)
             {
-                Debug.LogError("FSP mobile HUD failed to install: local participant did not become available in time.");
+                Debug.LogError("BMG mobile HUD failed to install: local participant did not become available in time.");
                 Destroy(gameObject);
                 return;
             }
