@@ -4,16 +4,38 @@ using UnityEngine;
 
 namespace Fsp.Presentation
 {
-    /// <summary>Original curved low-poly parachute canopy shown by ParachuteController.</summary>
+    /// <summary>Parachute presentation. Build 149 prefers the authored BMG canopy and retains the generated canopy only as fallback.</summary>
     public sealed class StarterParachuteVisual : MonoBehaviour
     {
         [SerializeField] private GameObject authoredVisual;
+        private const string AuthoredPath = "Models/BMG/bmg_parachute_mk1";
 
         private void Awake() => Build();
 
         public void Build()
         {
             if (authoredVisual != null) return;
+
+            GameObject authored = Resources.Load<GameObject>(AuthoredPath);
+            if (authored != null)
+            {
+                authoredVisual = Instantiate(authored, transform, false);
+                authoredVisual.name = "BMG_Parachute_Authored";
+                authoredVisual.transform.localPosition = new Vector3(0f, 4.2f, 0f);
+                authoredVisual.transform.localRotation = Quaternion.identity;
+                authoredVisual.transform.localScale = Vector3.one;
+                ApplyMaterial(authoredVisual, StarterCosmeticCatalog.Find(
+                    StarterWardrobeRuntime.LoadLocal().parachuteItemId, CosmeticSlot.Parachute).Color);
+                authoredVisual.SetActive(false);
+                GetComponent<ParachuteController>()?.ConfigureVisual(authoredVisual);
+                return;
+            }
+
+            BuildFallback();
+        }
+
+        private void BuildFallback()
+        {
             authoredVisual = new GameObject("FSP_ParachuteVisual");
             authoredVisual.transform.SetParent(transform, false);
             authoredVisual.transform.localPosition = new Vector3(0f, 4.2f, 0f);
@@ -23,7 +45,6 @@ namespace Fsp.Presentation
             Material accent = Mat(new Color(1f, .34f, .015f));
             CreateCanopy("Canopy", authoredVisual.transform, 5.4f, 2.8f, 0f, canopy);
             CreateCanopy("CanopyStripe", authoredVisual.transform, .62f, 2.82f, .025f, accent);
-
             Material lines = Mat(new Color(.76f, .72f, .62f));
             CreateLine(authoredVisual.transform, new Vector3(-2.35f, -.50f, 1.05f), new Vector3(-.34f, -4.08f, .18f), lines);
             CreateLine(authoredVisual.transform, new Vector3(2.35f, -.50f, 1.05f), new Vector3(.34f, -4.08f, .18f), lines);
@@ -44,7 +65,6 @@ namespace Fsp.Presentation
             const int along = 7;
             Vector3[] vertices = new Vector3[(across + 1) * (along + 1)];
             Vector2[] uv = new Vector2[vertices.Length];
-            // Two-sided triangles keep the canopy visible both from the player below and cameras above.
             int[] triangles = new int[across * along * 12];
             for (int z = 0; z <= along; z++)
             {
@@ -91,6 +111,13 @@ namespace Fsp.Presentation
             line.transform.localRotation = Quaternion.FromToRotation(Vector3.up, delta.normalized);
             line.transform.localScale = new Vector3(.025f, delta.magnitude, .025f);
             line.GetComponent<MeshRenderer>().sharedMaterial = material;
+        }
+
+        private static void ApplyMaterial(GameObject root, Color color)
+        {
+            Material material = Mat(color);
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++) if (renderers[i] != null) renderers[i].sharedMaterial = material;
         }
 
         private static Material Mat(Color color)
