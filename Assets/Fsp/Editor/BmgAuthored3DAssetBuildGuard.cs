@@ -17,6 +17,8 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_shotgun_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_helmet_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_backpack_mk1.obj",
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_tactical_vest_mk1.obj",
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_combat_boot_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_loot_crate_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_buggy_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_desert_car_mk1.obj",
@@ -29,7 +31,9 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_arm_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_leg_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_hangar_mk1.obj",
-            "Assets/Fsp/Art/Resources/Models/BMG/bmg_barricade_mk1.obj"
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_barricade_mk1.obj",
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_rock_cluster_mk1.obj",
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_warehouse_mk1.obj"
         };
 
         public int callbackOrder => -850;
