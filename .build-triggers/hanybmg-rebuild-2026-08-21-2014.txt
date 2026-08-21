@@ -1,0 +1,1 @@
+Rebuild latest clean hanybmg source from branch bmg/build149-authored-3d. Use approved BMG artwork only and produce Android APK named hanybmg.apk.
