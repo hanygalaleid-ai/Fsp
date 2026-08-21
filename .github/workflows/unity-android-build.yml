@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - bmg/build149-authored-3d
+  pull_request:
+    branches:
+      - bmg/build149-authored-3d
   workflow_dispatch:
     inputs:
       build_type:
@@ -79,7 +82,7 @@ jobs:
           echo "FSP_ANDROID_KEYSTORE_PATH=$GITHUB_WORKSPACE/.ci/bmg-upload.keystore" >> "$GITHUB_ENV"
           echo "FSP_ANDROID_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
           echo "FSP_ANDROID_KEYALIAS_NAME=$KEYALIAS_NAME" >> "$GITHUB_ENV"
-          echo "FSP_ANDROID_KEYALIAS_PASSWORD=$ALIAS_PASSWORD" >> "$GITHUB_ENV"
+          echo "FSP_ANDROID_KEYALIAS_PASSWORD=$KEYALIAS_PASSWORD" >> "$GITHUB_ENV"
 
       - name: Cache Unity Library
         uses: actions/cache@v4
@@ -90,7 +93,7 @@ jobs:
             Library-${{ runner.os }}-6000.3.17f1-Android-hanybmg-
 
       - name: Build hanybmg APK
-        if: github.event_name == 'push' || inputs.build_type == 'apk'
+        if: github.event_name == 'push' || github.event_name == 'pull_request' || inputs.build_type == 'apk'
         uses: game-ci/unity-builder@v5.0.0
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
