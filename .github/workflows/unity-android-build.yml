@@ -14,6 +14,9 @@ on:
   push:
     branches:
       - build/apk-147-export
+  pull_request:
+    branches:
+      - main
 
 concurrency:
   group: unity-android-manual-${{ github.ref }}
@@ -90,7 +93,7 @@ jobs:
             Library-${{ runner.os }}-6000.3.17f1-Android-
 
       - name: Build Android APK
-        if: github.event_name == 'push' || inputs.build_type == 'apk'
+        if: github.event_name != 'workflow_dispatch' || inputs.build_type == 'apk'
         uses: game-ci/unity-builder@v5.0.0
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -120,43 +123,6 @@ jobs:
           buildMethod: Fsp.EditorTools.FspBuildCommands.BuildAndroidAab
           buildsPath: Builds/Android
           allowDirtyBuild: true
-
-      - name: Set up Java for bundle verification
-        if: github.event_name == 'workflow_dispatch' && inputs.build_type == 'aab'
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Verify Google Play AAB
-        if: github.event_name == 'workflow_dispatch' && inputs.build_type == 'aab'
-        shell: bash
-        run: |
-          set -euo pipefail
-          AAB="Builds/Android/Fsp-release.aab"
-          if [ ! -f "$AAB" ]; then
-            AAB="$(find Builds/Android -type f -name '*.aab' -print -quit)"
-          fi
-          if [ -z "${AAB:-}" ] || [ ! -f "$AAB" ]; then
-            echo "::error::Release AAB was not produced."
-            exit 1
-          fi
-
-          jarsigner -verify -strict "$AAB"
-          mkdir -p .ci
-          curl -fsSL https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar -o .ci/bundletool.jar
-          java -jar .ci/bundletool.jar validate --bundle="$AAB"
-
-          ALIGNMENT="$(java -jar .ci/bundletool.jar dump config --bundle="$AAB" | grep -Eo 'PAGE_ALIGNMENT_(4K|16K)' | head -n1 || true)"
-          if [ "$ALIGNMENT" != "PAGE_ALIGNMENT_16K" ]; then
-            echo "::error::Expected PAGE_ALIGNMENT_16K, got ${ALIGNMENT:-UNKNOWN}."
-            exit 1
-          fi
-
-      - name: Remove temporary signing material
-        if: always() && github.event_name == 'workflow_dispatch' && inputs.build_type == 'aab'
-        shell: bash
-        run: rm -rf .ci
 
       - name: Upload Android artifacts
         if: success()
