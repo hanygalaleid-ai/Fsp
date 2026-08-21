@@ -9,8 +9,7 @@ using UnityEngine.UI;
 namespace Fsp.UI
 {
     /// <summary>
-    /// Runtime-safe Android controls. It is generated in code so cloud-created Match scenes are playable
-    /// even when no serialized mobile HUD prefab is present.
+    /// Runtime-safe Android controls using the approved BMG 3D combat UI only.
     /// </summary>
     public static class MobileMatchControlsInstaller
     {
@@ -26,7 +25,7 @@ namespace Fsp.UI
         {
             if (!string.Equals(SceneManager.GetActiveScene().name, "Match", System.StringComparison.OrdinalIgnoreCase)) return;
             if (Object.FindFirstObjectByType<MobileControlsInstallRetry>() == null)
-                new GameObject("Fsp_MobileControlsInstallRetry").AddComponent<MobileControlsInstallRetry>();
+                new GameObject("BMG_MobileControlsInstallRetry").AddComponent<MobileControlsInstallRetry>();
         }
 
         public static bool Install()
@@ -62,7 +61,6 @@ namespace Fsp.UI
             CreateLookArea(root);
             CreateJoystick(root);
 
-            // Approved BMG 3D atlas: FIRE, AIM, JUMP, RELOAD / HEAL, USE, SWAP, SPRINT.
             CreateActionButton(root, "Fire", "FIRE", new Vector2(0.875f, 0.13f), new Vector2(150f, 150f), Accent, MobileButtonActionType.Fire, 28, 0);
             CreateActionButton(root, "Aim", "AIM", new Vector2(0.765f, 0.34f), new Vector2(118f, 82f), PanelStrong, MobileButtonActionType.Aim, 18, 1);
             CreateActionButton(root, "Jump", "JUMP", new Vector2(0.755f, 0.20f), new Vector2(112f, 112f), PanelStrong, MobileButtonActionType.Jump, 19, 2);
@@ -94,10 +92,8 @@ namespace Fsp.UI
                 return;
             }
 
-            if (!eventSystem.gameObject.activeSelf)
-                eventSystem.gameObject.SetActive(true);
-            if (!eventSystem.enabled)
-                eventSystem.enabled = true;
+            if (!eventSystem.gameObject.activeSelf) eventSystem.gameObject.SetActive(true);
+            if (!eventSystem.enabled) eventSystem.enabled = true;
             if (eventSystem.GetComponent<BaseInputModule>() == null)
                 eventSystem.gameObject.AddComponent<StandaloneInputModule>();
         }
@@ -119,8 +115,7 @@ namespace Fsp.UI
             rt.anchorMax = new Vector2(0.99f, 0.92f);
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
-            Image image = look.GetComponent<Image>();
-            image.color = new Color(0f, 0f, 0f, 0.001f);
+            look.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.001f);
         }
 
         private static void CreateJoystick(RectTransform root)
@@ -169,11 +164,13 @@ namespace Fsp.UI
         private static void CreateActionIcon(Transform parent, int iconIndex)
         {
             if (actionAtlas == null)
-            {
                 actionAtlas = Resources.Load<Texture2D>("BMG/UI/bmg_action_icons_3d");
-                if (actionAtlas == null) actionAtlas = Resources.Load<Texture2D>("UI/action_icons");
+            if (actionAtlas == null)
+            {
+                Debug.LogError("Approved BMG 3D action icon atlas is missing.");
+                return;
             }
-            if (actionAtlas == null || iconIndex < 0 || iconIndex > 7) return;
+            if (iconIndex < 0 || iconIndex > 7) return;
 
             GameObject icon = new GameObject("Icon", typeof(RectTransform), typeof(RawImage));
             icon.transform.SetParent(parent, false);
@@ -279,10 +276,7 @@ namespace Fsp.UI
         private float nextTry;
         private float stopAt;
 
-        private void Awake()
-        {
-            stopAt = Time.unscaledTime + 20f;
-        }
+        private void Awake() => stopAt = Time.unscaledTime + 20f;
 
         private void Update()
         {
@@ -301,7 +295,6 @@ namespace Fsp.UI
 
             if (Time.unscaledTime < nextTry) return;
             nextTry = Time.unscaledTime + 0.2f;
-
             if (MobileMatchControlsInstaller.Install()) Destroy(gameObject);
         }
     }
