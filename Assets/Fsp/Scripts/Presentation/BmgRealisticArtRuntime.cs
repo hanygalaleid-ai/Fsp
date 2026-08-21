@@ -7,8 +7,8 @@ using Fsp.Lobby;
 namespace Fsp.Presentation
 {
     /// <summary>
-    /// Uses the approved realistic 2D BMG artwork in menus while preserving the live 3D match.
-    /// Character and weapon artwork are packed into compact atlases for Android.
+    /// Uses verified BMG artwork in menus while preserving the live 3D match.
+    /// Corrupt legacy JPG atlases are intentionally not loaded.
     /// </summary>
     public sealed class BmgRealisticArtRuntime : MonoBehaviour
     {
@@ -35,11 +35,9 @@ namespace Fsp.Presentation
 
         private void Awake()
         {
-            // Use the checked-in, verified BMG launcher artwork as the lobby brand mark.
-            // This removes the final dependency on the obsolete/corrupt standalone JPG logo.
             logoTexture = Resources.Load<Texture2D>("UI/bmg_app_icon");
-            characterAtlas = Resources.Load<Texture2D>("BMG/Atlases/bmg_characters_atlas");
-            weaponAtlas = Resources.Load<Texture2D>("BMG/Atlases/bmg_weapons_atlas");
+            characterAtlas = null;
+            weaponAtlas = null;
         }
 
         private void OnDestroy()
