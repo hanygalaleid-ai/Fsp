@@ -14,6 +14,7 @@ namespace Fsp.Presentation
         private const string SniperPath = "Models/BMG/bmg_sniper_mk1";
         private const string ShotgunPath = "Models/BMG/bmg_shotgun_mk1";
         private const string HelmetPath = "Models/BMG/bmg_helmet_mk1";
+        private const string FaceMaskPath = "Models/BMG/bmg_face_mask_mk1";
         private const string BackpackPath = "Models/BMG/bmg_backpack_mk1";
         private const string VestPath = "Models/BMG/bmg_tactical_vest_mk1";
         private const string BootPath = "Models/BMG/bmg_combat_boot_mk1";
@@ -78,6 +79,7 @@ namespace Fsp.Presentation
                 ReplaceWithAuthored(FindRecursive(visualRoot, "Torso"), torsoPath, "BMG_Torso_Authored", Vector3.one * .78f, uniform);
                 ReplaceWithAuthored(FindRecursive(visualRoot, "Vest"), VestPath, "BMG_Vest_Authored", Vector3.one * 1.02f, armor);
                 ReplaceWithAuthored(FindRecursive(visualRoot, "Head"), HeadPath, "BMG_Head_Authored", Vector3.one * .58f, skin);
+                ReplaceWithAuthored(FindRecursive(visualRoot, "FaceMask"), FaceMaskPath, "BMG_FaceMask_Authored", Vector3.one * 1.05f, armor);
                 ReplaceWithAuthored(FindRecursive(visualRoot, "LeftArm"), ArmPath, "BMG_LeftArm_Authored", Vector3.one * 1.65f, uniform);
                 ReplaceWithAuthored(FindRecursive(visualRoot, "RightArm"), ArmPath, "BMG_RightArm_Authored", Vector3.one * 1.65f, uniform);
                 ReplaceWithAuthored(FindRecursive(visualRoot, "LeftLeg"), LegPath, "BMG_LeftLeg_Authored", Vector3.one * 1.80f, uniform);
