@@ -6,7 +6,6 @@ using UnityEngine;
 
 namespace Fsp.EditorTools
 {
-    /// <summary>Stops Android/production builds if Build 149 authored 3D assets are missing from source control.</summary>
     public sealed class BmgAuthored3DAssetBuildGuard : IPreprocessBuildWithReport
     {
         private static readonly string[] RequiredAssets =
@@ -15,6 +14,7 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_smg_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_sniper_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_shotgun_mk1.obj",
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_weapon_optic_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_helmet_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_face_mask_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_backpack_mk1.obj",
@@ -23,7 +23,10 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_loot_crate_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_buggy_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_desert_car_mk1.obj",
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_vehicle_wheel_mk1.obj",
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_vehicle_bumper_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_watchtower_mk1.obj",
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_guardhouse_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_transport_plane_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_parachute_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_male_torso_mk1.obj",
@@ -38,17 +41,10 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_quarry_crusher_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_aircraft_wreck_mk1.obj"
         };
-
         public int callbackOrder => -850;
-
         public void OnPreprocessBuild(BuildReport report)
         {
-            for (int i = 0; i < RequiredAssets.Length; i++)
-            {
-                UnityEngine.Object asset = AssetDatabase.LoadMainAssetAtPath(RequiredAssets[i]);
-                if (asset == null)
-                    throw new BuildFailedException("BMG authored 3D asset is missing: " + RequiredAssets[i]);
-            }
+            for(int i=0;i<RequiredAssets.Length;i++) if(AssetDatabase.LoadMainAssetAtPath(RequiredAssets[i])==null) throw new BuildFailedException("BMG authored 3D asset is missing: "+RequiredAssets[i]);
             Debug.Log($"BMG AUTHORED 3D GATE PASSED ({RequiredAssets.Length} required meshes).");
         }
     }
