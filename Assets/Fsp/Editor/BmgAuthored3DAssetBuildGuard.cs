@@ -16,6 +16,7 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_sniper_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_shotgun_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_helmet_mk1.obj",
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_face_mask_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_backpack_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_tactical_vest_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_combat_boot_mk1.obj",
@@ -33,7 +34,9 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_hangar_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_barricade_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_rock_cluster_mk1.obj",
-            "Assets/Fsp/Art/Resources/Models/BMG/bmg_warehouse_mk1.obj"
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_warehouse_mk1.obj",
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_quarry_crusher_mk1.obj",
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_aircraft_wreck_mk1.obj"
         };
 
         public int callbackOrder => -850;
