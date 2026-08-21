@@ -17,7 +17,8 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_backpack_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_loot_crate_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_buggy_mk1.obj",
-            "Assets/Fsp/Art/Resources/Models/BMG/bmg_watchtower_mk1.obj"
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_watchtower_mk1.obj",
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_transport_plane_mk1.obj"
         };
 
         public int callbackOrder => -850;
