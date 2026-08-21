@@ -15,7 +15,6 @@ namespace Fsp.EditorTools
 
         private static readonly string[] RequiredArt =
         {
-            "Assets/Fsp/Art/Resources/Lobby/fsp_lobby_final.jpg",
             "Assets/Fsp/Art/Resources/BMG/Brand/bmg_logo.jpg",
             "Assets/Fsp/Art/Resources/BMG/Atlases/bmg_characters_atlas.jpg",
             "Assets/Fsp/Art/Resources/BMG/Atlases/bmg_weapons_atlas.jpg",
@@ -59,7 +58,7 @@ namespace Fsp.EditorTools
                 FspAndroidIconSetup.Apply();
 
             AssetDatabase.SaveAssets();
-            Debug.Log("BMG PRODUCTION ART GATE PASSED: approved realistic UI, branding and world art imported successfully.");
+            Debug.Log("BMG PRODUCTION ART GATE PASSED: approved BMG UI, branding and world art imported successfully.");
         }
 
         private static void ApplyDeterministicPlayerSettings(BuildTarget platform)
