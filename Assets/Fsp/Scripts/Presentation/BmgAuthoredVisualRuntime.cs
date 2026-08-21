@@ -1,21 +1,22 @@
 using System.Collections;
 using Fsp.BattleRoyale;
+using Fsp.Combat;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Fsp.Presentation
 {
-    /// <summary>
-    /// Build 149 authored-art bridge. Imported 3D assets in Resources/Models/BMG are
-    /// preferred over the legacy procedural presentation without changing gameplay.
-    /// Procedural visuals remain only as a safe fallback when an authored asset is absent.
-    /// </summary>
+    /// <summary>Build 149 authored-art bridge. Authored Resources meshes are authoritative; generated art is fallback only.</summary>
     public sealed class BmgAuthoredVisualRuntime : MonoBehaviour
     {
         private const string RiflePath = "Models/BMG/bmg_assault_rifle_mk1";
+        private const string SmgPath = "Models/BMG/bmg_smg_mk1";
+        private const string SniperPath = "Models/BMG/bmg_sniper_mk1";
+        private const string ShotgunPath = "Models/BMG/bmg_shotgun_mk1";
         private const string HelmetPath = "Models/BMG/bmg_helmet_mk1";
         private const string BackpackPath = "Models/BMG/bmg_backpack_mk1";
         private const string BuggyPath = "Models/BMG/bmg_buggy_mk1";
+        private const string DesertCarPath = "Models/BMG/bmg_desert_car_mk1";
         private const string PlanePath = "Models/BMG/bmg_transport_plane_mk1";
         private const string MaleTorsoPath = "Models/BMG/bmg_male_torso_mk1";
         private const string FemaleTorsoPath = "Models/BMG/bmg_female_torso_mk1";
@@ -42,10 +43,7 @@ namespace Fsp.Presentation
             instance = null;
         }
 
-        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-        {
-            StartCoroutine(ApplyWhenReady());
-        }
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode) => StartCoroutine(ApplyWhenReady());
 
         private IEnumerator ApplyWhenReady()
         {
@@ -82,30 +80,65 @@ namespace Fsp.Presentation
                 ReplaceWithAuthored(FindRecursive(visualRoot, "RightLeg"), LegPath, "BMG_RightLeg_Authored", Vector3.one * 1.80f, uniform);
                 ReplaceWithAuthored(FindRecursive(visualRoot, "Helmet"), HelmetPath, "BMG_Helmet_Authored", Vector3.one * 1.08f, new Color(.16f, .20f, .17f));
                 ReplaceWithAuthored(FindRecursive(visualRoot, "Backpack"), BackpackPath, "BMG_Backpack_Authored", Vector3.one * .95f, new Color(.20f, .24f, .18f));
-                ReplaceWithAuthored(FindRecursive(visualRoot, "RifleVisual"), RiflePath, "BMG_Rifle_Authored", Vector3.one * .72f, new Color(.10f, .11f, .11f));
+
+                HitscanWeapon activeWeapon = FindActiveWeapon(character);
+                string weaponPath = PathFor(activeWeapon != null ? activeWeapon.Config : null);
+                ReplaceWithAuthored(FindRecursive(visualRoot, "RifleVisual"), weaponPath, "BMG_Weapon_Authored", ScaleFor(activeWeapon != null ? activeWeapon.Config : null), new Color(.10f, .11f, .11f));
             }
+        }
+
+        private static HitscanWeapon FindActiveWeapon(Component owner)
+        {
+            HitscanWeapon[] weapons = owner.GetComponentsInChildren<HitscanWeapon>(true);
+            for (int i = 0; i < weapons.Length; i++)
+                if (weapons[i] != null && weapons[i].gameObject.activeInHierarchy && weapons[i].enabled) return weapons[i];
+            return weapons.Length > 0 ? weapons[0] : null;
+        }
+
+        private static string PathFor(WeaponConfig config)
+        {
+            if (config == null) return RiflePath;
+            return config.weaponClass switch
+            {
+                WeaponClass.SMG => SmgPath,
+                WeaponClass.Marksman => SniperPath,
+                WeaponClass.Shotgun => ShotgunPath,
+                _ => RiflePath
+            };
+        }
+
+        private static Vector3 ScaleFor(WeaponConfig config)
+        {
+            if (config == null) return Vector3.one * .72f;
+            return config.weaponClass switch
+            {
+                WeaponClass.SMG => Vector3.one * .66f,
+                WeaponClass.Marksman => Vector3.one * .76f,
+                WeaponClass.Shotgun => Vector3.one * .74f,
+                _ => Vector3.one * .72f
+            };
         }
 
         private static void UpgradeVehicles()
         {
             StarterProceduralVehicleVisual[] vehicles = FindObjectsByType<StarterProceduralVehicleVisual>(FindObjectsSortMode.None);
-            GameObject authored = Resources.Load<GameObject>(BuggyPath);
-            if (authored == null) return;
-
             for (int i = 0; i < vehicles.Length; i++)
             {
                 StarterProceduralVehicleVisual vehicle = vehicles[i];
-                if (vehicle == null || vehicle.transform.Find("BMG_Buggy_Authored") != null) continue;
+                if (vehicle == null || vehicle.transform.Find("BMG_Vehicle_Authored") != null) continue;
+                string path = (i & 1) == 0 ? BuggyPath : DesertCarPath;
+                GameObject authored = Resources.Load<GameObject>(path);
+                if (authored == null) authored = Resources.Load<GameObject>(BuggyPath);
+                if (authored == null) continue;
 
                 Transform old = vehicle.transform.Find("FSP_ScoutVehicleVisual");
                 if (old != null) old.gameObject.SetActive(false);
-
                 GameObject model = Instantiate(authored, vehicle.transform, false);
-                model.name = "BMG_Buggy_Authored";
+                model.name = "BMG_Vehicle_Authored";
                 model.transform.localPosition = Vector3.zero;
                 model.transform.localRotation = Quaternion.identity;
                 model.transform.localScale = Vector3.one * .92f;
-                ApplyMobileMaterial(model, new Color(.18f, .24f, .13f));
+                ApplyMobileMaterial(model, (i & 1) == 0 ? new Color(.18f, .24f, .13f) : new Color(.31f, .27f, .19f));
             }
         }
 
@@ -114,14 +147,12 @@ namespace Fsp.Presentation
             StarterPlaneVisual[] planes = FindObjectsByType<StarterPlaneVisual>(FindObjectsSortMode.None);
             GameObject authored = Resources.Load<GameObject>(PlanePath);
             if (authored == null) return;
-
             for (int i = 0; i < planes.Length; i++)
             {
                 StarterPlaneVisual plane = planes[i];
                 if (plane == null || plane.transform.Find("BMG_TransportPlane_Authored") != null) continue;
                 Transform old = plane.transform.Find("FSP_TransportPlaneVisual");
                 if (old != null) old.gameObject.SetActive(false);
-
                 GameObject model = Instantiate(authored, plane.transform, false);
                 model.name = "BMG_TransportPlane_Authored";
                 model.transform.localPosition = Vector3.zero;
@@ -137,12 +168,10 @@ namespace Fsp.Presentation
             if (oldVisual.parent.Find(newName) != null) return;
             GameObject authored = Resources.Load<GameObject>(resourcePath);
             if (authored == null) return;
-
             Transform parent = oldVisual.parent;
             Vector3 position = oldVisual.localPosition;
             Quaternion rotation = oldVisual.localRotation;
             oldVisual.gameObject.SetActive(false);
-
             GameObject model = Instantiate(authored, parent, false);
             model.name = newName;
             model.transform.localPosition = position;
@@ -169,18 +198,9 @@ namespace Fsp.Presentation
             if (shader == null) shader = Shader.Find("Fsp/MobileSafeLit");
             if (shader == null) shader = Shader.Find("Standard");
             if (shader == null) return;
-
-            Material material = new(shader)
-            {
-                color = color,
-                hideFlags = HideFlags.DontSave
-            };
-
+            Material material = new(shader) { color = color, hideFlags = HideFlags.DontSave };
             Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
-            for (int i = 0; i < renderers.Length; i++)
-            {
-                if (renderers[i] != null) renderers[i].sharedMaterial = material;
-            }
+            for (int i = 0; i < renderers.Length; i++) if (renderers[i] != null) renderers[i].sharedMaterial = material;
         }
     }
 }
