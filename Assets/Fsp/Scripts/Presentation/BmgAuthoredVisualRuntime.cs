@@ -1,4 +1,5 @@
 using System.Collections;
+using Fsp.BattleRoyale;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -16,6 +17,11 @@ namespace Fsp.Presentation
         private const string BackpackPath = "Models/BMG/bmg_backpack_mk1";
         private const string BuggyPath = "Models/BMG/bmg_buggy_mk1";
         private const string PlanePath = "Models/BMG/bmg_transport_plane_mk1";
+        private const string MaleTorsoPath = "Models/BMG/bmg_male_torso_mk1";
+        private const string FemaleTorsoPath = "Models/BMG/bmg_female_torso_mk1";
+        private const string HeadPath = "Models/BMG/bmg_head_mk1";
+        private const string ArmPath = "Models/BMG/bmg_arm_mk1";
+        private const string LegPath = "Models/BMG/bmg_leg_mk1";
         private static BmgAuthoredVisualRuntime instance;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -60,14 +66,23 @@ namespace Fsp.Presentation
                 Transform visualRoot = character.transform.Find("FSP_CharacterVisual");
                 if (visualRoot == null) continue;
 
-                Transform helmet = FindRecursive(visualRoot, "Helmet");
-                ReplaceWithAuthored(helmet, HelmetPath, "BMG_Helmet_Authored", new Vector3(1.08f, 1.08f, 1.08f));
+                MatchParticipant participant = character.GetComponent<MatchParticipant>();
+                bool bot = participant != null && participant.IsBot;
+                string selected = Fsp.Lobby.LobbyState.Instance != null ? Fsp.Lobby.LobbyState.Instance.SelectedCharacterId : "soldier_01";
+                bool female = bot ? (character.GetInstanceID() & 1) == 0 : selected == "soldier_03";
+                string torsoPath = female ? FemaleTorsoPath : MaleTorsoPath;
+                Color uniform = female ? new Color(.24f, .34f, .28f) : new Color(.26f, .31f, .23f);
+                Color skin = female ? new Color(.58f, .38f, .27f) : new Color(.47f, .31f, .22f);
 
-                Transform backpack = FindRecursive(visualRoot, "Backpack");
-                ReplaceWithAuthored(backpack, BackpackPath, "BMG_Backpack_Authored", new Vector3(.95f, .95f, .95f));
-
-                Transform rifle = FindRecursive(visualRoot, "RifleVisual");
-                ReplaceWithAuthored(rifle, RiflePath, "BMG_Rifle_Authored", new Vector3(.72f, .72f, .72f));
+                ReplaceWithAuthored(FindRecursive(visualRoot, "Torso"), torsoPath, "BMG_Torso_Authored", Vector3.one * .78f, uniform);
+                ReplaceWithAuthored(FindRecursive(visualRoot, "Head"), HeadPath, "BMG_Head_Authored", Vector3.one * .58f, skin);
+                ReplaceWithAuthored(FindRecursive(visualRoot, "LeftArm"), ArmPath, "BMG_LeftArm_Authored", Vector3.one * 1.65f, uniform);
+                ReplaceWithAuthored(FindRecursive(visualRoot, "RightArm"), ArmPath, "BMG_RightArm_Authored", Vector3.one * 1.65f, uniform);
+                ReplaceWithAuthored(FindRecursive(visualRoot, "LeftLeg"), LegPath, "BMG_LeftLeg_Authored", Vector3.one * 1.80f, uniform);
+                ReplaceWithAuthored(FindRecursive(visualRoot, "RightLeg"), LegPath, "BMG_RightLeg_Authored", Vector3.one * 1.80f, uniform);
+                ReplaceWithAuthored(FindRecursive(visualRoot, "Helmet"), HelmetPath, "BMG_Helmet_Authored", Vector3.one * 1.08f, new Color(.16f, .20f, .17f));
+                ReplaceWithAuthored(FindRecursive(visualRoot, "Backpack"), BackpackPath, "BMG_Backpack_Authored", Vector3.one * .95f, new Color(.20f, .24f, .18f));
+                ReplaceWithAuthored(FindRecursive(visualRoot, "RifleVisual"), RiflePath, "BMG_Rifle_Authored", Vector3.one * .72f, new Color(.10f, .11f, .11f));
             }
         }
 
@@ -116,7 +131,7 @@ namespace Fsp.Presentation
             }
         }
 
-        private static void ReplaceWithAuthored(Transform oldVisual, string resourcePath, string newName, Vector3 scale)
+        private static void ReplaceWithAuthored(Transform oldVisual, string resourcePath, string newName, Vector3 scale, Color color)
         {
             if (oldVisual == null || oldVisual.parent == null) return;
             if (oldVisual.parent.Find(newName) != null) return;
@@ -133,7 +148,7 @@ namespace Fsp.Presentation
             model.transform.localPosition = position;
             model.transform.localRotation = rotation;
             model.transform.localScale = scale;
-            ApplyMobileMaterial(model, resourcePath == RiflePath ? new Color(.10f, .11f, .11f) : new Color(.20f, .24f, .18f));
+            ApplyMobileMaterial(model, color);
         }
 
         private static Transform FindRecursive(Transform root, string name)
