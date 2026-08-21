@@ -1,0 +1,4 @@
+Final audited build trigger for hanybmg.
+Build this commit or newer only.
+Do NOT rebuild old build 157 / commit e994d23435fda3350e1dd61244bfa7e36878aae7.
+Legacy lobby art and corrupt BMG atlas hard dependencies have been removed from current branch.
