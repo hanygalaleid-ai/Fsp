@@ -1,0 +1,1 @@
+Trigger clean hanybmg Unity Cloud Build after removing all legacy lobby-art dependencies and the corrupt standalone BMG logo JPG. Lobby branding now uses the verified UI/bmg_app_icon asset.
