@@ -11,6 +11,7 @@ namespace Fsp.Presentation
         private const string SmgPath = "Models/BMG/bmg_smg_mk1";
         private const string SniperPath = "Models/BMG/bmg_sniper_mk1";
         private const string ShotgunPath = "Models/BMG/bmg_shotgun_mk1";
+        private const string OpticPath = "Models/BMG/bmg_weapon_optic_mk1";
         private static BmgWeaponVisualRefreshRuntime instance;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -45,8 +46,9 @@ namespace Fsp.Presentation
                 if (fallback == null || fallback.parent == null) continue;
 
                 HitscanWeapon weapon = FindActiveWeapon(character);
-                string desiredPath = PathFor(weapon != null ? weapon.Config : null);
-                string desiredName = NameFor(weapon != null ? weapon.Config : null);
+                WeaponConfig config = weapon != null ? weapon.Config : null;
+                string desiredPath = PathFor(config);
+                string desiredName = NameFor(config);
                 Transform current = FindCurrentAuthoredWeapon(fallback.parent);
                 if (current != null && current.name == desiredName) continue;
                 if (current != null) Destroy(current.gameObject);
@@ -57,9 +59,24 @@ namespace Fsp.Presentation
                 model.name = desiredName;
                 model.transform.localPosition = fallback.localPosition;
                 model.transform.localRotation = fallback.localRotation;
-                model.transform.localScale = ScaleFor(weapon != null ? weapon.Config : null);
-                ApplyMaterial(model);
+                model.transform.localScale = ScaleFor(config);
+                ApplyMaterial(model, new Color(.10f, .11f, .11f));
+                AddOptic(model, config);
             }
+        }
+
+        private static void AddOptic(GameObject weaponModel, WeaponConfig config)
+        {
+            if (weaponModel == null || config == null) return;
+            if (config.weaponClass != WeaponClass.Assault && config.weaponClass != WeaponClass.Marksman) return;
+            GameObject opticPrefab = Resources.Load<GameObject>(OpticPath);
+            if (opticPrefab == null) return;
+            GameObject optic = Instantiate(opticPrefab, weaponModel.transform, false);
+            optic.name = "BMG_Optic_Authored";
+            optic.transform.localPosition = config.weaponClass == WeaponClass.Marksman ? new Vector3(0f, .20f, .22f) : new Vector3(0f, .17f, .08f);
+            optic.transform.localRotation = Quaternion.identity;
+            optic.transform.localScale = config.weaponClass == WeaponClass.Marksman ? Vector3.one * .42f : Vector3.one * .30f;
+            ApplyMaterial(optic, new Color(.055f, .06f, .06f));
         }
 
         private static Transform FindCurrentAuthoredWeapon(Transform parent)
@@ -122,13 +139,13 @@ namespace Fsp.Presentation
             return null;
         }
 
-        private static void ApplyMaterial(GameObject root)
+        private static void ApplyMaterial(GameObject root, Color color)
         {
             Shader shader = Resources.Load<Shader>("Shaders/FspMobileSafe");
             if (shader == null) shader = Shader.Find("Fsp/MobileSafeLit");
             if (shader == null) shader = Shader.Find("Standard");
             if (shader == null) return;
-            Material material = new(shader) { color = new Color(.10f, .11f, .11f), hideFlags = HideFlags.DontSave };
+            Material material = new(shader) { color = color, hideFlags = HideFlags.DontSave };
             Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
             for (int i = 0; i < renderers.Length; i++) if (renderers[i] != null) renderers[i].sharedMaterial = material;
         }
