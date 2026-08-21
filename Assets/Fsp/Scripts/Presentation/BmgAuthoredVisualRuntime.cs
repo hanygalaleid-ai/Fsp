@@ -12,6 +12,7 @@ namespace Fsp.Presentation
     public sealed class BmgAuthoredVisualRuntime : MonoBehaviour
     {
         private const string RiflePath = "Models/BMG/bmg_assault_rifle_mk1";
+        private const string HelmetPath = "Models/BMG/bmg_helmet_mk1";
         private const string BackpackPath = "Models/BMG/bmg_backpack_mk1";
         private const string BuggyPath = "Models/BMG/bmg_buggy_mk1";
         private static BmgAuthoredVisualRuntime instance;
@@ -41,7 +42,6 @@ namespace Fsp.Presentation
 
         private IEnumerator ApplyWhenReady()
         {
-            // Runtime assemblies build their fallback visuals during Awake/Start.
             yield return null;
             yield return null;
             UpgradeCharacters();
@@ -57,6 +57,9 @@ namespace Fsp.Presentation
                 if (character == null) continue;
                 Transform visualRoot = character.transform.Find("FSP_CharacterVisual");
                 if (visualRoot == null) continue;
+
+                Transform helmet = FindRecursive(visualRoot, "Helmet");
+                ReplaceWithAuthored(helmet, HelmetPath, "BMG_Helmet_Authored", new Vector3(1.08f, 1.08f, 1.08f));
 
                 Transform backpack = FindRecursive(visualRoot, "Backpack");
                 ReplaceWithAuthored(backpack, BackpackPath, "BMG_Backpack_Authored", new Vector3(.95f, .95f, .95f));
