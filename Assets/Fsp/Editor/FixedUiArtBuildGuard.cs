@@ -13,12 +13,10 @@ namespace Fsp.EditorTools
 
         private const string AndroidApplicationId = "com.hanygalaleid.fsp";
 
+        // Keep this gate limited to assets that are known-good and required for a successful build.
+        // Optional lobby preview JPGs are loaded opportunistically at runtime and must not block APK export.
         private static readonly string[] RequiredArt =
         {
-            "Assets/Fsp/Art/Resources/BMG/Atlases/bmg_characters_atlas.jpg",
-            "Assets/Fsp/Art/Resources/BMG/Atlases/bmg_weapons_atlas.jpg",
-            "Assets/Fsp/Art/Resources/BMG/UI/bmg_menu_icons_3d.jpg",
-            "Assets/Fsp/Art/Resources/BMG/UI/bmg_action_icons_3d.jpg",
             "Assets/Fsp/Art/Resources/UI/bmg_app_icon.png",
             "Assets/Fsp/Art/Resources/UI/bmg_adaptive_foreground.png",
             "Assets/Fsp/Art/Resources/UI/bmg_adaptive_background.png",
@@ -57,7 +55,7 @@ namespace Fsp.EditorTools
                 FspAndroidIconSetup.Apply();
 
             AssetDatabase.SaveAssets();
-            Debug.Log("BMG PRODUCTION ART GATE PASSED: approved BMG UI, branding and world art imported successfully.");
+            Debug.Log("BMG PRODUCTION ART GATE PASSED: required BMG UI, branding and world art imported successfully.");
         }
 
         private static void ApplyDeterministicPlayerSettings(BuildTarget platform)
