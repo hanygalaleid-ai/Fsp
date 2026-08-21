@@ -16,23 +16,17 @@ namespace Fsp.EditorTools
         private static readonly string[] RequiredArt =
         {
             "Assets/Fsp/Art/Resources/Lobby/fsp_lobby_final.jpg",
-            "Assets/Fsp/Art/Resources/UI/ui_panel_dark.png",
-            "Assets/Fsp/Art/Resources/UI/ui_button_primary.png",
+            "Assets/Fsp/Art/Resources/BMG/Brand/bmg_logo.jpg",
+            "Assets/Fsp/Art/Resources/BMG/Atlases/bmg_characters_atlas.jpg",
+            "Assets/Fsp/Art/Resources/BMG/Atlases/bmg_weapons_atlas.jpg",
+            "Assets/Fsp/Art/Resources/BMG/UI/bmg_menu_icons_3d.jpg",
+            "Assets/Fsp/Art/Resources/BMG/UI/bmg_action_icons_3d.jpg",
             "Assets/Fsp/Art/Resources/UI/bmg_app_icon.png",
             "Assets/Fsp/Art/Resources/UI/bmg_adaptive_foreground.png",
             "Assets/Fsp/Art/Resources/UI/bmg_adaptive_background.png",
             "Assets/Fsp/Art/Resources/UI/google_signin_square.png",
-            "Assets/Fsp/Art/Resources/UI/action_icons.png",
             "Assets/Fsp/Art/Resources/UI/mobile_joystick.png",
             "Assets/Fsp/Art/Resources/UI/language_icons.png",
-            "Assets/Fsp/Art/Resources/World/sand_ground.png",
-            "Assets/Fsp/Art/Resources/World/rock_cliff.png",
-            "Assets/Fsp/Art/Resources/World/road_dust.png",
-            "Assets/Fsp/Art/Resources/World/fortress_wall.png",
-            "Assets/Fsp/Art/Resources/World/sand_ground_v2.png",
-            "Assets/Fsp/Art/Resources/World/rock_cliff_v2.png",
-            "Assets/Fsp/Art/Resources/World/road_dust_v2.png",
-            "Assets/Fsp/Art/Resources/World/fortress_wall_v2.png",
             "Assets/Fsp/Art/Resources/World/bmg_desert_ground_v3.png",
             "Assets/Fsp/Art/Resources/World/bmg_fortress_wall_v3.png",
             "Assets/Fsp/Art/Resources/World/bmg_wood_floor_v3.png",
@@ -42,33 +36,30 @@ namespace Fsp.EditorTools
         public void OnPreprocessBuild(BuildReport report)
         {
             ApplyDeterministicPlayerSettings(report.summary.platform);
-
-            // Release builds use checked-in art only. Runtime world assembly may construct
-            // collision geometry, but every visual texture and shader must pass this gate.
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
 
             foreach (string path in RequiredArt)
             {
                 if (!File.Exists(path))
-                    throw new BuildFailedException("Required production FSP art is missing: " + path);
+                    throw new BuildFailedException("Required BMG production art is missing: " + path);
 
                 long bytes = new FileInfo(path).Length;
                 if (bytes < 256)
-                    throw new BuildFailedException("Required production FSP art looks invalid or empty: " + path);
+                    throw new BuildFailedException("Required BMG production art looks invalid or empty: " + path);
 
                 AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
                 Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
                 if (texture == null || texture.width <= 0 || texture.height <= 0)
-                    throw new BuildFailedException("Unity failed to import required production FSP texture: " + path);
+                    throw new BuildFailedException("Unity failed to import required BMG production texture: " + path);
 
-                Debug.Log($"FSP PRODUCTION ART OK: {path} ({texture.width}x{texture.height}, {bytes / 1024f:0.0} KB)");
+                Debug.Log($"BMG PRODUCTION ART OK: {path} ({texture.width}x{texture.height}, {bytes / 1024f:0.0} KB)");
             }
 
             if (report.summary.platform == BuildTarget.Android)
                 FspAndroidIconSetup.Apply();
 
             AssetDatabase.SaveAssets();
-            Debug.Log("FSP PRODUCTION ART GATE PASSED: all checked-in lobby, HUD, world and Android art imported successfully.");
+            Debug.Log("BMG PRODUCTION ART GATE PASSED: approved realistic UI, branding and world art imported successfully.");
         }
 
         private static void ApplyDeterministicPlayerSettings(BuildTarget platform)
@@ -88,7 +79,7 @@ namespace Fsp.EditorTools
             PlayerSettings.Android.forceInternetPermission = true;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
 
-            Debug.Log("FSP CLOUD SETTINGS OK: Android ARM64/IL2CPP, landscape fullscreen, package " + AndroidApplicationId);
+            Debug.Log("BMG CLOUD SETTINGS OK: Android ARM64/IL2CPP, landscape fullscreen, package " + AndroidApplicationId);
         }
     }
 }
