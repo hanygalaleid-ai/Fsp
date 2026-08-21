@@ -1,0 +1,1 @@
+Rebuild hanybmg from the latest clean BMG source. Corrupt BMG JPG atlases were removed, runtime dependencies were disabled, and legacy FSP lobby art is not required by current validation.
