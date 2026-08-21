@@ -35,7 +35,9 @@ namespace Fsp.Presentation
 
         private void Awake()
         {
-            logoTexture = Resources.Load<Texture2D>("BMG/Brand/bmg_logo");
+            // Use the checked-in, verified BMG launcher artwork as the lobby brand mark.
+            // This removes the final dependency on the obsolete/corrupt standalone JPG logo.
+            logoTexture = Resources.Load<Texture2D>("UI/bmg_app_icon");
             characterAtlas = Resources.Load<Texture2D>("BMG/Atlases/bmg_characters_atlas");
             weaponAtlas = Resources.Load<Texture2D>("BMG/Atlases/bmg_weapons_atlas");
         }
@@ -141,7 +143,6 @@ namespace Fsp.Presentation
             characterImage.texture = characterAtlas;
             characterImage.color = Color.white;
             characterImage.raycastTarget = false;
-            // Keep menus/buttons above the portrait.
             go.transform.SetSiblingIndex(Mathf.Min(2, root.childCount - 1));
         }
 
@@ -167,7 +168,7 @@ namespace Fsp.Presentation
         {
             switch ((id ?? string.Empty).ToLowerInvariant())
             {
-                case "soldier_01": return 1; // approved desert operator
+                case "soldier_01": return 1;
                 case "soldier_02": return 2;
                 case "soldier_03": return 4;
                 case "soldier_04": return 5;
