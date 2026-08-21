@@ -1,49 +1,86 @@
-name: Export BMG Source Snapshot
+name: Export hanybmg Full Project Backup
 
 on:
-  push:
+  pull_request:
     branches:
       - bmg/build149-authored-3d
-    paths-ignore:
-      - 'export/**'
   workflow_dispatch:
 
 jobs:
   export:
+    name: Package full hanybmg project
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
-      contents: write
+      contents: read
     steps:
-      - name: Checkout source
+      - name: Checkout full source with LFS
         uses: actions/checkout@v4
         with:
           lfs: true
-          fetch-depth: 1
+          fetch-depth: 0
 
-      - name: Create clean source archive
+      - name: Fetch all LFS assets
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p export
-          git archive --format=zip --output=export/Fsp_BMG_build149_clean_source.zip HEAD
+          git lfs pull
 
-      - name: Publish source ZIP on branch
+      - name: Create full project backup
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f export/Fsp_BMG_build149_clean_source.zip
-          if git diff --cached --quiet; then
-            exit 0
-          fi
-          git commit -m "Export cleaned BMG source ZIP [skip export]"
-          git push
+          rm -rf .backup_out
+          mkdir -p .backup_out/hanybmg_FULL_PROJECT
 
-      - name: Upload source ZIP artifact
+          rsync -a ./ .backup_out/hanybmg_FULL_PROJECT/ \
+            --exclude='.git/' \
+            --exclude='.backup_out/' \
+            --exclude='export/' \
+            --exclude='Library/' \
+            --exclude='Temp/' \
+            --exclude='Logs/' \
+            --exclude='Builds/'
+
+          git bundle create .backup_out/hanybmg_FULL_GIT_HISTORY.bundle --all
+
+          cat > .backup_out/README_BACKUP.txt <<'TXT'
+          hanybmg FULL PROJECT BACKUP
+          ===========================
+          Unity version: 6000.3.17f1
+          Production branch: bmg/build149-authored-3d
+
+          Includes:
+          - Full Unity source working tree (Assets, Packages, ProjectSettings and repository configs)
+          - BMG realistic images, UI atlases and authored models tracked in the repository
+          - Audio/runtime sound systems tracked in the repository
+          - Backend/rules/config files tracked in the repository
+          - Git history bundle for recovery of repository history/branches available to checkout
+
+          Excluded because Unity regenerates them:
+          - Library
+          - Temp
+          - Logs
+          - Builds
+          - .git directory (history is saved separately as hanybmg_FULL_GIT_HISTORY.bundle)
+          TXT
+
+          cd .backup_out
+          zip -r -9 hanybmg_FULL_PROJECT_2026-08-21.zip \
+            hanybmg_FULL_PROJECT \
+            hanybmg_FULL_GIT_HISTORY.bundle \
+            README_BACKUP.txt
+
+          test -s hanybmg_FULL_PROJECT_2026-08-21.zip
+          sha256sum hanybmg_FULL_PROJECT_2026-08-21.zip > hanybmg_FULL_PROJECT_2026-08-21.sha256
+          ls -lh hanybmg_FULL_PROJECT_2026-08-21.zip
+
+      - name: Upload complete backup
         uses: actions/upload-artifact@v4
         with:
-          name: Fsp_BMG_build149_clean_source
-          path: export/Fsp_BMG_build149_clean_source.zip
+          name: hanybmg_FULL_PROJECT_2026-08-21
+          path: |
+            .backup_out/hanybmg_FULL_PROJECT_2026-08-21.zip
+            .backup_out/hanybmg_FULL_PROJECT_2026-08-21.sha256
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
