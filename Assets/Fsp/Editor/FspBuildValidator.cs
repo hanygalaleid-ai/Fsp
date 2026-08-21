@@ -52,13 +52,13 @@ namespace Fsp.EditorTools
             if (!File.Exists("Assets/Fsp/Art/Resources/Shaders/FspMobileSafe.shader"))
                 errors.Add("Android mobile-safe shader is missing; release could render magenta materials.");
 
+            // Only hard-require production assets that are known-good and required for gameplay/build.
+            // Character/weapon/logo preview JPGs are optional presentation assets and must never block a clean build.
             string[] requiredRuntimeArt =
             {
-                "Assets/Fsp/Art/Resources/BMG/Brand/bmg_logo.jpg",
-                "Assets/Fsp/Art/Resources/BMG/Atlases/bmg_characters_atlas.jpg",
-                "Assets/Fsp/Art/Resources/BMG/Atlases/bmg_weapons_atlas.jpg",
-                "Assets/Fsp/Art/Resources/BMG/UI/bmg_menu_icons_3d.jpg",
-                "Assets/Fsp/Art/Resources/BMG/UI/bmg_action_icons_3d.jpg",
+                "Assets/Fsp/Art/Resources/UI/bmg_app_icon.png",
+                "Assets/Fsp/Art/Resources/UI/bmg_adaptive_foreground.png",
+                "Assets/Fsp/Art/Resources/UI/bmg_adaptive_background.png",
                 "Assets/Fsp/Art/Resources/World/bmg_desert_ground_v3.png",
                 "Assets/Fsp/Art/Resources/World/bmg_fortress_wall_v3.png",
                 "Assets/Fsp/Art/Resources/World/bmg_wood_floor_v3.png",
