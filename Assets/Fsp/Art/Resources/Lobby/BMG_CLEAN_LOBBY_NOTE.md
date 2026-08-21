@@ -1,0 +1,1 @@
+The production Lobby background must use approved BMG artwork only. Legacy FSP lobby artwork is not permitted in clean builds.
