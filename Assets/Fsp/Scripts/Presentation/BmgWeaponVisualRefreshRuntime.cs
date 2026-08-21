@@ -47,8 +47,8 @@ namespace Fsp.Presentation
                 HitscanWeapon weapon = FindActiveWeapon(character);
                 string desiredPath = PathFor(weapon != null ? weapon.Config : null);
                 string desiredName = NameFor(weapon != null ? weapon.Config : null);
-                Transform current = fallback.parent.Find("BMG_Weapon_Authored");
-                if (current != null && current.gameObject.name == desiredName) continue;
+                Transform current = FindCurrentAuthoredWeapon(fallback.parent);
+                if (current != null && current.name == desiredName) continue;
                 if (current != null) Destroy(current.gameObject);
 
                 GameObject prefab = Resources.Load<GameObject>(desiredPath);
@@ -60,6 +60,16 @@ namespace Fsp.Presentation
                 model.transform.localScale = ScaleFor(weapon != null ? weapon.Config : null);
                 ApplyMaterial(model);
             }
+        }
+
+        private static Transform FindCurrentAuthoredWeapon(Transform parent)
+        {
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                Transform child = parent.GetChild(i);
+                if (child.name == "BMG_Weapon_Authored" || child.name.StartsWith("BMG_Weapon_Authored_")) return child;
+            }
+            return null;
         }
 
         private static HitscanWeapon FindActiveWeapon(Component owner)
