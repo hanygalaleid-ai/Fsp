@@ -1,0 +1,1 @@
+Rebuild clean hanybmg after removing legacy FSP lobby visual gate and deleted corrupt atlas requirements. Build from this commit or a descendant only.
