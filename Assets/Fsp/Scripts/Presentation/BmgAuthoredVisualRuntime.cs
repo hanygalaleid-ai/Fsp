@@ -15,6 +15,7 @@ namespace Fsp.Presentation
         private const string HelmetPath = "Models/BMG/bmg_helmet_mk1";
         private const string BackpackPath = "Models/BMG/bmg_backpack_mk1";
         private const string BuggyPath = "Models/BMG/bmg_buggy_mk1";
+        private const string PlanePath = "Models/BMG/bmg_transport_plane_mk1";
         private static BmgAuthoredVisualRuntime instance;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -46,6 +47,7 @@ namespace Fsp.Presentation
             yield return null;
             UpgradeCharacters();
             UpgradeVehicles();
+            UpgradePlanes();
         }
 
         private static void UpgradeCharacters()
@@ -89,6 +91,28 @@ namespace Fsp.Presentation
                 model.transform.localRotation = Quaternion.identity;
                 model.transform.localScale = Vector3.one * .92f;
                 ApplyMobileMaterial(model, new Color(.18f, .24f, .13f));
+            }
+        }
+
+        private static void UpgradePlanes()
+        {
+            StarterPlaneVisual[] planes = FindObjectsByType<StarterPlaneVisual>(FindObjectsSortMode.None);
+            GameObject authored = Resources.Load<GameObject>(PlanePath);
+            if (authored == null) return;
+
+            for (int i = 0; i < planes.Length; i++)
+            {
+                StarterPlaneVisual plane = planes[i];
+                if (plane == null || plane.transform.Find("BMG_TransportPlane_Authored") != null) continue;
+                Transform old = plane.transform.Find("FSP_TransportPlaneVisual");
+                if (old != null) old.gameObject.SetActive(false);
+
+                GameObject model = Instantiate(authored, plane.transform, false);
+                model.name = "BMG_TransportPlane_Authored";
+                model.transform.localPosition = Vector3.zero;
+                model.transform.localRotation = Quaternion.identity;
+                model.transform.localScale = Vector3.one;
+                ApplyMobileMaterial(model, new Color(.34f, .40f, .35f));
             }
         }
 
