@@ -28,7 +28,8 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_head_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_arm_mk1.obj",
             "Assets/Fsp/Art/Resources/Models/BMG/bmg_leg_mk1.obj",
-            "Assets/Fsp/Art/Resources/Models/BMG/bmg_hangar_mk1.obj"
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_hangar_mk1.obj",
+            "Assets/Fsp/Art/Resources/Models/BMG/bmg_barricade_mk1.obj"
         };
 
         public int callbackOrder => -850;
