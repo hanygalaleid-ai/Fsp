@@ -1,0 +1,3 @@
+Trigger Unity Cloud build for hanybmg clean BMG-only branch.
+Expected Android output: hanybmg.apk
+Source branch: bmg/build149-authored-3d
