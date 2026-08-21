@@ -22,6 +22,7 @@ namespace Fsp.Presentation
             Part(root, "Windshield", new Vector3(0f, 1.16f, .66f), new Vector3(1.48f, .48f, .05f), glass);
             Part(root, "Bumper", new Vector3(0f, .42f, 2.02f), new Vector3(2.2f, .22f, .16f), dark);
             Part(root, "Rear", new Vector3(0f, .62f, -1.64f), new Vector3(1.9f, .65f, .55f), body);
+            RoundPart(root, "SpareWheel", new Vector3(0f, .72f, -1.97f), new Vector3(.72f, .24f, .72f), dark, Quaternion.Euler(90f, 0f, 0f));
             Part(root, "HeadlightL", new Vector3(-.66f, .62f, 2.03f), new Vector3(.34f, .20f, .08f), light);
             Part(root, "HeadlightR", new Vector3(.66f, .62f, 2.03f), new Vector3(.34f, .20f, .08f), light);
             Wheel(root, new Vector3(-1.03f, .37f, 1.25f), dark);
@@ -31,7 +32,16 @@ namespace Fsp.Presentation
         }
 
         private static void Wheel(Transform root, Vector3 position, Material material)
-            => Part(root, "Wheel", position, new Vector3(.32f, .66f, .66f), material);
+            => RoundPart(root, "Wheel", position, new Vector3(.38f, .72f, .72f), material, Quaternion.Euler(0f, 0f, 90f));
+
+        private static void RoundPart(Transform parent, string name, Vector3 position, Vector3 scale, Material material, Quaternion rotation)
+        {
+            GameObject go = AndroidSafeMesh.CreateCylinder(name, parent);
+            go.transform.localPosition = position;
+            go.transform.localRotation = rotation;
+            go.transform.localScale = scale;
+            go.GetComponent<MeshRenderer>().sharedMaterial = material;
+        }
 
         private static void Part(Transform parent, string name, Vector3 position, Vector3 scale, Material material)
         {

@@ -27,7 +27,7 @@ namespace Fsp.EditorTools
             PrepareAndroidSettings(false);
             EditorUserBuildSettings.buildAppBundle = false;
             EditorUserBuildSettings.development = false;
-            Build(BuildTarget.Android, "Builds/Android/Fsp-test.apk", requireZeroWarnings: false);
+            Build(BuildTarget.Android, "Builds/Android/BMG-test.apk", requireZeroWarnings: false);
         }
 
         [MenuItem("Fsp/Build/Android/Build AAB (Google Play)")]
@@ -43,7 +43,7 @@ namespace Fsp.EditorTools
             // large TextMeshPro methods) even when game scripts compile with zero warnings.
             // The compile audit remains the source-code gate; reviewed toolchain warnings
             // must not turn a valid signed AAB into a false build failure.
-            Build(BuildTarget.Android, "Builds/Android/Fsp-release.aab", requireZeroWarnings: false);
+            Build(BuildTarget.Android, "Builds/Android/BMG-release.aab", requireZeroWarnings: false);
         }
 
         [MenuItem("Fsp/Build/Windows/Build x64")]
@@ -52,7 +52,7 @@ namespace Fsp.EditorTools
             FspProjectBootstrap.EnsureProjectForBuild();
             FspProjectValidator.ValidateOrThrow();
             PrepareCommonPlayerSettings();
-            Build(BuildTarget.StandaloneWindows64, "Builds/Windows/Fsp/Fsp.exe", requireZeroWarnings: false);
+            Build(BuildTarget.StandaloneWindows64, "Builds/Windows/BMG/BMG.exe", requireZeroWarnings: false);
         }
 
         [MenuItem("Fsp/Build/iOS/Export Xcode Project")]
@@ -66,8 +66,8 @@ namespace Fsp.EditorTools
 
         private static void PrepareCommonPlayerSettings()
         {
-            PlayerSettings.companyName = "Fsp Studio";
-            PlayerSettings.productName = "Fsp";
+            PlayerSettings.companyName = "BMG Studio";
+            PlayerSettings.productName = "BMG";
             string versionName = Environment.GetEnvironmentVariable("FSP_ANDROID_VERSION_NAME");
             if (!string.IsNullOrWhiteSpace(versionName)) PlayerSettings.bundleVersion = versionName.Trim();
             else if (string.IsNullOrWhiteSpace(PlayerSettings.bundleVersion)) PlayerSettings.bundleVersion = "1.0.0";

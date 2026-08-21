@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -9,6 +11,7 @@ namespace Fsp.Backend
     public sealed class SupabaseAuthClient : MonoBehaviour
     {
         private const int RequestTimeoutSeconds = 8;
+        private const string PkceVerifierKey = "bmg_google_pkce_verifier";
         public const string OAuthRedirectUri = "com.hanygalaleid.fsp://auth-callback";
 
         private Action<bool, string> googleSignInDone;
@@ -19,6 +22,12 @@ namespace Fsp.Backend
             public string access_token;
             public string refresh_token;
             public AuthUser user;
+        }
+
+        [Serializable] private sealed class PkceExchangeBody
+        {
+            public string auth_code;
+            public string code_verifier;
         }
 
         private void OnEnable()
@@ -32,8 +41,15 @@ namespace Fsp.Backend
         public void BeginGoogleSignIn(Action<bool, string> done)
         {
             googleSignInDone = done;
+            string verifier = GenerateCodeVerifier();
+            string challenge = GenerateCodeChallenge(verifier);
+            PlayerPrefs.SetString(PkceVerifierKey, verifier);
+            PlayerPrefs.Save();
             string redirect = UnityWebRequest.EscapeURL(OAuthRedirectUri);
-            string url = SupabaseRuntimeConfig.ProjectUrl + "/auth/v1/authorize?provider=google&redirect_to=" + redirect;
+            string url = SupabaseRuntimeConfig.ProjectUrl +
+                         "/auth/v1/authorize?provider=google&redirect_to=" + redirect +
+                         "&scopes=email%20profile&code_challenge=" + UnityWebRequest.EscapeURL(challenge) +
+                         "&code_challenge_method=s256";
             Application.OpenURL(url);
         }
 
@@ -46,13 +62,56 @@ namespace Fsp.Backend
                 CompleteGoogle(false, string.IsNullOrWhiteSpace(oauthError) ? "Google sign in failed." : oauthError);
                 return;
             }
+            if (values.TryGetValue("code", out string authCode) && !string.IsNullOrWhiteSpace(authCode))
+            {
+                string verifier = PlayerPrefs.GetString(PkceVerifierKey, string.Empty);
+                if (string.IsNullOrWhiteSpace(verifier))
+                {
+                    CompleteGoogle(false, "Google sign in expired. Please try again.");
+                    return;
+                }
+                StartCoroutine(ExchangePkceCode(authCode, verifier));
+                return;
+            }
             if (!values.TryGetValue("access_token", out string access) || string.IsNullOrWhiteSpace(access))
             {
                 CompleteGoogle(false, "Google sign in did not return a session.");
                 return;
             }
+            ClearPkceVerifier();
             values.TryGetValue("refresh_token", out string refresh);
             StartCoroutine(CompleteOAuthSession(access, refresh));
+        }
+
+        private IEnumerator ExchangePkceCode(string authCode, string verifier)
+        {
+            string body = JsonUtility.ToJson(new PkceExchangeBody { auth_code = authCode, code_verifier = verifier });
+            using var req = new UnityWebRequest(
+                SupabaseRuntimeConfig.ProjectUrl + "/auth/v1/token?grant_type=pkce",
+                UnityWebRequest.kHttpVerbPOST);
+            req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
+            req.downloadHandler = new DownloadHandlerBuffer();
+            req.timeout = RequestTimeoutSeconds;
+            req.SetRequestHeader("Content-Type", "application/json");
+            req.SetRequestHeader("apikey", SupabaseRuntimeConfig.PublishableKey);
+            yield return req.SendWebRequest();
+
+            ClearPkceVerifier();
+            if (req.result != UnityWebRequest.Result.Success)
+            {
+                string error = req.downloadHandler != null ? req.downloadHandler.text : req.error;
+                CompleteGoogle(false, string.IsNullOrWhiteSpace(error) ? "Google session exchange failed." : error);
+                yield break;
+            }
+
+            AuthResponse response = JsonUtility.FromJson<AuthResponse>(req.downloadHandler.text);
+            if (response == null || response.user == null || string.IsNullOrWhiteSpace(response.access_token))
+            {
+                CompleteGoogle(false, "Google session was not returned.");
+                yield break;
+            }
+            SupabaseSession.Save(response.access_token, response.refresh_token, response.user.id);
+            CompleteGoogle(true, string.Empty);
         }
 
         private IEnumerator CompleteOAuthSession(string accessToken, string refreshToken)
@@ -82,6 +141,29 @@ namespace Fsp.Backend
             Action<bool, string> done = googleSignInDone;
             googleSignInDone = null;
             done?.Invoke(ok, error);
+        }
+
+        private static string GenerateCodeVerifier()
+        {
+            byte[] bytes = new byte[32];
+            using RandomNumberGenerator random = RandomNumberGenerator.Create();
+            random.GetBytes(bytes);
+            return Base64Url(bytes);
+        }
+
+        private static string GenerateCodeChallenge(string verifier)
+        {
+            using SHA256 sha = SHA256.Create();
+            return Base64Url(sha.ComputeHash(Encoding.ASCII.GetBytes(verifier)));
+        }
+
+        private static string Base64Url(byte[] value)
+            => Convert.ToBase64String(value).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+        private static void ClearPkceVerifier()
+        {
+            PlayerPrefs.DeleteKey(PkceVerifierKey);
+            PlayerPrefs.Save();
         }
 
         private static Dictionary<string, string> ParseUrlValues(string url)

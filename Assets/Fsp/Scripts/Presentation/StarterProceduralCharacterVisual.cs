@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Fsp.Presentation
 {
-    /// <summary>Original low-poly military character used when no authored character prefab is present.</summary>
+    /// <summary>Original rounded low-poly military character used when no authored character prefab is present.</summary>
     public sealed class StarterProceduralCharacterVisual : MonoBehaviour
     {
         private Transform leftArm;
@@ -46,11 +46,11 @@ namespace Fsp.Presentation
 
             MatchParticipant participant = GetComponent<MatchParticipant>();
             bool bot = participant != null && participant.IsBot;
-            Color cloth = bot ? new Color(0.52f, 0.24f, 0.14f) : new Color(0.23f, 0.42f, 0.27f);
+            Color cloth = bot ? new Color(0.62f, 0.29f, 0.16f) : new Color(0.29f, 0.50f, 0.33f);
             Material uniform = MaterialFor(cloth);
-            Material armor = MaterialFor(bot ? new Color(0.30f, 0.11f, 0.07f) : new Color(0.13f, 0.18f, 0.14f));
-            Material skin = MaterialFor(new Color(0.58f, 0.39f, 0.28f));
-            Material metal = MaterialFor(new Color(0.12f, 0.14f, 0.15f));
+            Material armor = MaterialFor(bot ? new Color(0.38f, 0.15f, 0.09f) : new Color(0.20f, 0.27f, 0.21f));
+            Material skin = MaterialFor(new Color(0.68f, 0.47f, 0.34f));
+            Material metal = MaterialFor(new Color(0.20f, 0.23f, 0.24f));
             Material accent = MaterialFor(bot ? new Color(0.78f, 0.12f, 0.05f) : new Color(1f, 0.36f, 0.015f));
 
             Transform root = new GameObject("FSP_CharacterVisual").transform;
@@ -58,15 +58,15 @@ namespace Fsp.Presentation
             visualRoot = root;
             root.localScale = Vector3.one * 1.06f;
 
-            Part(root, "Torso", new Vector3(0f, 1.18f, 0f), new Vector3(.62f, .72f, .34f), uniform);
-            Part(root, "Vest", new Vector3(0f, 1.22f, .20f), new Vector3(.68f, .55f, .13f), armor);
-            Part(root, "Belt", new Vector3(0f, .82f, 0f), new Vector3(.66f, .12f, .35f), metal);
-            Part(root, "Neck", new Vector3(0f, 1.62f, 0f), new Vector3(.19f, .16f, .18f), skin);
-            Part(root, "Head", new Vector3(0f, 1.84f, 0f), new Vector3(.38f, .38f, .36f), skin);
-            Part(root, "Helmet", new Vector3(0f, 2.04f, -.01f), new Vector3(.46f, .20f, .42f), armor);
+            RoundPart(root, "Torso", new Vector3(0f, 1.18f, 0f), new Vector3(.68f, .82f, .40f), uniform);
+            RoundPart(root, "Vest", new Vector3(0f, 1.22f, .14f), new Vector3(.72f, .64f, .30f), armor);
+            RoundPart(root, "Belt", new Vector3(0f, .84f, 0f), new Vector3(.68f, .15f, .38f), metal);
+            CylinderPart(root, "Neck", new Vector3(0f, 1.61f, 0f), new Vector3(.20f, .18f, .20f), skin);
+            RoundPart(root, "Head", new Vector3(0f, 1.84f, 0f), new Vector3(.38f, .43f, .36f), skin);
+            RoundPart(root, "Helmet", new Vector3(0f, 2.03f, -.01f), new Vector3(.48f, .30f, .44f), armor);
             Part(root, "HelmetVisor", new Vector3(0f, 1.94f, .22f), new Vector3(.30f, .07f, .08f), metal);
             Part(root, "FaceMask", new Vector3(0f, 1.79f, .195f), new Vector3(.31f, .14f, .06f), armor);
-            Part(root, "Backpack", new Vector3(0f, 1.22f, -.27f), new Vector3(.50f, .58f, .22f), armor);
+            RoundPart(root, "Backpack", new Vector3(0f, 1.22f, -.27f), new Vector3(.54f, .64f, .28f), armor);
             Part(root, "TeamMark", new Vector3(0f, 1.35f, .28f), new Vector3(.18f, .08f, .03f), accent);
             Part(root, "ChestPouchL", new Vector3(-.19f, 1.12f, .285f), new Vector3(.18f, .23f, .08f), armor);
             Part(root, "ChestPouchR", new Vector3(.19f, 1.12f, .285f), new Vector3(.18f, .23f, .08f), armor);
@@ -75,6 +75,8 @@ namespace Fsp.Presentation
             rightArm = Limb(root, "RightArm", new Vector3(.42f, 1.46f, 0f), new Vector3(.18f, .66f, .18f), uniform);
             leftLeg = Limb(root, "LeftLeg", new Vector3(-.18f, .75f, 0f), new Vector3(.24f, .82f, .27f), uniform);
             rightLeg = Limb(root, "RightLeg", new Vector3(.18f, .75f, 0f), new Vector3(.24f, .82f, .27f), uniform);
+            RoundPart(leftArm, "LeftHand", new Vector3(0f, -.62f, 0f), new Vector3(.20f, .22f, .18f), skin);
+            RoundPart(rightArm, "RightHand", new Vector3(0f, -.62f, 0f), new Vector3(.20f, .22f, .18f), skin);
             Part(leftLeg, "LeftBoot", new Vector3(0f, -.45f, .08f), new Vector3(.28f, .18f, .42f), metal);
             Part(rightLeg, "RightBoot", new Vector3(0f, -.45f, .08f), new Vector3(.28f, .18f, .42f), metal);
             Part(leftLeg, "LeftKnee", new Vector3(0f, -.14f, .16f), new Vector3(.26f, .18f, .09f), armor);
@@ -85,8 +87,11 @@ namespace Fsp.Presentation
             rifle.localPosition = new Vector3(-.18f, -.18f, .34f);
             rifle.localRotation = Quaternion.Euler(72f, 0f, 0f);
             Part(rifle, "Receiver", Vector3.zero, new Vector3(.16f, .16f, .62f), metal);
-            Part(rifle, "Barrel", new Vector3(0f, 0f, .46f), new Vector3(.07f, .07f, .45f), metal);
+            GameObject barrel = CylinderPart(rifle, "Barrel", new Vector3(0f, 0f, .46f), new Vector3(.07f, .45f, .07f), metal);
+            barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             Part(rifle, "Magazine", new Vector3(0f, -.12f, -.05f), new Vector3(.12f, .25f, .16f), armor);
+            Part(rifle, "Stock", new Vector3(0f, .02f, -.40f), new Vector3(.14f, .19f, .34f), armor);
+            Part(rifle, "Sight", new Vector3(0f, .12f, .02f), new Vector3(.08f, .08f, .15f), accent);
 
             if (!bot)
             {
@@ -152,18 +157,37 @@ namespace Fsp.Presentation
             Transform pivot = new GameObject(name + "Pivot").transform;
             pivot.SetParent(parent, false);
             pivot.localPosition = position;
-            Part(pivot, name, new Vector3(0f, -scale.y * .42f, 0f), scale, material);
+            CylinderPart(pivot, name, new Vector3(0f, -scale.y * .42f, 0f), scale, material);
             return pivot;
+        }
+
+        private static GameObject RoundPart(Transform parent, string name, Vector3 position, Vector3 scale, Material material)
+        {
+            GameObject go = AndroidSafeMesh.CreateSphere(name, parent);
+            SetupPart(go, position, scale, material);
+            return go;
+        }
+
+        private static GameObject CylinderPart(Transform parent, string name, Vector3 position, Vector3 scale, Material material)
+        {
+            GameObject go = AndroidSafeMesh.CreateCylinder(name, parent);
+            SetupPart(go, position, scale, material);
+            return go;
         }
 
         private static GameObject Part(Transform parent, string name, Vector3 position, Vector3 scale, Material material)
         {
             GameObject go = AndroidSafeMesh.CreateBox(name, parent);
+            SetupPart(go, position, scale, material);
+            return go;
+        }
+
+        private static void SetupPart(GameObject go, Vector3 position, Vector3 scale, Material material)
+        {
             go.transform.localPosition = position;
             go.transform.localScale = scale;
             MeshRenderer renderer = go.GetComponent<MeshRenderer>();
             if (renderer != null) renderer.sharedMaterial = material;
-            return go;
         }
 
         private static Material MaterialFor(Color color)

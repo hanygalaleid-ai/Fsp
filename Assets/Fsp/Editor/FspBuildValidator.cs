@@ -54,10 +54,11 @@ namespace Fsp.EditorTools
             string[] requiredRuntimeArt =
             {
                 "Assets/Fsp/Art/Resources/Lobby/fsp_lobby_final.jpg",
-                "Assets/Fsp/Art/Resources/World/sand_ground_v2.png",
+                "Assets/Fsp/Art/Resources/World/bmg_desert_ground_v3.png",
                 "Assets/Fsp/Art/Resources/World/road_dust_v2.png",
                 "Assets/Fsp/Art/Resources/World/rock_cliff_v2.png",
-                "Assets/Fsp/Art/Resources/World/fortress_wall_v2.png",
+                "Assets/Fsp/Art/Resources/World/bmg_fortress_wall_v3.png",
+                "Assets/Fsp/Art/Resources/World/bmg_wood_floor_v3.png",
                 "Assets/Fsp/Art/Resources/World/sunscar_sky_panorama.png",
                 "Assets/Fsp/Art/Resources/UI/mobile_joystick.png"
             };

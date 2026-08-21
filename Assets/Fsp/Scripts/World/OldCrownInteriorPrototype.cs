@@ -30,10 +30,10 @@ namespace Fsp.World
             var root = new GameObject("GeneratedInteriors").transform;
             root.SetParent(transform, false);
 
-            stone = MakeMaterial(new Color(0.57f, 0.50f, 0.39f));
-            darkStone = MakeMaterial(new Color(0.28f, 0.27f, 0.24f));
-            wood = MakeMaterial(new Color(0.31f, 0.20f, 0.12f));
-            bronze = MakeMaterial(new Color(0.46f, 0.31f, 0.16f));
+            stone = MakeMaterial(Color.white, "World/bmg_fortress_wall_v3", new Vector2(3f, 2f));
+            darkStone = MakeMaterial(new Color(.72f, .68f, .62f), "World/bmg_fortress_wall_v3", new Vector2(3f, 2f));
+            wood = MakeMaterial(Color.white, "World/bmg_wood_floor_v3", new Vector2(3f, 3f));
+            bronze = MakeMaterial(new Color(0.64f, 0.43f, 0.22f), null, Vector2.one);
 
             var random = new System.Random(seed);
             for (int i = 0; i < Mathf.Max(1, buildingCount); i++)
@@ -194,11 +194,24 @@ namespace Fsp.World
             return go;
         }
 
-        private static Material MakeMaterial(Color color)
+        private static Material MakeMaterial(Color color, string texturePath, Vector2 scale)
         {
-            Shader shader = Shader.Find("Standard");
+            Shader shader = Resources.Load<Shader>("Shaders/FspMobileSafe");
+            if (shader == null) shader = Shader.Find("Fsp/MobileSafeLit");
             Material mat = new Material(shader != null ? shader : Shader.Find("Sprites/Default"));
             mat.color = color;
+            if (!string.IsNullOrEmpty(texturePath))
+            {
+                Texture2D texture = Resources.Load<Texture2D>(texturePath);
+                if (texture != null)
+                {
+                    texture.wrapMode = TextureWrapMode.Repeat;
+                    texture.filterMode = FilterMode.Bilinear;
+                    texture.anisoLevel = 2;
+                    mat.mainTexture = texture;
+                    mat.mainTextureScale = scale;
+                }
+            }
             return mat;
         }
     }
