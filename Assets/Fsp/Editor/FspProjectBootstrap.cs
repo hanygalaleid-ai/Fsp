@@ -61,8 +61,8 @@ namespace Fsp.EditorTools
 
         private static void ApplyPlayerDefaults()
         {
-            PlayerSettings.companyName = "Fsp Studio";
-            PlayerSettings.productName = "Fsp";
+            PlayerSettings.companyName = "BMG Studio";
+            PlayerSettings.productName = "BMG";
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;
             PlayerSettings.runInBackground = false;
             PlayerSettings.fullScreenMode = FullScreenMode.FullScreenWindow;

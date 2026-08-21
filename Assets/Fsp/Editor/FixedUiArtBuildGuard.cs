@@ -33,6 +33,9 @@ namespace Fsp.EditorTools
             "Assets/Fsp/Art/Resources/World/rock_cliff_v2.png",
             "Assets/Fsp/Art/Resources/World/road_dust_v2.png",
             "Assets/Fsp/Art/Resources/World/fortress_wall_v2.png",
+            "Assets/Fsp/Art/Resources/World/bmg_desert_ground_v3.png",
+            "Assets/Fsp/Art/Resources/World/bmg_fortress_wall_v3.png",
+            "Assets/Fsp/Art/Resources/World/bmg_wood_floor_v3.png",
             "Assets/Fsp/Art/Resources/World/sunscar_sky_panorama.png"
         };
 
@@ -70,8 +73,8 @@ namespace Fsp.EditorTools
 
         private static void ApplyDeterministicPlayerSettings(BuildTarget platform)
         {
-            PlayerSettings.companyName = "Fsp Studio";
-            PlayerSettings.productName = "Fsp";
+            PlayerSettings.companyName = "BMG Studio";
+            PlayerSettings.productName = "BMG";
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;
             PlayerSettings.fullScreenMode = FullScreenMode.FullScreenWindow;
             PlayerSettings.runInBackground = false;

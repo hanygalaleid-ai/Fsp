@@ -203,32 +203,50 @@ namespace Fsp.BattleRoyale
         private static HitscanWeapon CreateRuntimeWeapon(Transform owner, PlayerInventory inventory, Camera aimCamera,
             WeaponConfig config, string objectName, Vector3 localPosition, Vector3 localScale)
         {
-            GameObject weaponObject = AndroidSafeMesh.CreateBox(objectName, owner);
+            GameObject weaponObject = new(objectName);
+            weaponObject.transform.SetParent(owner, false);
             weaponObject.transform.localPosition = localPosition;
-            weaponObject.transform.localRotation = Quaternion.identity;
-            weaponObject.transform.localScale = localScale;
-            MeshRenderer weaponRenderer = weaponObject.GetComponent<MeshRenderer>();
-            if (weaponRenderer != null)
-            {
-                Shader shader = Resources.Load<Shader>("Shaders/FspMobileSafe");
-                if (shader == null) shader = Shader.Find("Fsp/MobileSafeLit");
-                if (shader == null) shader = Shader.Find("Sprites/Default");
-                if (shader != null)
-                {
-                    Color color = config.weaponClass == WeaponClass.SMG
-                        ? new Color(.11f, .14f, .15f, 1f)
-                        : new Color(.25f, .29f, .22f, 1f);
-                    weaponRenderer.sharedMaterial = new Material(shader) { color = color, hideFlags = HideFlags.DontSave };
-                }
-            }
+            weaponObject.transform.localRotation = Quaternion.Euler(0f, 0f, -8f);
+            weaponObject.transform.localScale = Vector3.one * Mathf.Clamp(localScale.z / .62f, .78f, 1.05f);
+            bool smg = config.weaponClass == WeaponClass.SMG;
+            Material metal = RuntimeWeaponMaterial(smg ? new Color(.16f, .20f, .22f, 1f) : new Color(.30f, .35f, .27f, 1f));
+            Material dark = RuntimeWeaponMaterial(new Color(.08f, .10f, .11f, 1f));
+            Material accent = RuntimeWeaponMaterial(new Color(.92f, .29f, .025f, 1f));
+            float length = smg ? .48f : .66f;
+            WeaponBox(weaponObject.transform, "Receiver", Vector3.zero, new Vector3(.16f, .17f, length), metal);
+            WeaponBox(weaponObject.transform, "Handguard", new Vector3(0f, 0f, length * .52f), new Vector3(.14f, .15f, length * .42f), dark);
+            WeaponBox(weaponObject.transform, "Stock", new Vector3(0f, .01f, -length * .64f), new Vector3(.15f, .20f, length * .34f), dark);
+            WeaponBox(weaponObject.transform, "Magazine", new Vector3(0f, -.18f, -.02f), new Vector3(.12f, .28f, .16f), dark);
+            WeaponBox(weaponObject.transform, "Sight", new Vector3(0f, .15f, .04f), new Vector3(.08f, .08f, .15f), accent);
+            GameObject barrel = AndroidSafeMesh.CreateCylinder("Barrel", weaponObject.transform);
+            barrel.transform.localPosition = new Vector3(0f, 0f, length * .98f);
+            barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            barrel.transform.localScale = new Vector3(.055f, length * .58f, .055f);
+            barrel.GetComponent<MeshRenderer>().sharedMaterial = dark;
 
             GameObject muzzleObject = new GameObject("Muzzle");
             muzzleObject.transform.SetParent(weaponObject.transform, false);
-            muzzleObject.transform.localPosition = new Vector3(0f, 0f, .58f);
+            muzzleObject.transform.localPosition = new Vector3(0f, 0f, length * 1.28f);
 
             HitscanWeapon weapon = weaponObject.AddComponent<HitscanWeapon>();
             weapon.Configure(config, aimCamera, muzzleObject.transform, inventory);
             return weapon;
+        }
+
+        private static void WeaponBox(Transform parent, string name, Vector3 position, Vector3 scale, Material material)
+        {
+            GameObject part = AndroidSafeMesh.CreateBox(name, parent);
+            part.transform.localPosition = position;
+            part.transform.localScale = scale;
+            part.GetComponent<MeshRenderer>().sharedMaterial = material;
+        }
+
+        private static Material RuntimeWeaponMaterial(Color color)
+        {
+            Shader shader = Resources.Load<Shader>("Shaders/FspMobileSafe");
+            if (shader == null) shader = Shader.Find("Fsp/MobileSafeLit");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
+            return new Material(shader) { color = color, hideFlags = HideFlags.DontSave };
         }
 
         private static void EnsureDropFlow(GameObject player)

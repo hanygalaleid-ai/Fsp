@@ -15,7 +15,7 @@ namespace Fsp.World
             Transform root = Root(owner, "GeneratedCopperPort", new Vector3(62f, 0f, -45f));
             if (root == null) return;
             Material ground = Mat("World/road_dust_v2", new Color(.48f, .38f, .25f), new Vector2(8f, 6f));
-            Material wall = Mat("World/fortress_wall_v2", new Color(.54f, .42f, .28f), new Vector2(2f, 2f));
+            Material wall = Mat("World/bmg_fortress_wall_v3", Color.white, new Vector2(3f, 2f));
             Material metal = Mat(null, new Color(.22f, .28f, .30f), Vector2.one);
             Material orange = Mat(null, new Color(.86f, .31f, .05f), Vector2.one);
             Material water = Mat(null, new Color(.10f, .34f, .43f), Vector2.one);
@@ -44,9 +44,9 @@ namespace Fsp.World
         {
             Transform root = Root(owner, "GeneratedDryfield", new Vector3(82f, 0f, 78f));
             if (root == null) return;
-            Material soil = Mat("World/sand_ground_v2", new Color(.50f, .38f, .20f), new Vector2(10f, 10f));
+            Material soil = Mat("World/bmg_desert_ground_v3", Color.white, new Vector2(12f, 12f));
             Material road = Mat("World/road_dust_v2", Color.white, new Vector2(2f, 8f));
-            Material wall = Mat("World/fortress_wall_v2", new Color(.65f, .52f, .34f), new Vector2(2f, 2f));
+            Material wall = Mat("World/bmg_fortress_wall_v3", Color.white, new Vector2(3f, 2f));
             Material crop = Mat(null, new Color(.35f, .45f, .17f), Vector2.one);
             Material metal = Mat(null, new Color(.25f, .28f, .28f), Vector2.one);
 
@@ -73,9 +73,9 @@ namespace Fsp.World
         {
             Transform root = Root(owner, "GeneratedLanternCoast", new Vector3(-132f, 0f, 86f));
             if (root == null) return;
-            Material sand = Mat("World/sand_ground_v2", new Color(.60f, .48f, .29f), new Vector2(8f, 8f));
+            Material sand = Mat("World/bmg_desert_ground_v3", Color.white, new Vector2(10f, 10f));
             Material stone = Mat("World/rock_cliff_v2", Color.white, new Vector2(3f, 3f));
-            Material wall = Mat("World/fortress_wall_v2", new Color(.64f, .53f, .38f), new Vector2(2f, 2f));
+            Material wall = Mat("World/bmg_fortress_wall_v3", Color.white, new Vector2(3f, 2f));
             Material dark = Mat(null, new Color(.18f, .22f, .23f), Vector2.one);
             Material orange = Mat(null, new Color(1f, .38f, .04f), Vector2.one);
             Material water = Mat(null, new Color(.09f, .34f, .44f), Vector2.one);

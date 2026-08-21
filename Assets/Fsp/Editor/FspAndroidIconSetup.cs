@@ -22,6 +22,9 @@ namespace Fsp.EditorTools
                 throw new BuildFailedException("Required Android launcher icon was not found: " + IconPath);
             }
 
+            ConfigureIconImport(IconPath, false);
+            ConfigureIconImport(AdaptiveForegroundPath, true);
+            ConfigureIconImport(AdaptiveBackgroundPath, false);
             AssetDatabase.ImportAsset(IconPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
             Texture2D icon = AssetDatabase.LoadAssetAtPath<Texture2D>(IconPath);
             if (icon == null || icon.width <= 0 || icon.height <= 0)
@@ -41,11 +44,27 @@ namespace Fsp.EditorTools
 
             PlatformIcon[] adaptiveIcons = PlayerSettings.GetPlatformIcons(NamedBuildTarget.Android, AndroidPlatformIconKind.Adaptive);
             for (int i = 0; i < adaptiveIcons.Length; i++)
-                adaptiveIcons[i].SetTextures(adaptiveForeground, adaptiveBackground);
+                // Adaptive icon layers are background first, then foreground.
+                // Reversing them lets the opaque navy layer cover the BMG emblem.
+                adaptiveIcons[i].SetTextures(adaptiveBackground, adaptiveForeground);
             PlayerSettings.SetPlatformIcons(NamedBuildTarget.Android, AndroidPlatformIconKind.Adaptive, adaptiveIcons);
 
             AssetDatabase.SaveAssets();
             Debug.Log($"[BMG] Android legacy and adaptive launcher icons applied ({icon.width}x{icon.height}).");
+        }
+
+        private static void ConfigureIconImport(string path, bool alpha)
+        {
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null) return;
+            importer.textureType = TextureImporterType.Default;
+            importer.alphaIsTransparency = alpha;
+            importer.mipmapEnabled = false;
+            importer.npotScale = TextureImporterNPOTScale.None;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.maxTextureSize = 1024;
+            importer.SaveAndReimport();
         }
     }
 }

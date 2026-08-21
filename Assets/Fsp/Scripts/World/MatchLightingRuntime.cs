@@ -13,10 +13,10 @@ namespace Fsp.World
             if (!string.Equals(SceneManager.GetActiveScene().name, "Match", StringComparison.OrdinalIgnoreCase)) return;
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.54f, 0.59f, 0.66f);
-            RenderSettings.ambientEquatorColor = new Color(0.42f, 0.36f, 0.29f);
-            RenderSettings.ambientGroundColor = new Color(0.18f, 0.15f, 0.12f);
-            RenderSettings.ambientIntensity = 1.05f;
+            RenderSettings.ambientSkyColor = new Color(0.62f, 0.67f, 0.74f);
+            RenderSettings.ambientEquatorColor = new Color(0.52f, 0.45f, 0.36f);
+            RenderSettings.ambientGroundColor = new Color(0.29f, 0.24f, 0.19f);
+            RenderSettings.ambientIntensity = 1.28f;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogColor = new Color(0.60f, 0.65f, 0.68f);
@@ -33,14 +33,14 @@ namespace Fsp.World
             }
             sun.transform.rotation = Quaternion.Euler(38f, -32f, 0f);
             sun.color = new Color(1f, 0.86f, 0.68f);
-            sun.intensity = 1.15f;
-            sun.shadows = PlayerPrefs.GetInt("fsp_quality", 1) == 0 ? LightShadows.None : LightShadows.Hard;
+            sun.intensity = 1.32f;
+            sun.shadows = PlayerPrefs.GetInt("fsp_quality", 1) == 0 ? LightShadows.None : LightShadows.Soft;
 
             Camera camera = Camera.main;
             if (camera != null)
             {
                 camera.clearFlags = CameraClearFlags.Skybox;
-                camera.farClipPlane = 420f;
+                camera.farClipPlane = 520f;
                 camera.allowHDR = PlayerPrefs.GetInt("fsp_quality", 1) >= 2;
                 camera.allowMSAA = PlayerPrefs.GetInt("fsp_quality", 1) >= 1;
             }

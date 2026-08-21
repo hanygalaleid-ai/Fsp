@@ -18,7 +18,7 @@ namespace Fsp.Input
         [SerializeField] private float lookSensitivity = 0.16f;
         [SerializeField] private float minPitch = -35f;
         [SerializeField] private float maxPitch = 65f;
-        [SerializeField] private Vector3 followOffset = new Vector3(0f, 2.6f, -5.2f);
+        [SerializeField] private Vector3 followOffset = new Vector3(0f, 2.35f, -6.8f);
         [SerializeField] private float cameraFollow = 12f;
         [SerializeField, Min(0.05f)] private float cameraCollisionRadius = 0.28f;
         [SerializeField, Min(0.05f)] private float cameraSurfacePadding = 0.18f;
@@ -48,7 +48,7 @@ namespace Fsp.Input
             if (cameraPivot != null)
             {
                 yaw = transform.eulerAngles.y;
-                pitch = 12f;
+                pitch = 9f;
                 motor?.SetCamera(cameraPivot);
             }
         }
@@ -124,7 +124,7 @@ namespace Fsp.Input
             }
             else
             {
-                lookPoint = transform.position + Vector3.up * (parachuting ? 2.1f : 1.35f);
+                lookPoint = transform.position + Vector3.up * (parachuting ? 2.1f : 1.52f);
                 Quaternion orbit = Quaternion.Euler(pitch, yaw, 0f);
                 Vector3 stateOffset = parachuting ? new Vector3(0f, 3.8f, -8.2f) : followOffset;
                 desired = transform.position + orbit * stateOffset;
