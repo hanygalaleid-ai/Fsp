@@ -22,11 +22,11 @@ namespace Fsp.EditorTools
             string[] errors = ValidateProject(report.summary.platform);
             if (errors.Length == 0)
             {
-                Debug.Log("Fsp pre-build validation passed.");
+                Debug.Log("BMG pre-build validation passed.");
                 return;
             }
 
-            string message = "Fsp build blocked:\n- " + string.Join("\n- ", errors);
+            string message = "BMG build blocked:\n- " + string.Join("\n- ", errors);
             throw new BuildFailedException(message);
         }
 
@@ -36,9 +36,9 @@ namespace Fsp.EditorTools
             FspProjectBootstrap.EnsureProjectForBuild();
             string[] errors = ValidateProject(EditorUserBuildSettings.activeBuildTarget);
             if (errors.Length == 0)
-                Debug.Log("Fsp MVP validation passed.");
+                Debug.Log("BMG MVP validation passed.");
             else
-                Debug.LogError("Fsp MVP validation failed:\n- " + string.Join("\n- ", errors));
+                Debug.LogError("BMG MVP validation failed:\n- " + string.Join("\n- ", errors));
         }
 
         private static string[] ValidateProject(BuildTarget target)
@@ -51,19 +51,23 @@ namespace Fsp.EditorTools
             if (!File.Exists(matchPath)) errors.Add("Match scene is missing.");
             if (!File.Exists("Assets/Fsp/Art/Resources/Shaders/FspMobileSafe.shader"))
                 errors.Add("Android mobile-safe shader is missing; release could render magenta materials.");
+
             string[] requiredRuntimeArt =
             {
-                "Assets/Fsp/Art/Resources/Lobby/fsp_lobby_final.jpg",
+                "Assets/Fsp/Art/Resources/BMG/Brand/bmg_logo.jpg",
+                "Assets/Fsp/Art/Resources/BMG/Atlases/bmg_characters_atlas.jpg",
+                "Assets/Fsp/Art/Resources/BMG/Atlases/bmg_weapons_atlas.jpg",
+                "Assets/Fsp/Art/Resources/BMG/UI/bmg_menu_icons_3d.jpg",
+                "Assets/Fsp/Art/Resources/BMG/UI/bmg_action_icons_3d.jpg",
                 "Assets/Fsp/Art/Resources/World/bmg_desert_ground_v3.png",
-                "Assets/Fsp/Art/Resources/World/road_dust_v2.png",
-                "Assets/Fsp/Art/Resources/World/rock_cliff_v2.png",
                 "Assets/Fsp/Art/Resources/World/bmg_fortress_wall_v3.png",
                 "Assets/Fsp/Art/Resources/World/bmg_wood_floor_v3.png",
                 "Assets/Fsp/Art/Resources/World/sunscar_sky_panorama.png",
                 "Assets/Fsp/Art/Resources/UI/mobile_joystick.png"
             };
             foreach (string artPath in requiredRuntimeArt)
-                if (!File.Exists(artPath)) errors.Add("Required runtime art is missing: " + artPath);
+                if (!File.Exists(artPath)) errors.Add("Required BMG runtime art is missing: " + artPath);
+
             const string oauthManifest = "Assets/Plugins/Android/FspAuth.androidlib/AndroidManifest.xml";
             if (!File.Exists(oauthManifest) || !File.ReadAllText(oauthManifest).Contains("auth-callback"))
                 errors.Add("Google OAuth Android callback manifest is missing or invalid.");
@@ -85,7 +89,7 @@ namespace Fsp.EditorTools
                     errors.Add($"Google Play AAB application identifier must be {ReleaseApplicationId}; current value is '{id}'.");
 
                 if (PlayerSettings.Android.targetSdkVersion != AndroidSdkVersions.AndroidApiLevel36)
-                    errors.Add("Google Play AAB must target Android 16 / API level 36 in the Fsp release pipeline.");
+                    errors.Add("Google Play AAB must target Android 16 / API level 36 in the BMG release pipeline.");
 
                 if (PlayerSettings.Android.bundleVersionCode < 1)
                     errors.Add("Google Play AAB must use a positive Android versionCode.");
@@ -105,7 +109,7 @@ namespace Fsp.EditorTools
                     errors.Add("Google Play AAB must include Android INTERNET permission for Supabase, matchmaking and WebRTC voice.");
 
                 if (PlayerSettings.GetScriptingBackend(NamedBuildTarget.Android) != ScriptingImplementation.IL2CPP)
-                    errors.Add("Google Play AAB must use IL2CPP in the Fsp release pipeline.");
+                    errors.Add("Google Play AAB must use IL2CPP in the BMG release pipeline.");
 
                 if (!PlayerSettings.Android.useCustomKeystore)
                     errors.Add("Google Play AAB must use the configured custom upload keystore.");
@@ -130,8 +134,7 @@ namespace Fsp.EditorTools
             try
             {
                 if (!FindInScene<Camera>(scene)) errors.Add("Lobby scene has no Camera.");
-                // LobbyRuntimeGuard creates the responsive overlay and keeps legacy
-                // world-space artwork disabled on every aspect ratio.
+                // Clean BMG lobby is runtime-authored; no legacy FSP lobby bitmap is required.
             }
             finally
             {
@@ -147,8 +150,6 @@ namespace Fsp.EditorTools
             try
             {
                 if (!FindInScene<Camera>(scene)) errors.Add("Match scene has no Camera.");
-                // MatchSceneAssembler is auto-installed after Match loads and creates a safety
-                // player, manager and ground when authored gameplay objects are absent.
             }
             finally
             {
