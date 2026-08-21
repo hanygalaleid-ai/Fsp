@@ -1,0 +1,34 @@
+name: Export BMG Source Snapshot
+
+on:
+  push:
+    branches:
+      - bmg/build149-authored-3d
+  workflow_dispatch:
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 1
+
+      - name: Create source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p export
+          git archive --format=zip --output=export/Fsp_BMG_build149_authored_3d_source.zip HEAD
+
+      - name: Upload source ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fsp_BMG_build149_authored_3d_source
+          path: export/Fsp_BMG_build149_authored_3d_source.zip
+          if-no-files-found: error
+          retention-days: 7
