@@ -1,0 +1,5 @@
+Build the strict modern BMG visual branch only.
+Legacy/procedural render blending is disabled.
+Flat runtime material overrides are removed.
+Modern runtime character and transport-plane replacements are enabled.
+Use Clean Build from the latest commit on bmg/build149-authored-3d.
