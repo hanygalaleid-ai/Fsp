@@ -33,6 +33,12 @@ namespace Fsp.Presentation
         };
 
         private static BmgProductionVisualController instance;
+        private static Material environmentMaterial;
+        private static Material characterMaterial;
+        private static Material weaponMaterial;
+        private static Material planeMaterial;
+        private static Material vehicleMaterial;
+        private static Material parachuteMaterial;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -111,8 +117,9 @@ namespace Fsp.Presentation
                 if (prefab == null) return;
                 GameObject model = Instantiate(prefab, participant.transform, false);
                 model.name = "BMG_PRODUCTION_PARACHUTE";
-                model.transform.localPosition = Vector3.zero;
+                model.transform.localPosition = new Vector3(0f, 1.65f, 0f);
                 model.transform.localRotation = Quaternion.identity;
+                ApplyProductionMaterial(model.transform, "BMG_PRODUCTION_PARACHUTE");
                 marker = model.transform;
             }
             controller.ConfigureVisual(marker.gameObject);
@@ -126,6 +133,7 @@ namespace Fsp.Presentation
             GameObject environment = Instantiate(prefab);
             environment.name = "BMG_PRODUCTION_ENVIRONMENT";
             environment.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+            ApplyProductionMaterial(environment.transform, environment.name);
         }
 
         private static void HideLegacyWorldRenderers()
@@ -147,6 +155,7 @@ namespace Fsp.Presentation
             if (marker != null)
             {
                 SetProductionRenderers(marker, true);
+                ApplyProductionMaterial(marker, markerName);
                 return;
             }
             GameObject prefab = Resources.Load<GameObject>(resourcePath);
@@ -156,7 +165,49 @@ namespace Fsp.Presentation
             model.transform.localPosition = Vector3.zero;
             model.transform.localRotation = Quaternion.identity;
             model.transform.localScale = scale;
+            ApplyProductionMaterial(model.transform, markerName);
             SetProductionRenderers(model.transform, true);
+        }
+
+        private static void ApplyProductionMaterial(Transform root, string markerName)
+        {
+            Material material = MaterialFor(markerName);
+            if (material == null || root == null) return;
+            foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
+                if (renderer != null) renderer.sharedMaterial = material;
+        }
+
+        private static Material MaterialFor(string markerName)
+        {
+            if (markerName.Contains("ENVIRONMENT"))
+                return environmentMaterial ??= CreateMaterial("BMG_Environment", new Color(.44f, .36f, .24f, 1f), .22f, .08f);
+            if (markerName.Contains("CHARACTER"))
+                return characterMaterial ??= CreateMaterial("BMG_TacticalCharacter", new Color(.16f, .20f, .13f, 1f), .36f, .10f);
+            if (markerName.Contains("WEAPON"))
+                return weaponMaterial ??= CreateMaterial("BMG_Gunmetal", new Color(.075f, .085f, .09f, 1f), .72f, .38f);
+            if (markerName.Contains("PLANE"))
+                return planeMaterial ??= CreateMaterial("BMG_MilitaryPlane", new Color(.19f, .23f, .23f, 1f), .42f, .18f);
+            if (markerName.Contains("VEHICLE"))
+                return vehicleMaterial ??= CreateMaterial("BMG_DesertVehicle", new Color(.31f, .28f, .20f, 1f), .48f, .16f);
+            if (markerName.Contains("PARACHUTE"))
+                return parachuteMaterial ??= CreateMaterial("BMG_ParachuteOrange", new Color(.80f, .24f, .025f, 1f), .18f, .04f);
+            return null;
+        }
+
+        private static Material CreateMaterial(string name, Color color, float smoothness, float metallic)
+        {
+            Shader shader = Resources.Load<Shader>("Shaders/FspMobileSafe");
+            if (shader == null) shader = Shader.Find("Fsp/MobileSafeLit");
+            if (shader == null) shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) shader = Shader.Find("Standard");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
+            if (shader == null) return null;
+
+            Material material = new(shader) { name = name, color = color, hideFlags = HideFlags.DontSave };
+            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", smoothness);
+            if (material.HasProperty("_Glossiness")) material.SetFloat("_Glossiness", smoothness);
+            if (material.HasProperty("_Metallic")) material.SetFloat("_Metallic", metallic);
+            return material;
         }
 
         private static void HideLegacyRenderers(Transform root)
