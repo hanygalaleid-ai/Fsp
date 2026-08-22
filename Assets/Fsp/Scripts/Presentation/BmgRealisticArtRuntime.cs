@@ -7,8 +7,8 @@ using Fsp.Lobby;
 namespace Fsp.Presentation
 {
     /// <summary>
-    /// Uses verified BMG artwork in menus while preserving the live 3D match.
-    /// Corrupt legacy JPG atlases are intentionally not loaded.
+    /// Approved BMG presentation art only. Uses the six selected character renders and five selected weapon renders.
+    /// The live controls remain functional above the modern backgrounds.
     /// </summary>
     public sealed class BmgRealisticArtRuntime : MonoBehaviour
     {
@@ -16,9 +16,11 @@ namespace Fsp.Presentation
         private Texture2D logoTexture;
         private Texture2D characterAtlas;
         private Texture2D weaponAtlas;
+        private Texture2D loadoutTexture;
         private RawImage logoImage;
         private RawImage characterImage;
         private RawImage weaponImage;
+        private RawImage loadoutBackgroundImage;
         private LobbyState boundLobbyState;
         private float nextRefresh;
 
@@ -36,8 +38,9 @@ namespace Fsp.Presentation
         private void Awake()
         {
             logoTexture = Resources.Load<Texture2D>("UI/bmg_app_icon");
-            characterAtlas = null;
-            weaponAtlas = null;
+            characterAtlas = Resources.Load<Texture2D>("BMG/Characters/bmg_characters_6_atlas");
+            weaponAtlas = Resources.Load<Texture2D>("BMG/Weapons/bmg_weapons_5_atlas");
+            loadoutTexture = Resources.Load<Texture2D>("BMG/UI/bmg_loadout_modern");
         }
 
         private void OnDestroy()
@@ -57,6 +60,7 @@ namespace Fsp.Presentation
             logoImage = null;
             characterImage = null;
             weaponImage = null;
+            loadoutBackgroundImage = null;
             StartCoroutine(RefreshDelayed());
         }
 
@@ -82,6 +86,9 @@ namespace Fsp.Presentation
         private void RefreshSceneArt()
         {
             if (!string.Equals(SceneManager.GetActiveScene().name, "Lobby", System.StringComparison.OrdinalIgnoreCase)) return;
+            if (characterAtlas == null) characterAtlas = Resources.Load<Texture2D>("BMG/Characters/bmg_characters_6_atlas");
+            if (weaponAtlas == null) weaponAtlas = Resources.Load<Texture2D>("BMG/Weapons/bmg_weapons_5_atlas");
+            if (loadoutTexture == null) loadoutTexture = Resources.Load<Texture2D>("BMG/UI/bmg_loadout_modern");
             CreateLobbyLogo();
             CreateCharacterPreview();
             BindLobbyState();
@@ -125,13 +132,18 @@ namespace Fsp.Presentation
             RectTransform root = FindLobbyRoot();
             if (root == null) return;
             GameObject existing = GameObject.Find("BMG_RealisticCharacterPreview");
-            if (existing != null) { characterImage = existing.GetComponent<RawImage>(); return; }
+            if (existing != null)
+            {
+                characterImage = existing.GetComponent<RawImage>();
+                if (characterImage != null) characterImage.texture = characterAtlas;
+                return;
+            }
 
             GameObject go = new("BMG_RealisticCharacterPreview", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
             go.transform.SetParent(root, false);
             RectTransform rt = go.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(.30f, .145f);
-            rt.anchorMax = new Vector2(.71f, .94f);
+            rt.anchorMin = new Vector2(.31f, .145f);
+            rt.anchorMax = new Vector2(.70f, .93f);
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
             AspectRatioFitter fit = go.GetComponent<AspectRatioFitter>();
@@ -158,55 +170,76 @@ namespace Fsp.Presentation
         {
             if (characterImage == null || characterAtlas == null) return;
             string id = LobbyState.Instance != null ? LobbyState.Instance.SelectedCharacterId : "soldier_01";
-            int tile = CharacterTile(id);
-            characterImage.uvRect = AtlasRect(tile, 4, 2);
+            characterImage.uvRect = AtlasRect(CharacterTile(id), 3, 2);
         }
 
         private static int CharacterTile(string id)
         {
             switch ((id ?? string.Empty).ToLowerInvariant())
             {
-                case "soldier_01": return 1;
-                case "soldier_02": return 2;
-                case "soldier_03": return 4;
-                case "soldier_04": return 5;
-                case "soldier_05": return 0;
-                case "soldier_06": return 6;
-                default: return 1;
+                case "soldier_01": return 0; // male 1
+                case "soldier_02": return 1; // male 2
+                case "soldier_03": return 2; // male 3
+                case "soldier_04": return 3; // female 1
+                case "soldier_05": return 4; // female 2
+                case "soldier_06": return 5; // female 3
+                default: return 0;
             }
         }
 
         private void RefreshWeaponPreview()
         {
-            if (weaponAtlas == null) return;
             GameObject modal = GameObject.Find("LobbySectionModal");
             bool loadoutOpen = modal != null && modal.activeInHierarchy && ContainsLoadoutTitle(modal);
             if (!loadoutOpen)
             {
                 if (weaponImage != null) weaponImage.gameObject.SetActive(false);
+                if (loadoutBackgroundImage != null) loadoutBackgroundImage.gameObject.SetActive(false);
                 return;
             }
 
+            RectTransform panel = modal.GetComponent<RectTransform>();
+            if (panel == null) return;
+
+            if (loadoutTexture != null && loadoutBackgroundImage == null)
+            {
+                GameObject bg = new("BMG_ModernLoadoutBackground", typeof(RectTransform), typeof(RawImage));
+                bg.transform.SetParent(panel, false);
+                RectTransform brt = bg.GetComponent<RectTransform>();
+                brt.anchorMin = Vector2.zero;
+                brt.anchorMax = Vector2.one;
+                brt.offsetMin = Vector2.zero;
+                brt.offsetMax = Vector2.zero;
+                loadoutBackgroundImage = bg.GetComponent<RawImage>();
+                loadoutBackgroundImage.texture = loadoutTexture;
+                loadoutBackgroundImage.color = Color.white;
+                loadoutBackgroundImage.raycastTarget = false;
+                bg.transform.SetAsFirstSibling();
+            }
+            if (loadoutBackgroundImage != null) loadoutBackgroundImage.gameObject.SetActive(true);
+
+            if (weaponAtlas == null) return;
             if (weaponImage == null)
             {
-                RectTransform panel = modal.GetComponent<RectTransform>();
                 GameObject go = new("BMG_RealisticWeaponPreview", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
                 go.transform.SetParent(panel, false);
                 RectTransform rt = go.GetComponent<RectTransform>();
-                rt.anchorMin = new Vector2(.24f, .39f);
-                rt.anchorMax = new Vector2(.76f, .68f);
+                rt.anchorMin = new Vector2(.48f, .40f);
+                rt.anchorMax = new Vector2(.91f, .68f);
                 rt.offsetMin = Vector2.zero;
                 rt.offsetMax = Vector2.zero;
                 AspectRatioFitter fit = go.GetComponent<AspectRatioFitter>();
                 fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-                fit.aspectRatio = 1f;
+                fit.aspectRatio = 5f;
                 weaponImage = go.GetComponent<RawImage>();
                 weaponImage.texture = weaponAtlas;
+                weaponImage.color = Color.white;
                 weaponImage.raycastTarget = false;
             }
 
             weaponImage.gameObject.SetActive(true);
-            weaponImage.uvRect = AtlasRect(WeaponTile(LobbyGameplayProgress.LoadoutName), 3, 2);
+            weaponImage.uvRect = AtlasRect(WeaponTile(LobbyGameplayProgress.LoadoutName), 5, 1);
+            weaponImage.transform.SetAsLastSibling();
         }
 
         private static bool ContainsLoadoutTitle(GameObject modal)
@@ -222,9 +255,9 @@ namespace Fsp.Presentation
         private static int WeaponTile(string loadout)
         {
             string v = (loadout ?? string.Empty).ToLowerInvariant();
-            if (v.Contains("smg") || v.Contains("scout")) return 2;
-            if (v.Contains("sniper")) return 3;
-            if (v.Contains("marksman") || v.Contains("dmr")) return 4;
+            if (v.Contains("smg") || v.Contains("scout")) return 3;
+            if (v.Contains("sniper")) return 4;
+            if (v.Contains("marksman") || v.Contains("dmr")) return 2;
             if (v.Contains("heavy") || v.Contains("shotgun")) return 1;
             return 0;
         }
