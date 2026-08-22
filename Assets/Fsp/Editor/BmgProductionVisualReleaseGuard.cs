@@ -20,6 +20,7 @@ namespace Fsp.EditorTools
         {
             "bmg_sunscar_environment",
             "bmg_transport_plane",
+            "bmg_parachute",
             "bmg_buggy",
             "bmg_assault_rifle",
             "bmg_smg",
@@ -61,7 +62,7 @@ namespace Fsp.EditorTools
                     "The old *_mk1/procedural assets are not accepted as final art. Missing: " + string.Join(", ", missing));
             }
 
-            string controllerPath = "Assets/Fsp/Scripts/Presentation/BmgProductionVisualController.cs";
+            const string controllerPath = "Assets/Fsp/Scripts/Presentation/BmgProductionVisualController.cs";
             if (AssetDatabase.LoadMainAssetAtPath(controllerPath) == null)
                 throw new BuildFailedException("BMG PRODUCTION VISUAL GATE: production visual controller is missing.");
 
