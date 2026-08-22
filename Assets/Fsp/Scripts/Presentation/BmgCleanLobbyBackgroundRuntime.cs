@@ -5,10 +5,11 @@ using UnityEngine.UI;
 
 namespace Fsp.Presentation
 {
-    /// <summary>Clean-build guard: removes all legacy FSP lobby artwork and keeps the approved BMG presentation only.</summary>
+    /// <summary>Strict BMG lobby background: legacy FSP art is disabled and the approved modern BMG art is used.</summary>
     public sealed class BmgCleanLobbyBackgroundRuntime : MonoBehaviour
     {
         private static BmgCleanLobbyBackgroundRuntime instance;
+        private Texture2D modernLobby;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -17,6 +18,7 @@ namespace Fsp.Presentation
             var host = new GameObject("BMG_CleanLobbyBackgroundRuntime");
             DontDestroyOnLoad(host);
             instance = host.AddComponent<BmgCleanLobbyBackgroundRuntime>();
+            instance.modernLobby = Resources.Load<Texture2D>("BMG/UI/bmg_lobby_modern");
             SceneManager.sceneLoaded += instance.OnSceneLoaded;
             instance.StartCoroutine(instance.ApplyDelayed());
         }
@@ -33,7 +35,7 @@ namespace Fsp.Presentation
         private IEnumerator ApplyDelayed()
         {
             if (!string.Equals(SceneManager.GetActiveScene().name, "Lobby", System.StringComparison.OrdinalIgnoreCase)) yield break;
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 10; i++)
             {
                 yield return null;
                 Apply();
@@ -42,33 +44,33 @@ namespace Fsp.Presentation
             Apply();
         }
 
-        private static void Apply()
+        private void Apply()
         {
             GameObject legacy = GameObject.Find("FSP_FIXED_LOBBY_ART");
             if (legacy != null)
             {
-                var sr = legacy.GetComponent<SpriteRenderer>();
-                if (sr != null) sr.enabled = false;
+                foreach (var renderer in legacy.GetComponentsInChildren<Renderer>(true))
+                    if (renderer != null) renderer.enabled = false;
                 legacy.SetActive(false);
             }
 
+            if (modernLobby == null)
+                modernLobby = Resources.Load<Texture2D>("BMG/UI/bmg_lobby_modern");
+
             GameObject bg = GameObject.Find("LobbyBackground");
-            if (bg != null)
-            {
-                var raw = bg.GetComponent<RawImage>();
-                if (raw != null)
-                {
-                    raw.texture = null;
-                    raw.color = new Color(.008f, .015f, .023f, 1f);
-                    raw.raycastTarget = false;
-                }
-                var image = bg.GetComponent<Image>();
-                if (image != null)
-                {
-                    image.sprite = null;
-                    image.color = new Color(.008f, .015f, .023f, 1f);
-                }
-            }
+            if (bg == null || modernLobby == null) return;
+
+            var raw = bg.GetComponent<RawImage>();
+            if (raw == null) raw = bg.AddComponent<RawImage>();
+            raw.texture = modernLobby;
+            raw.color = Color.white;
+            raw.uvRect = new Rect(0f, 0f, 1f, 1f);
+            raw.raycastTarget = false;
+
+            var image = bg.GetComponent<Image>();
+            if (image != null) image.enabled = false;
+
+            bg.transform.SetAsFirstSibling();
         }
     }
 }
