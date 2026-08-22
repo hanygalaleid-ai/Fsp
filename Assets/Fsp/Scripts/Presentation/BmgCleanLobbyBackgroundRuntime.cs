@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 namespace Fsp.Presentation
 {
-    /// <summary>Strict BMG lobby background. Always creates a full-screen approved BMG background and never falls back to legacy FSP art.</summary>
+    /// <summary>Strict BMG lobby background. Keeps only the approved full-screen background and purges obsolete runtime overlays.</summary>
     public sealed class BmgCleanLobbyBackgroundRuntime : MonoBehaviour
     {
         private static BmgCleanLobbyBackgroundRuntime instance;
@@ -69,8 +69,17 @@ namespace Fsp.Presentation
             return anyCanvas != null ? anyCanvas.GetComponent<RectTransform>() : null;
         }
 
+        private static void PurgeObsoleteOverlay(string objectName)
+        {
+            GameObject go = GameObject.Find(objectName);
+            if (go != null) Destroy(go);
+        }
+
         private void Apply()
         {
+            PurgeObsoleteOverlay("BMG_RealisticLogo");
+            PurgeObsoleteOverlay("BMG_RealisticCharacterPreview");
+
             GameObject legacy = GameObject.Find("FSP_FIXED_LOBBY_ART");
             if (legacy != null) legacy.SetActive(false);
 
