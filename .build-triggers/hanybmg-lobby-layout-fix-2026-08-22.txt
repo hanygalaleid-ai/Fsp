@@ -1,0 +1,2 @@
+BMG lobby full-screen background + corrected realistic character/weapon preview layout.
+Do not treat low-poly in-match models as final realistic 3D.
