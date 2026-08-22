@@ -2,26 +2,20 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using Fsp.Lobby;
 
 namespace Fsp.Presentation
 {
     /// <summary>
-    /// Approved BMG presentation art only. Uses the six selected character renders and five selected weapon renders.
-    /// The live controls remain functional above the modern backgrounds.
+    /// BMG lobby art helper. Runtime creation of lobby logo/character overlays is intentionally disabled.
+    /// The lobby background and authored UI own the main screen. This component only decorates the loadout modal.
     /// </summary>
     public sealed class BmgRealisticArtRuntime : MonoBehaviour
     {
         private static BmgRealisticArtRuntime instance;
-        private Texture2D logoTexture;
-        private Texture2D characterAtlas;
         private Texture2D weaponAtlas;
         private Texture2D loadoutTexture;
-        private RawImage logoImage;
-        private RawImage characterImage;
         private RawImage weaponImage;
         private RawImage loadoutBackgroundImage;
-        private LobbyState boundLobbyState;
         private float nextRefresh;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -37,28 +31,18 @@ namespace Fsp.Presentation
 
         private void Awake()
         {
-            logoTexture = Resources.Load<Texture2D>("UI/bmg_app_icon");
-            characterAtlas = Resources.Load<Texture2D>("BMG/Characters/bmg_characters_6_atlas");
             weaponAtlas = Resources.Load<Texture2D>("BMG/Weapons/bmg_weapons_5_atlas");
             loadoutTexture = Resources.Load<Texture2D>("BMG/UI/bmg_loadout_modern");
         }
 
         private void OnDestroy()
         {
-            if (boundLobbyState != null) boundLobbyState.Changed -= RefreshCharacter;
             SceneManager.sceneLoaded -= OnSceneLoaded;
             if (instance == this) instance = null;
         }
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            if (boundLobbyState != null)
-            {
-                boundLobbyState.Changed -= RefreshCharacter;
-                boundLobbyState = null;
-            }
-            logoImage = null;
-            characterImage = null;
             weaponImage = null;
             loadoutBackgroundImage = null;
             StartCoroutine(RefreshDelayed());
@@ -69,9 +53,9 @@ namespace Fsp.Presentation
             yield return null;
             yield return null;
             yield return new WaitForSecondsRealtime(.25f);
-            RefreshSceneArt();
+            RefreshLoadoutArt();
             yield return new WaitForSecondsRealtime(.75f);
-            RefreshSceneArt();
+            RefreshLoadoutArt();
         }
 
         private void Update()
@@ -79,129 +63,15 @@ namespace Fsp.Presentation
             if (Time.unscaledTime < nextRefresh) return;
             nextRefresh = Time.unscaledTime + .35f;
             if (!string.Equals(SceneManager.GetActiveScene().name, "Lobby", System.StringComparison.OrdinalIgnoreCase)) return;
-            BindLobbyState();
-            RefreshWeaponPreview();
+            RefreshLoadoutArt();
         }
 
-        private void RefreshSceneArt()
+        private void RefreshLoadoutArt()
         {
             if (!string.Equals(SceneManager.GetActiveScene().name, "Lobby", System.StringComparison.OrdinalIgnoreCase)) return;
-            if (characterAtlas == null) characterAtlas = Resources.Load<Texture2D>("BMG/Characters/bmg_characters_6_atlas");
             if (weaponAtlas == null) weaponAtlas = Resources.Load<Texture2D>("BMG/Weapons/bmg_weapons_5_atlas");
             if (loadoutTexture == null) loadoutTexture = Resources.Load<Texture2D>("BMG/UI/bmg_loadout_modern");
-            CreateLobbyLogo();
-            CreateCharacterPreview();
-            BindLobbyState();
-            RefreshCharacter();
             RefreshWeaponPreview();
-        }
-
-        private static RectTransform FindLobbyRoot()
-        {
-            GameObject safe = GameObject.Find("SafeRoot");
-            if (safe != null) return safe.GetComponent<RectTransform>();
-            GameObject canvas = GameObject.Find("ProductionLobbyCanvas");
-            return canvas != null ? canvas.GetComponent<RectTransform>() : null;
-        }
-
-        private void CreateLobbyLogo()
-        {
-            if (logoTexture == null || logoImage != null) return;
-            RectTransform root = FindLobbyRoot();
-            if (root == null) return;
-            GameObject existing = GameObject.Find("BMG_RealisticLogo");
-            if (existing != null) { logoImage = existing.GetComponent<RawImage>(); return; }
-
-            GameObject go = new("BMG_RealisticLogo", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
-            go.transform.SetParent(root, false);
-            RectTransform rt = go.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(.025f, .79f);
-            rt.anchorMax = new Vector2(.13f, .965f);
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
-            AspectRatioFitter fit = go.GetComponent<AspectRatioFitter>();
-            fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-            fit.aspectRatio = 1f;
-            logoImage = go.GetComponent<RawImage>();
-            logoImage.texture = logoTexture;
-            logoImage.color = Color.white;
-            logoImage.raycastTarget = false;
-            go.transform.SetAsLastSibling();
-        }
-
-        private void CreateCharacterPreview()
-        {
-            if (characterAtlas == null || characterImage != null) return;
-            RectTransform root = FindLobbyRoot();
-            if (root == null) return;
-            GameObject existing = GameObject.Find("BMG_RealisticCharacterPreview");
-            if (existing != null)
-            {
-                characterImage = existing.GetComponent<RawImage>();
-                if (characterImage != null)
-                {
-                    characterImage.texture = characterAtlas;
-                    ApplyCharacterLayout(characterImage.rectTransform);
-                }
-                return;
-            }
-
-            GameObject go = new("BMG_RealisticCharacterPreview", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
-            go.transform.SetParent(root, false);
-            RectTransform rt = go.GetComponent<RectTransform>();
-            ApplyCharacterLayout(rt);
-            AspectRatioFitter fit = go.GetComponent<AspectRatioFitter>();
-            fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-            fit.aspectRatio = 2f / 3f;
-            characterImage = go.GetComponent<RawImage>();
-            characterImage.texture = characterAtlas;
-            characterImage.color = Color.white;
-            characterImage.raycastTarget = false;
-            go.transform.SetSiblingIndex(Mathf.Min(2, root.childCount - 1));
-        }
-
-        private static void ApplyCharacterLayout(RectTransform rt)
-        {
-            if (rt == null) return;
-            rt.anchorMin = new Vector2(.405f, .16f);
-            rt.anchorMax = new Vector2(.595f, .88f);
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
-            rt.localScale = Vector3.one;
-        }
-
-        private void BindLobbyState()
-        {
-            LobbyState state = LobbyState.Instance;
-            if (state == null || state == boundLobbyState) return;
-            if (boundLobbyState != null) boundLobbyState.Changed -= RefreshCharacter;
-            boundLobbyState = state;
-            boundLobbyState.Changed += RefreshCharacter;
-            RefreshCharacter();
-        }
-
-        private void RefreshCharacter()
-        {
-            if (characterImage == null || characterAtlas == null) return;
-            string id = LobbyState.Instance != null ? LobbyState.Instance.SelectedCharacterId : "soldier_01";
-            characterImage.texture = characterAtlas;
-            characterImage.uvRect = AtlasRect(CharacterTile(id), 3, 2);
-            characterImage.color = Color.white;
-            ApplyCharacterLayout(characterImage.rectTransform);
-        }
-
-        private static int CharacterTile(string id)
-        {
-            switch ((id ?? string.Empty).ToLowerInvariant())
-            {
-                case "soldier_01": return 0;
-                case "soldier_02": return 1;
-                case "soldier_03": return 2;
-                case "soldier_04": return 3;
-                case "soldier_05": return 4;
-                case "soldier_06": return 5;
-                default: return 0;
-            }
         }
 
         private void RefreshWeaponPreview()
@@ -256,7 +126,7 @@ namespace Fsp.Presentation
 
             weaponImage.gameObject.SetActive(true);
             weaponImage.texture = weaponAtlas;
-            weaponImage.uvRect = AtlasRect(WeaponTile(LobbyGameplayProgress.LoadoutName), 5, 1);
+            weaponImage.uvRect = AtlasRect(WeaponTile(Fsp.Lobby.LobbyGameplayProgress.LoadoutName), 5, 1);
             weaponImage.transform.SetAsLastSibling();
         }
 
