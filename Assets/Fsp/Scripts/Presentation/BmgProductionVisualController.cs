@@ -10,15 +10,15 @@ using UnityEngine.SceneManagement;
 namespace Fsp.Presentation
 {
     /// <summary>
-    /// Production-only visual authority for the Match scene.
-    /// Gameplay/colliders may still be created by compatibility systems, but their legacy renderers are hidden.
-    /// Only assets under Resources/Models/BMG/Production are allowed to become visible production art.
+    /// Production-only visual authority for Match. Compatibility gameplay/colliders may exist,
+    /// but only assets under Resources/Models/BMG/Production are allowed to render.
     /// </summary>
     public sealed class BmgProductionVisualController : MonoBehaviour
     {
-        private const string ProductionRoot = "BMG_PRODUCTION_VISUAL";
+        private const string ProductionRoot = "BMG_PRODUCTION_";
         private const string EnvironmentPath = "Models/BMG/Production/bmg_sunscar_environment";
         private const string PlanePath = "Models/BMG/Production/bmg_transport_plane";
+        private const string ParachutePath = "Models/BMG/Production/bmg_parachute";
         private const string BuggyPath = "Models/BMG/Production/bmg_buggy";
         private const string RiflePath = "Models/BMG/Production/bmg_assault_rifle";
         private const string SmgPath = "Models/BMG/Production/bmg_smg";
@@ -70,7 +70,10 @@ namespace Fsp.Presentation
             EnsureProductionEnvironment();
 
             foreach (MatchParticipant participant in FindObjectsByType<MatchParticipant>(FindObjectsSortMode.None))
+            {
                 ApplyCharacter(participant);
+                ApplyParachute(participant);
+            }
 
             foreach (DropPlaneController plane in FindObjectsByType<DropPlaneController>(FindObjectsSortMode.None))
                 ApplyModel(plane.transform, PlanePath, "BMG_PRODUCTION_PLANE", Vector3.one);
@@ -93,8 +96,26 @@ namespace Fsp.Presentation
             if (!string.IsNullOrWhiteSpace(id) && id.StartsWith("soldier_", StringComparison.OrdinalIgnoreCase))
                 int.TryParse(id.Substring("soldier_".Length), out index);
             index = Mathf.Clamp(index, 1, 6);
-            string path = $"Models/BMG/Production/bmg_character_{index:00}";
-            ApplyModel(participant.transform, path, "BMG_PRODUCTION_CHARACTER", Vector3.one);
+            ApplyModel(participant.transform, $"Models/BMG/Production/bmg_character_{index:00}", "BMG_PRODUCTION_CHARACTER", Vector3.one);
+        }
+
+        private static void ApplyParachute(MatchParticipant participant)
+        {
+            if (participant == null) return;
+            ParachuteController controller = participant.GetComponent<ParachuteController>();
+            if (controller == null) return;
+            Transform marker = participant.transform.Find("BMG_PRODUCTION_PARACHUTE");
+            if (marker == null)
+            {
+                GameObject prefab = Resources.Load<GameObject>(ParachutePath);
+                if (prefab == null) return;
+                GameObject model = Instantiate(prefab, participant.transform, false);
+                model.name = "BMG_PRODUCTION_PARACHUTE";
+                model.transform.localPosition = Vector3.zero;
+                model.transform.localRotation = Quaternion.identity;
+                marker = model.transform;
+            }
+            controller.ConfigureVisual(marker.gameObject);
         }
 
         private static void EnsureProductionEnvironment()
@@ -114,7 +135,6 @@ namespace Fsp.Presentation
                 GameObject root = GameObject.Find(rootName);
                 if (root != null) HideLegacyRenderers(root.transform);
             }
-
             GameObject safetyGround = GameObject.Find("RuntimeSafetyGround");
             if (safetyGround != null) HideLegacyRenderers(safetyGround.transform);
         }
@@ -129,10 +149,8 @@ namespace Fsp.Presentation
                 SetProductionRenderers(marker, true);
                 return;
             }
-
             GameObject prefab = Resources.Load<GameObject>(resourcePath);
             if (prefab == null) return;
-
             GameObject model = Instantiate(prefab, owner, false);
             model.name = markerName;
             model.transform.localPosition = Vector3.zero;
@@ -145,21 +163,13 @@ namespace Fsp.Presentation
         {
             if (root == null) return;
             foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
-            {
-                if (renderer == null || IsProductionRenderer(renderer.transform)) continue;
-                renderer.enabled = false;
-            }
+                if (renderer != null && !IsProductionRenderer(renderer.transform)) renderer.enabled = false;
         }
 
         private static bool IsProductionRenderer(Transform transform)
         {
-            Transform current = transform;
-            while (current != null)
-            {
-                if (current.name.StartsWith(ProductionRoot, StringComparison.Ordinal) ||
-                    current.name.StartsWith("BMG_PRODUCTION_", StringComparison.Ordinal)) return true;
-                current = current.parent;
-            }
+            for (Transform current = transform; current != null; current = current.parent)
+                if (current.name.StartsWith(ProductionRoot, StringComparison.Ordinal)) return true;
             return false;
         }
 
