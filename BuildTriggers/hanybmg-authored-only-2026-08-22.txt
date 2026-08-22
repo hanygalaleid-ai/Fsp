@@ -1,0 +1,4 @@
+Clean rebuild request for hanybmg authored-only presentation.
+Procedural character, vehicle, plane and weapon visual generation is disabled.
+Use branch bmg/build149-authored-3d and this commit or later.
+Expected Android output: hanybmg.apk
