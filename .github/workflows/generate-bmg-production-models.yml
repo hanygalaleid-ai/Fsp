@@ -1,0 +1,53 @@
+name: Generate BMG Production Models
+
+on:
+  push:
+    branches:
+      - bmg/build149-authored-3d
+    paths:
+      - tools/generate_bmg_production_models.py
+      - .github/workflows/generate-bmg-production-models.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: bmg/build149-authored-3d
+          fetch-depth: 0
+
+      - name: Generate static production OBJ pack
+        run: python3 tools/generate_bmg_production_models.py
+
+      - name: Verify all required production models
+        shell: bash
+        run: |
+          set -euo pipefail
+          d='Assets/Fsp/Art/Resources/Models/BMG/Production'
+          for f in \
+            bmg_sunscar_environment bmg_transport_plane bmg_parachute bmg_buggy \
+            bmg_assault_rifle bmg_smg \
+            bmg_character_01 bmg_character_02 bmg_character_03 \
+            bmg_character_04 bmg_character_05 bmg_character_06; do
+            test -s "$d/$f.obj"
+          done
+          find "$d" -name '*.obj' -type f -printf '%f %s bytes\n' | sort
+
+      - name: Commit generated production assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'hanybmg-production-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add Assets/Fsp/Art/Resources/Models/BMG/Production/*.obj
+          if git diff --cached --quiet; then
+            echo 'Production models already current.'
+            exit 0
+          fi
+          git commit -m 'BMG production: add static mid-poly 3D model pack'
+          git push origin HEAD:bmg/build149-authored-3d
