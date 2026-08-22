@@ -112,13 +112,16 @@ namespace Fsp.Presentation
             GameObject existing = GameObject.Find("BMG_RealisticLogo");
             if (existing != null) { logoImage = existing.GetComponent<RawImage>(); return; }
 
-            GameObject go = new("BMG_RealisticLogo", typeof(RectTransform), typeof(RawImage));
+            GameObject go = new("BMG_RealisticLogo", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
             go.transform.SetParent(root, false);
             RectTransform rt = go.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(.015f, .785f);
-            rt.anchorMax = new Vector2(.16f, .985f);
+            rt.anchorMin = new Vector2(.025f, .79f);
+            rt.anchorMax = new Vector2(.13f, .965f);
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
+            AspectRatioFitter fit = go.GetComponent<AspectRatioFitter>();
+            fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fit.aspectRatio = 1f;
             logoImage = go.GetComponent<RawImage>();
             logoImage.texture = logoTexture;
             logoImage.color = Color.white;
@@ -135,25 +138,36 @@ namespace Fsp.Presentation
             if (existing != null)
             {
                 characterImage = existing.GetComponent<RawImage>();
-                if (characterImage != null) characterImage.texture = characterAtlas;
+                if (characterImage != null)
+                {
+                    characterImage.texture = characterAtlas;
+                    ApplyCharacterLayout(characterImage.rectTransform);
+                }
                 return;
             }
 
             GameObject go = new("BMG_RealisticCharacterPreview", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
             go.transform.SetParent(root, false);
             RectTransform rt = go.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(.31f, .145f);
-            rt.anchorMax = new Vector2(.70f, .93f);
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
+            ApplyCharacterLayout(rt);
             AspectRatioFitter fit = go.GetComponent<AspectRatioFitter>();
             fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-            fit.aspectRatio = 1f;
+            fit.aspectRatio = 2f / 3f;
             characterImage = go.GetComponent<RawImage>();
             characterImage.texture = characterAtlas;
             characterImage.color = Color.white;
             characterImage.raycastTarget = false;
             go.transform.SetSiblingIndex(Mathf.Min(2, root.childCount - 1));
+        }
+
+        private static void ApplyCharacterLayout(RectTransform rt)
+        {
+            if (rt == null) return;
+            rt.anchorMin = new Vector2(.405f, .16f);
+            rt.anchorMax = new Vector2(.595f, .88f);
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            rt.localScale = Vector3.one;
         }
 
         private void BindLobbyState()
@@ -170,19 +184,22 @@ namespace Fsp.Presentation
         {
             if (characterImage == null || characterAtlas == null) return;
             string id = LobbyState.Instance != null ? LobbyState.Instance.SelectedCharacterId : "soldier_01";
+            characterImage.texture = characterAtlas;
             characterImage.uvRect = AtlasRect(CharacterTile(id), 3, 2);
+            characterImage.color = Color.white;
+            ApplyCharacterLayout(characterImage.rectTransform);
         }
 
         private static int CharacterTile(string id)
         {
             switch ((id ?? string.Empty).ToLowerInvariant())
             {
-                case "soldier_01": return 0; // male 1
-                case "soldier_02": return 1; // male 2
-                case "soldier_03": return 2; // male 3
-                case "soldier_04": return 3; // female 1
-                case "soldier_05": return 4; // female 2
-                case "soldier_06": return 5; // female 3
+                case "soldier_01": return 0;
+                case "soldier_02": return 1;
+                case "soldier_03": return 2;
+                case "soldier_04": return 3;
+                case "soldier_05": return 4;
+                case "soldier_06": return 5;
                 default: return 0;
             }
         }
@@ -230,7 +247,7 @@ namespace Fsp.Presentation
                 rt.offsetMax = Vector2.zero;
                 AspectRatioFitter fit = go.GetComponent<AspectRatioFitter>();
                 fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-                fit.aspectRatio = 5f;
+                fit.aspectRatio = 1.6f;
                 weaponImage = go.GetComponent<RawImage>();
                 weaponImage.texture = weaponAtlas;
                 weaponImage.color = Color.white;
@@ -238,6 +255,7 @@ namespace Fsp.Presentation
             }
 
             weaponImage.gameObject.SetActive(true);
+            weaponImage.texture = weaponAtlas;
             weaponImage.uvRect = AtlasRect(WeaponTile(LobbyGameplayProgress.LoadoutName), 5, 1);
             weaponImage.transform.SetAsLastSibling();
         }
