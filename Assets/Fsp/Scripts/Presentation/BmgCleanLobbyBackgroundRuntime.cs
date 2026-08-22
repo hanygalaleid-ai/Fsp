@@ -5,11 +5,12 @@ using UnityEngine.UI;
 
 namespace Fsp.Presentation
 {
-    /// <summary>Strict BMG lobby background: legacy FSP art is disabled and the approved modern BMG art is used.</summary>
+    /// <summary>Strict BMG lobby background. Always creates a full-screen approved BMG background and never falls back to legacy FSP art.</summary>
     public sealed class BmgCleanLobbyBackgroundRuntime : MonoBehaviour
     {
         private static BmgCleanLobbyBackgroundRuntime instance;
         private Texture2D modernLobby;
+        private RawImage runtimeBackground;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
@@ -30,47 +31,88 @@ namespace Fsp.Presentation
             instance = null;
         }
 
-        private void OnSceneLoaded(Scene scene, LoadSceneMode mode) => StartCoroutine(ApplyDelayed());
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            runtimeBackground = null;
+            StartCoroutine(ApplyDelayed());
+        }
 
         private IEnumerator ApplyDelayed()
         {
             if (!string.Equals(SceneManager.GetActiveScene().name, "Lobby", System.StringComparison.OrdinalIgnoreCase)) yield break;
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 12; i++)
             {
                 yield return null;
                 Apply();
             }
-            yield return new WaitForSecondsRealtime(.5f);
+            yield return new WaitForSecondsRealtime(.75f);
             Apply();
+        }
+
+        private static RectTransform FindLobbyRoot()
+        {
+            GameObject safe = GameObject.Find("SafeRoot");
+            if (safe != null)
+            {
+                RectTransform rt = safe.GetComponent<RectTransform>();
+                if (rt != null) return rt;
+            }
+
+            GameObject canvas = GameObject.Find("ProductionLobbyCanvas");
+            if (canvas != null)
+            {
+                RectTransform rt = canvas.GetComponent<RectTransform>();
+                if (rt != null) return rt;
+            }
+
+            Canvas anyCanvas = FindFirstObjectByType<Canvas>();
+            return anyCanvas != null ? anyCanvas.GetComponent<RectTransform>() : null;
         }
 
         private void Apply()
         {
             GameObject legacy = GameObject.Find("FSP_FIXED_LOBBY_ART");
-            if (legacy != null)
-            {
-                foreach (var renderer in legacy.GetComponentsInChildren<Renderer>(true))
-                    if (renderer != null) renderer.enabled = false;
-                legacy.SetActive(false);
-            }
+            if (legacy != null) legacy.SetActive(false);
 
             if (modernLobby == null)
                 modernLobby = Resources.Load<Texture2D>("BMG/UI/bmg_lobby_modern");
+            if (modernLobby == null) return;
 
-            GameObject bg = GameObject.Find("LobbyBackground");
-            if (bg == null || modernLobby == null) return;
+            RectTransform root = FindLobbyRoot();
+            if (root == null) return;
 
-            var raw = bg.GetComponent<RawImage>();
-            if (raw == null) raw = bg.AddComponent<RawImage>();
-            raw.texture = modernLobby;
-            raw.color = Color.white;
-            raw.uvRect = new Rect(0f, 0f, 1f, 1f);
-            raw.raycastTarget = false;
+            if (runtimeBackground == null)
+            {
+                GameObject existing = GameObject.Find("BMG_ModernLobbyBackground");
+                if (existing != null) runtimeBackground = existing.GetComponent<RawImage>();
+            }
 
-            var image = bg.GetComponent<Image>();
-            if (image != null) image.enabled = false;
+            if (runtimeBackground == null)
+            {
+                GameObject bgObject = new("BMG_ModernLobbyBackground", typeof(RectTransform), typeof(RawImage));
+                bgObject.transform.SetParent(root, false);
+                RectTransform rt = bgObject.GetComponent<RectTransform>();
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero;
+                rt.offsetMax = Vector2.zero;
+                runtimeBackground = bgObject.GetComponent<RawImage>();
+            }
 
-            bg.transform.SetAsFirstSibling();
+            runtimeBackground.texture = modernLobby;
+            runtimeBackground.color = Color.white;
+            runtimeBackground.uvRect = new Rect(0f, 0f, 1f, 1f);
+            runtimeBackground.raycastTarget = false;
+            runtimeBackground.transform.SetAsFirstSibling();
+
+            GameObject oldBackground = GameObject.Find("LobbyBackground");
+            if (oldBackground != null && oldBackground != runtimeBackground.gameObject)
+            {
+                Image image = oldBackground.GetComponent<Image>();
+                if (image != null) image.enabled = false;
+                RawImage raw = oldBackground.GetComponent<RawImage>();
+                if (raw != null) raw.enabled = false;
+            }
         }
     }
 }
