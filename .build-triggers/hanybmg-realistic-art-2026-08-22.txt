@@ -1,0 +1,1 @@
+Clean build hanybmg with realistic lobby, character atlas and weapon atlas actually committed to Unity Resources. Use this commit or newer only.
