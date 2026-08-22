@@ -1,0 +1,1 @@
+Build hanybmg from authored-only presentation state. No primitive character/vehicle/plane/weapon visual generation.
