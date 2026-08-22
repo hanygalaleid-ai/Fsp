@@ -1,0 +1,7 @@
+Upload exactly this file into this folder on this staging branch:
+BMG_HQ_2D_APPROVED_2026-08-22.zip
+
+Expected SHA256:
+3aec289dd65ec7cd1d9254650e8283e4947a261f39296405aab2d70c358911f3
+
+The Install BMG HQ 2D Assets workflow will verify the package and each approved image, install the exact bytes into Unity Resources, remove the transfer package, and commit the final assets.
