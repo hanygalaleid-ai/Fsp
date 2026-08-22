@@ -1,0 +1,78 @@
+name: Install BMG HQ 2D Assets
+
+on:
+  push:
+    branches:
+      - staging/bmg-hq2d-transfer-2026-08-22
+    paths:
+      - '.bmg-transfer/BMG_HQ_2D_APPROVED_2026-08-22.zip'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout staging branch
+        uses: actions/checkout@v4
+        with:
+          ref: staging/bmg-hq2d-transfer-2026-08-22
+          fetch-depth: 0
+
+      - name: Verify transfer package
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP='.bmg-transfer/BMG_HQ_2D_APPROVED_2026-08-22.zip'
+          test -f "$ZIP"
+          echo '3aec289dd65ec7cd1d9254650e8283e4947a261f39296405aab2d70c358911f3  '"$ZIP" | sha256sum -c -
+          rm -rf .bmg-transfer/extracted
+          mkdir -p .bmg-transfer/extracted
+          unzip -q "$ZIP" -d .bmg-transfer/extracted
+          ROOT='.bmg-transfer/extracted/BMG_HQ_2D_APPROVED'
+          echo '9f4626c532bf369c6723e6ef5834eea1aaa8b2ec8b4ac1cc183b74575e52903a  '"$ROOT/UI/bmg_lobby_modern.jpg" | sha256sum -c -
+          echo '43343c86884a573d7aa59576f4d76c96f961fadf29c2bedbdf74bce5a586c3b6  '"$ROOT/Characters/bmg_characters_6_atlas.jpg" | sha256sum -c -
+          echo 'de6ca146196a177517f655d1f63bc1df944257ea24efa79777544199bad5dcca  '"$ROOT/Weapons/bmg_weapons_5_atlas.jpg" | sha256sum -c -
+
+      - name: Install exact approved files
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT='.bmg-transfer/extracted/BMG_HQ_2D_APPROVED'
+          mkdir -p Assets/Fsp/Art/Resources/BMG/UI
+          mkdir -p Assets/Fsp/Art/Resources/BMG/Characters
+          mkdir -p Assets/Fsp/Art/Resources/BMG/Weapons
+          cp -f "$ROOT/UI/bmg_lobby_modern.jpg" Assets/Fsp/Art/Resources/BMG/UI/bmg_lobby_modern.jpg
+          cp -f "$ROOT/Characters/bmg_characters_6_atlas.jpg" Assets/Fsp/Art/Resources/BMG/Characters/bmg_characters_6_atlas.jpg
+          cp -f "$ROOT/Weapons/bmg_weapons_5_atlas.jpg" Assets/Fsp/Art/Resources/BMG/Weapons/bmg_weapons_5_atlas.jpg
+          rm -rf .bmg-transfer
+
+      - name: Verify installed sizes and hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(stat -c%s Assets/Fsp/Art/Resources/BMG/UI/bmg_lobby_modern.jpg)" -eq 142668
+          test "$(stat -c%s Assets/Fsp/Art/Resources/BMG/Characters/bmg_characters_6_atlas.jpg)" -eq 151532
+          test "$(stat -c%s Assets/Fsp/Art/Resources/BMG/Weapons/bmg_weapons_5_atlas.jpg)" -eq 46847
+          echo '9f4626c532bf369c6723e6ef5834eea1aaa8b2ec8b4ac1cc183b74575e52903a  Assets/Fsp/Art/Resources/BMG/UI/bmg_lobby_modern.jpg' | sha256sum -c -
+          echo '43343c86884a573d7aa59576f4d76c96f961fadf29c2bedbdf74bce5a586c3b6  Assets/Fsp/Art/Resources/BMG/Characters/bmg_characters_6_atlas.jpg' | sha256sum -c -
+          echo 'de6ca146196a177517f655d1f63bc1df944257ea24efa79777544199bad5dcca  Assets/Fsp/Art/Resources/BMG/Weapons/bmg_weapons_5_atlas.jpg' | sha256sum -c -
+
+      - name: Commit verified HQ assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'hanybmg-hq-assets-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add Assets/Fsp/Art/Resources/BMG/UI/bmg_lobby_modern.jpg \
+                  Assets/Fsp/Art/Resources/BMG/Characters/bmg_characters_6_atlas.jpg \
+                  Assets/Fsp/Art/Resources/BMG/Weapons/bmg_weapons_5_atlas.jpg \
+                  .bmg-transfer || true
+          if git diff --cached --quiet; then
+            echo 'No changes to commit.'
+          else
+            git commit -m 'BMG HQ 2D: install exact approved lobby character and weapon art'
+            git push origin HEAD:staging/bmg-hq2d-transfer-2026-08-22
+          fi
