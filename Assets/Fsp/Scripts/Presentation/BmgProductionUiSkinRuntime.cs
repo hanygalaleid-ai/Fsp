@@ -6,7 +6,7 @@ using UnityEngine.UI;
 namespace Fsp.Presentation
 {
     /// <summary>
-    /// Production BMG metallic UI skin. Keeps existing callbacks/layouts while upgrading Lobby + Match presentation.
+    /// Production BMG metallic UI skin. Uses checked-in static BMG assets only; no runtime texture generation.
     /// </summary>
     public sealed class BmgProductionUiSkinRuntime : MonoBehaviour
     {
@@ -24,7 +24,7 @@ namespace Fsp.Presentation
         private static void Bootstrap()
         {
             if (instance != null) return;
-            var go = new GameObject("BMG_ProductionUiSkinRuntime");
+            GameObject go = new("BMG_ProductionUiSkinRuntime");
             DontDestroyOnLoad(go);
             instance = go.AddComponent<BmgProductionUiSkinRuntime>();
             SceneManager.sceneLoaded += instance.OnSceneLoaded;
@@ -44,95 +44,61 @@ namespace Fsp.Presentation
         {
             yield return null;
             yield return null;
-            yield return new WaitForSecondsRealtime(0.08f);
+            yield return new WaitForSecondsRealtime(.08f);
             EnsureSprites();
             ApplyAll();
-            yield return new WaitForSecondsRealtime(0.35f);
+            yield return new WaitForSecondsRealtime(.35f);
             ApplyAll();
-            yield return new WaitForSecondsRealtime(0.90f);
+            yield return new WaitForSecondsRealtime(.90f);
             ApplyAll();
         }
 
         private static void EnsureSprites()
         {
             if (metalButton != null) return;
-            metalPanel = BuildSprite("BMG_MetalPanel", 96, 96, 15, false, false);
-            metalButton = BuildSprite("BMG_MetalButton", 96, 64, 13, false, true);
-            orangeButton = BuildSprite("BMG_OrangeButton", 96, 64, 13, true, true);
-            roundMetal = BuildSprite("BMG_RoundMetal", 96, 96, 46, false, true);
-            roundOrange = BuildSprite("BMG_RoundOrange", 96, 96, 46, true, true);
+            metalPanel = LoadSprite("BMG/UI/bmg_ui_panel_static");
+            metalButton = LoadSprite("BMG/UI/bmg_ui_button_static");
+            orangeButton = LoadSprite("BMG/UI/bmg_ui_button_orange_static");
+            roundMetal = LoadSprite("BMG/UI/bmg_ui_round_static");
+            roundOrange = LoadSprite("BMG/UI/bmg_ui_round_orange_static");
+            if (metalPanel == null || metalButton == null || orangeButton == null || roundMetal == null || roundOrange == null)
+                Debug.LogError("BMG production UI static skin assets are missing or not imported as sprites.");
         }
 
-        private static Sprite BuildSprite(string name, int w, int h, int radius, bool orange, bool bevel)
+        private static Sprite LoadSprite(string resourcePath)
         {
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false, true)
-            {
-                name = name + "Tex",
-                wrapMode = TextureWrapMode.Clamp,
-                filterMode = FilterMode.Bilinear,
-                hideFlags = HideFlags.DontSave
-            };
-            var pixels = new Color32[w * h];
-            for (int y = 0; y < h; y++)
-            {
-                for (int x = 0; x < w; x++)
-                {
-                    float dx = Mathf.Max(radius - x, x - (w - 1 - radius));
-                    float dy = Mathf.Max(radius - y, y - (h - 1 - radius));
-                    bool corner = dx > 0f && dy > 0f && dx * dx + dy * dy > radius * radius;
-                    if (corner) { pixels[y * w + x] = new Color32(0, 0, 0, 0); continue; }
-                    int edge = Mathf.Min(Mathf.Min(x, w - 1 - x), Mathf.Min(y, h - 1 - y));
-                    float vertical = y / (float)(h - 1);
-                    Color c;
-                    if (orange)
-                    {
-                        c = Color.Lerp(new Color(0.34f, 0.075f, 0.008f, 1f), new Color(0.95f, 0.32f, 0.018f, 1f), 0.28f + vertical * 0.58f);
-                        if (edge <= 2) c = new Color(1f, 0.66f, 0.16f, 1f);
-                        else if (edge <= 5 && bevel) c *= 1.17f;
-                    }
-                    else
-                    {
-                        c = Color.Lerp(new Color(0.028f, 0.032f, 0.036f, 0.98f), new Color(0.11f, 0.105f, 0.09f, 0.98f), vertical);
-                        if (edge <= 2) c = new Color(0.52f, 0.39f, 0.23f, 1f);
-                        else if (edge <= 5 && bevel) c = new Color(0.20f, 0.18f, 0.145f, 1f);
-                    }
-                    pixels[y * w + x] = c;
-                }
-            }
-            tex.SetPixels32(pixels);
-            tex.Apply(false, true);
-            var border = new Vector4(radius + 3, radius + 3, radius + 3, radius + 3);
-            var sprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(.5f, .5f), 100f, 0, SpriteMeshType.FullRect, border);
-            sprite.name = name;
-            sprite.hideFlags = HideFlags.DontSave;
-            return sprite;
+            Sprite sprite = Resources.Load<Sprite>(resourcePath);
+            if (sprite != null) return sprite;
+            Texture2D texture = Resources.Load<Texture2D>(resourcePath);
+            if (texture == null) return null;
+            return Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(.5f, .5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(12f, 12f, 12f, 12f));
         }
 
         private static void ApplyAll()
         {
-            foreach (var button in FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None)) StyleButton(button);
-            foreach (var text in FindObjectsByType<Text>(FindObjectsInactive.Include, FindObjectsSortMode.None)) StyleText(text);
-            foreach (var image in FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None)) StylePanelOrAction(image);
-            foreach (var raw in FindObjectsByType<RawImage>(FindObjectsInactive.Include, FindObjectsSortMode.None)) StyleRawImage(raw);
+            if (metalButton == null) return;
+            foreach (Button button in FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None)) StyleButton(button);
+            foreach (Text text in FindObjectsByType<Text>(FindObjectsInactive.Include, FindObjectsSortMode.None)) StyleText(text);
+            foreach (Image image in FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None)) StylePanelOrAction(image);
         }
 
         private static void StyleButton(Button button)
         {
             if (button == null) return;
-            var image = button.targetGraphic as Image ?? button.GetComponent<Image>();
+            Image image = button.targetGraphic as Image ?? button.GetComponent<Image>();
             if (image == null) return;
             string n = button.gameObject.name.ToLowerInvariant();
-            var label = button.GetComponentInChildren<Text>(true);
+            Text label = button.GetComponentInChildren<Text>(true);
             string t = label != null ? (label.text ?? string.Empty).Trim().ToLowerInvariant() : string.Empty;
             bool primary = ContainsAny(n, "start", "fire", "shoot", "confirm", "equip", "claim") || ContainsAny(t, "start", "ابدأ", "إطلاق", "اطلاق", "تجهيز", "موافق", "استلام");
             bool round = IsSquareish(button.GetComponent<RectTransform>()) && IsCombatAction(n, t);
             ApplyButtonSurface(image, primary, round);
-            var cb = button.colors;
+            ColorBlock cb = button.colors;
             cb.normalColor = Color.white;
-            cb.highlightedColor = primary ? new Color(1.12f, 1.05f, 0.92f, 1f) : new Color(1.12f, 1.10f, 1.04f, 1f);
-            cb.pressedColor = primary ? PressedOrange : new Color(0.66f, 0.66f, 0.63f, 1f);
+            cb.highlightedColor = Color.white;
+            cb.pressedColor = primary ? PressedOrange : new Color(.66f, .66f, .63f, 1f);
             cb.selectedColor = cb.highlightedColor;
-            cb.disabledColor = new Color(0.28f, 0.28f, 0.28f, 0.72f);
+            cb.disabledColor = new Color(.28f, .28f, .28f, .72f);
             cb.colorMultiplier = 1f;
             cb.fadeDuration = .08f;
             button.colors = cb;
@@ -146,7 +112,9 @@ namespace Fsp.Presentation
 
         private static void ApplyButtonSurface(Image image, bool primary, bool round)
         {
-            image.sprite = round ? (primary ? roundOrange : roundMetal) : (primary ? orangeButton : metalButton);
+            Sprite sprite = round ? (primary ? roundOrange : roundMetal) : (primary ? orangeButton : metalButton);
+            if (sprite == null) return;
+            image.sprite = sprite;
             image.type = Image.Type.Sliced;
             image.color = Color.white;
             AddShadow(image.gameObject, primary ? new Color(1f, .28f, .02f, .42f) : new Color(0f, 0f, 0f, .68f), primary ? new Vector2(0, -5) : new Vector2(2, -4));
@@ -155,11 +123,10 @@ namespace Fsp.Presentation
 
         private static void StyleText(Text text)
         {
-            if (text == null || text.transform.parent == null) return;
-            if (text.GetComponentInParent<Button>() != null) return;
+            if (text == null || text.transform.parent == null || text.GetComponentInParent<Button>() != null) return;
             text.color = text.color.a < .2f ? text.color : TextIvory;
             if (text.fontSize >= 22) text.fontStyle = FontStyle.Bold;
-            if (text.fontSize >= 18) AddShadow(text.gameObject, new Color(0, 0, 0, .70f), new Vector2(1.2f, -1.6f));
+            if (text.fontSize >= 18) AddShadow(text.gameObject, new Color(0f, 0f, 0f, .70f), new Vector2(1.2f, -1.6f));
         }
 
         private static void StylePanelOrAction(Image image)
@@ -167,44 +134,21 @@ namespace Fsp.Presentation
             if (image == null || image.GetComponent<Button>() != null) return;
             string n = image.gameObject.name.ToLowerInvariant();
             if (ContainsAny(n, "background", "backdrop", "icon", "portrait", "avatar", "logo", "sprite", "swatch")) return;
-            var rt = image.rectTransform;
+            RectTransform rt = image.rectTransform;
             if (rt == null) return;
-
-            bool action = IsCombatAction(n, string.Empty);
-            if (action)
+            if (IsCombatAction(n, string.Empty))
             {
                 bool primary = ContainsAny(n, "fire", "shoot");
                 ApplyButtonSurface(image, primary, IsSquareish(rt));
-                var label = image.GetComponentInChildren<Text>(true);
-                if (label != null) { label.color = Color.white; label.fontStyle = FontStyle.Bold; }
                 return;
             }
-
-            if (image.color.a < .28f) return;
+            if (image.color.a < .28f || metalPanel == null) return;
             if (ContainsAny(n, "panel", "modal", "profile", "wallet", "bar", "frame", "section", "topbadge"))
             {
                 image.sprite = metalPanel;
                 image.type = Image.Type.Sliced;
                 image.color = Color.white;
                 AddOutline(image.gameObject, new Color(.42f, .31f, .18f, .60f), new Vector2(1f, -1f));
-            }
-        }
-
-        private static void StyleRawImage(RawImage raw)
-        {
-            if (raw == null) return;
-            string n = raw.gameObject.name.ToLowerInvariant();
-            if (n == "movejoystick")
-            {
-                raw.texture = roundMetal.texture;
-                raw.uvRect = new Rect(0, 0, 1, 1);
-                raw.color = new Color(1f, 1f, 1f, .86f);
-            }
-            else if (n == "handle" && raw.transform.parent != null && raw.transform.parent.name == "MoveJoystick")
-            {
-                raw.texture = roundOrange.texture;
-                raw.uvRect = new Rect(0, 0, 1, 1);
-                raw.color = new Color(1f, 1f, 1f, .92f);
             }
         }
 
@@ -215,35 +159,34 @@ namespace Fsp.Presentation
         private static bool IsSquareish(RectTransform rt)
         {
             if (rt == null) return false;
-            var r = rt.rect;
+            Rect r = rt.rect;
             float w = Mathf.Abs(r.width), h = Mathf.Abs(r.height);
-            if (w < 18f || h < 18f) return false;
-            return Mathf.Abs(w - h) / Mathf.Max(w, h) < .28f;
+            return w >= 18f && h >= 18f && Mathf.Abs(w - h) / Mathf.Max(w, h) < .28f;
         }
 
         private static bool ContainsAny(string s, params string[] keys)
         {
             if (string.IsNullOrEmpty(s)) return false;
-            foreach (var k in keys) if (s.Contains(k)) return true;
+            foreach (string key in keys) if (s.Contains(key)) return true;
             return false;
         }
 
         private static void AddShadow(GameObject go, Color color, Vector2 distance)
         {
-            var sh = go.GetComponent<Shadow>();
-            if (sh == null) sh = go.AddComponent<Shadow>();
-            sh.effectColor = color;
-            sh.effectDistance = distance;
-            sh.useGraphicAlpha = true;
+            Shadow shadow = go.GetComponent<Shadow>();
+            if (shadow == null) shadow = go.AddComponent<Shadow>();
+            shadow.effectColor = color;
+            shadow.effectDistance = distance;
+            shadow.useGraphicAlpha = true;
         }
 
         private static void AddOutline(GameObject go, Color color, Vector2 distance)
         {
-            var ol = go.GetComponent<Outline>();
-            if (ol == null) ol = go.AddComponent<Outline>();
-            ol.effectColor = color;
-            ol.effectDistance = distance;
-            ol.useGraphicAlpha = true;
+            Outline outline = go.GetComponent<Outline>();
+            if (outline == null) outline = go.AddComponent<Outline>();
+            outline.effectColor = color;
+            outline.effectDistance = distance;
+            outline.useGraphicAlpha = true;
         }
     }
 }
