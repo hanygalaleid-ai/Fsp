@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 
 namespace Fsp.Presentation
 {
-    /// <summary>Build 149 one-shot environment visual upgrade. Existing colliders/gameplay objects remain authoritative.</summary>
+    /// <summary>Strict BMG environment visuals. Old render geometry is fully hidden; gameplay colliders stay active.</summary>
     public sealed class BmgEnvironmentVisualRuntime : MonoBehaviour
     {
         private const string BarricadePath = "Models/BMG/bmg_barricade_mk1";
@@ -19,7 +19,7 @@ namespace Fsp.Presentation
         private static void Bootstrap()
         {
             if (instance != null) return;
-            GameObject host = new("BMG_EnvironmentVisualRuntime");
+            var host = new GameObject("BMG_StrictEnvironmentVisualRuntime");
             DontDestroyOnLoad(host);
             instance = host.AddComponent<BmgEnvironmentVisualRuntime>();
             SceneManager.sceneLoaded += instance.OnSceneLoaded;
@@ -37,46 +37,53 @@ namespace Fsp.Presentation
 
         private IEnumerator ApplyDelayed()
         {
-            yield return null;
-            yield return null;
-            yield return null;
-            ApplyNamed("Barrier", BarricadePath, "BMG_Barricade_Authored", Vector3.one, new Color(.28f,.25f,.19f));
-            ApplyNamed("Crate", CratePath, "BMG_Crate_Authored", Vector3.one * .85f, new Color(.32f,.20f,.12f));
-            ApplyNamed("QuarryRock", RockPath, "BMG_Rock_Authored", Vector3.one, new Color(.42f,.40f,.36f));
-            ApplyNamed("Office", WarehousePath, "BMG_QuarryOffice_Authored", Vector3.one * .58f, new Color(.29f,.31f,.30f));
-            ApplyNamed("Crusher", CrusherPath, "BMG_Crusher_Authored", Vector3.one * .82f, new Color(.31f,.30f,.27f));
-            ApplyNamed("AircraftWreck", WreckPath, "BMG_AircraftWreck_Authored", Vector3.one, new Color(.24f,.26f,.25f));
-        }
-
-        private static void ApplyNamed(string objectName, string resourcePath, string authoredName, Vector3 scale, Color color)
-        {
-            GameObject prefab = Resources.Load<GameObject>(resourcePath);
-            if (prefab == null) return;
-            Transform[] all = FindObjectsByType<Transform>(FindObjectsSortMode.None);
-            for (int i = 0; i < all.Length; i++)
+            for (int pass = 0; pass < 8; pass++)
             {
-                Transform target = all[i];
-                if (target == null || target.name != objectName || target.Find(authoredName) != null) continue;
-                Renderer renderer = target.GetComponent<Renderer>();
-                if (renderer != null) renderer.enabled = false;
-                GameObject model = Instantiate(prefab, target, false);
-                model.name = authoredName;
-                model.transform.localPosition = Vector3.zero;
-                model.transform.localRotation = Quaternion.identity;
-                model.transform.localScale = scale;
-                ApplyMaterial(model, color);
+                yield return pass == 0 ? null : new WaitForSeconds(.25f);
+                ApplyNamed("Barrier", BarricadePath, "BMG_Barricade_Authored", Vector3.one);
+                ApplyNamed("Crate", CratePath, "BMG_Crate_Authored", Vector3.one * .85f);
+                ApplyNamed("QuarryRock", RockPath, "BMG_Rock_Authored", Vector3.one);
+                ApplyNamed("Office", WarehousePath, "BMG_QuarryOffice_Authored", Vector3.one * .58f);
+                ApplyNamed("Crusher", CrusherPath, "BMG_Crusher_Authored", Vector3.one * .82f);
+                ApplyNamed("AircraftWreck", WreckPath, "BMG_AircraftWreck_Authored", Vector3.one);
             }
         }
 
-        private static void ApplyMaterial(GameObject root, Color color)
+        private static void ApplyNamed(string objectName, string resourcePath, string authoredName, Vector3 scale)
         {
-            Shader shader = Resources.Load<Shader>("Shaders/FspMobileSafe");
-            if (shader == null) shader = Shader.Find("Fsp/MobileSafeLit");
-            if (shader == null) shader = Shader.Find("Standard");
-            if (shader == null) return;
-            Material material = new(shader) { color = color, hideFlags = HideFlags.DontSave };
-            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
-            for (int i = 0; i < renderers.Length; i++) if (renderers[i] != null) renderers[i].sharedMaterial = material;
+            var prefab = Resources.Load<GameObject>(resourcePath);
+            if (prefab == null) return;
+
+            var all = FindObjectsByType<Transform>(FindObjectsSortMode.None);
+            foreach (var target in all)
+            {
+                if (target == null || target.name != objectName) continue;
+
+                var existing = target.Find(authoredName);
+                if (existing == null)
+                {
+                    DisableRenderers(target);
+                    var model = Instantiate(prefab, target, false);
+                    model.name = authoredName;
+                    model.transform.localPosition = Vector3.zero;
+                    model.transform.localRotation = Quaternion.identity;
+                    model.transform.localScale = scale;
+                }
+                else
+                {
+                    // Keep authored model visible, but ensure any procedural siblings/children stay hidden.
+                    var renderers = target.GetComponentsInChildren<Renderer>(true);
+                    foreach (var renderer in renderers)
+                        if (renderer != null && !renderer.transform.IsChildOf(existing)) renderer.enabled = false;
+                }
+            }
+        }
+
+        private static void DisableRenderers(Transform root)
+        {
+            var renderers = root.GetComponentsInChildren<Renderer>(true);
+            foreach (var renderer in renderers)
+                if (renderer != null) renderer.enabled = false;
         }
     }
 }
