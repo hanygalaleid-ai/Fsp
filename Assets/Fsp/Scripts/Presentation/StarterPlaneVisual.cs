@@ -1,75 +1,12 @@
-using Fsp.Core;
 using UnityEngine;
 
 namespace Fsp.Presentation
 {
-    /// <summary>Original low-poly transport plane visual for the battle-royale drop route.</summary>
+    /// <summary>
+    /// Compatibility-only component. Procedural transport-plane generation is permanently disabled.
+    /// BmgAuthoredVisualRuntime supplies the approved authored BMG plane asset.
+    /// </summary>
     public sealed class StarterPlaneVisual : MonoBehaviour
     {
-        private void Awake()
-        {
-            if (transform.Find("FSP_TransportPlaneVisual") != null) return;
-            Transform root = new GameObject("FSP_TransportPlaneVisual").transform;
-            root.SetParent(transform, false);
-            Material body = Mat(new Color(.38f, .45f, .40f));
-            Material bodyLight = Mat(new Color(.48f, .53f, .47f));
-            Material dark = Mat(new Color(.10f, .14f, .14f));
-            Material glass = Mat(new Color(.12f, .34f, .45f));
-            Material accent = Mat(new Color(1f, .30f, .015f));
-            CylinderPart(root, "Fuselage", Vector3.zero, new Vector3(2.8f, 12.5f, 2.2f), body, Quaternion.Euler(90f, 0f, 0f));
-            SpherePart(root, "Nose", new Vector3(0f, 0f, 6.0f), new Vector3(2.55f, 1.95f, 2.6f), bodyLight);
-            Part(root, "Wing", new Vector3(0f, .05f, .3f), new Vector3(18f, .34f, 3.2f), body);
-            Part(root, "TailWing", new Vector3(0f, .35f, -4.8f), new Vector3(6.8f, .22f, 1.7f), body);
-            Part(root, "TailFin", new Vector3(0f, 1.8f, -4.7f), new Vector3(.28f, 3.2f, 2.1f), body);
-            Part(root, "CockpitGlass", new Vector3(0f, .58f, 6.65f), new Vector3(1.7f, .48f, .12f), glass);
-            Part(root, "Stripe", new Vector3(0f, -.88f, .5f), new Vector3(.42f, .08f, 8.5f), accent);
-            Engine(root, -5.2f, .15f, 1.2f, dark, accent);
-            Engine(root, 5.2f, .15f, 1.2f, dark, accent);
-            Engine(root, -7.1f, .10f, -.15f, dark, accent);
-            Engine(root, 7.1f, .10f, -.15f, dark, accent);
-            for (int side = -1; side <= 1; side += 2)
-                for (int i = 0; i < 5; i++)
-                    Part(root, "CabinWindow", new Vector3(side * 1.43f, .55f, 3.6f - i * 1.45f), new Vector3(.08f, .30f, .58f), glass);
-        }
-
-        private static void Engine(Transform root, float x, float y, float z, Material dark, Material accent)
-        {
-            CylinderPart(root, "Engine", new Vector3(x, y, z), new Vector3(1.35f, 2.5f, 1.35f), dark, Quaternion.Euler(90f, 0f, 0f));
-            CylinderPart(root, "EngineIntake", new Vector3(x, y, z + 1.27f), new Vector3(.86f, .10f, .86f), accent, Quaternion.Euler(90f, 0f, 0f));
-        }
-
-        private static void CylinderPart(Transform parent, string name, Vector3 position, Vector3 scale, Material material, Quaternion rotation)
-        {
-            GameObject go = AndroidSafeMesh.CreateCylinder(name, parent);
-            Setup(go, position, scale, material, rotation);
-        }
-
-        private static void SpherePart(Transform parent, string name, Vector3 position, Vector3 scale, Material material)
-        {
-            GameObject go = AndroidSafeMesh.CreateSphere(name, parent);
-            Setup(go, position, scale, material, Quaternion.identity);
-        }
-
-        private static void Part(Transform parent, string name, Vector3 position, Vector3 scale, Material material)
-        {
-            GameObject go = AndroidSafeMesh.CreateBox(name, parent);
-            Setup(go, position, scale, material, Quaternion.identity);
-        }
-
-        private static void Setup(GameObject go, Vector3 position, Vector3 scale, Material material, Quaternion rotation)
-        {
-            go.transform.localPosition = position;
-            go.transform.localRotation = rotation;
-            go.transform.localScale = scale;
-            go.GetComponent<MeshRenderer>().sharedMaterial = material;
-        }
-
-        private static Material Mat(Color color)
-        {
-            Shader shader = Resources.Load<Shader>("Shaders/FspMobileSafe");
-            if (shader == null) shader = Shader.Find("Fsp/MobileSafeLit");
-            if (shader == null) shader = Shader.Find("Sprites/Default");
-            return new Material(shader) { color = color, hideFlags = HideFlags.DontSave };
-        }
     }
 }
